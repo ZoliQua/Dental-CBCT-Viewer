@@ -1,4 +1,4 @@
-import { useCallback, useState, type DragEvent, type ChangeEvent } from 'react';
+import { useCallback, useRef, useState, type DragEvent, type ChangeEvent } from 'react';
 import { useDicomLoader } from '@/hooks/useDicomLoader';
 import { useI18n } from '@/i18n/I18nContext';
 
@@ -6,6 +6,8 @@ export function FileDropZone() {
   const { loadFiles, isLoading, loadProgress, error } = useDicomLoader();
   const { t } = useI18n();
   const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault();
@@ -99,12 +101,23 @@ export function FileDropZone() {
           }
         `}
       >
+        {/* Files: individual DICOM files */}
         <input
+          ref={fileInputRef}
           type="file"
           multiple
           onChange={handleFileInput}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          className="hidden"
           accept=".dcm,.dicom,application/dicom"
+        />
+        {/* Folder: a whole study/series directory (Chromium: webkitdirectory) */}
+        <input
+          ref={folderInputRef}
+          type="file"
+          onChange={handleFileInput}
+          className="hidden"
+          multiple
+          {...({ webkitdirectory: '', directory: '' } as Record<string, string>)}
         />
 
         {isLoading ? (
@@ -143,11 +156,31 @@ export function FileDropZone() {
                 d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
               />
             </svg>
-            <p className="text-lg text-gray-700 dark:text-gray-300 mb-2">{t('drop.title')}</p>
-            <p className="text-sm text-gray-500">
+            <p className="text-lg text-gray-700 dark:text-gray-300 mb-1">{t('drop.title')}</p>
+            <p className="text-sm text-gray-500 mb-4">
               {t('drop.hint')}
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-600 mt-2">{t('drop.format')}</p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-4 py-2 text-sm rounded-lg bg-dental-600 text-white hover:bg-dental-700 transition-colors"
+              >
+                {t('drop.chooseFiles')}
+              </button>
+              <button
+                type="button"
+                onClick={() => folderInputRef.current?.click()}
+                className="px-4 py-2 text-sm rounded-lg border border-dental-500 text-dental-700 hover:bg-dental-100 dark:text-dental-300 dark:hover:bg-dental-900/30 transition-colors flex items-center gap-1.5"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6}
+                    d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                </svg>
+                {t('drop.chooseFolder')}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-600 mt-3">{t('drop.format')}</p>
           </>
         )}
 

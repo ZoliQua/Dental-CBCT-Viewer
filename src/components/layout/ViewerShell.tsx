@@ -5,6 +5,7 @@ import { Toolbar } from './Toolbar';
 import { SeriesList } from '@/components/dicom/SeriesList';
 import { ViewportGrid } from '@/components/viewport/ViewportGrid';
 import { LayersPanel } from '@/components/layers/LayersPanel';
+import { RegistrationPanel } from '@/components/registration/RegistrationPanel';
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
 import { setupTools } from '@/core/toolManager';
@@ -151,6 +152,7 @@ export function ViewerShell() {
             </div>
           )}
           <LayersPanel />
+          <RegistrationPanel />
         </div>
       </div>
     </div>

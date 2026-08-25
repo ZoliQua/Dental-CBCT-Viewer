@@ -52,6 +52,25 @@ export type ViewportTool =
 
 export type LayoutMode = '1x1' | '2x2' | '1+3' | 'OPG' | 'OPG2+1';
 
+/** A view that can occupy a panel slot in the configurable 1+3 layout. */
+export type ViewKey = 'AXIAL' | 'SAGITTAL' | 'CORONAL' | '3D';
+
+export const VIEW_KEYS: ViewKey[] = ['AXIAL', 'SAGITTAL', 'CORONAL', '3D'];
+
+/** Panel assignment for the 1+3 layout: one big slot + three small slots. */
+export interface PanelConfig {
+  big: ViewKey;
+  small: [ViewKey, ViewKey, ViewKey];
+  /** 'left' = big on the left, 3 stacked right; 'top' = big on top, 3 in a row below */
+  arrangement: 'left' | 'top';
+}
+
+export const DEFAULT_PANEL: PanelConfig = {
+  big: '3D',
+  small: ['AXIAL', 'SAGITTAL', 'CORONAL'],
+  arrangement: 'left',
+};
+
 export type ProjectionMode = 'AVG' | 'MIP';
 
 export type MPROrientation = 'AXIAL' | 'SAGITTAL' | 'CORONAL';
@@ -160,6 +179,32 @@ export interface GuidedPlan {
 
 export const SLEEVE_OFFSETS = [8, 9, 10, 11, 12];
 
+/**
+ * Drill-guide (surgical template) export parameters. Kept here (no manifold
+ * import) so the context/Settings can reference the defaults without pulling in
+ * the WASM Boolean kernel — that lives in `core/guideBuilder` (loaded on demand).
+ */
+export interface GuideParams {
+  /** Sleeve housing wall thickness (radial), mm */
+  wallMm: number;
+  /** Base bar cross-section width, mm */
+  baseWidthMm: number;
+  /** Base bar cross-section height (Z), mm */
+  baseHeightMm: number;
+  /** Extra diameter on the drill channel over the sleeve diameter, mm */
+  channelTolMm: number;
+  /** Angular tessellation of cylinders */
+  segments: number;
+}
+
+export const GUIDE_DEFAULTS: GuideParams = {
+  wallMm: 1.5,
+  baseWidthMm: 5,
+  baseHeightMm: 4,
+  channelTolMm: 0.1,
+  segments: 48,
+};
+
 export function getImplantSystem(id: string | undefined): ImplantSystem {
   return IMPLANT_SYSTEMS.find((s) => s.id === id) ?? IMPLANT_SYSTEMS[0];
 }
@@ -167,6 +212,33 @@ export function getImplantSystem(id: string | undefined): ImplantSystem {
 export function defaultGuidedPlan(implant: { length: number }): GuidedPlan {
   return { enabled: true, sleeveOffset: 9, sleeveHeight: 5, drillLength: implant.length };
 }
+
+// ── Multimodal: imported scan meshes (STL/OBJ/PLY) ─────────────
+
+export type ScanType = 'oral' | 'bite' | 'antagonist' | 'toothSetup';
+
+/** An imported surface mesh, aligned to the CBCT by a 4×4 transform. */
+export interface ScanMesh {
+  id: string;
+  name: string;
+  type: ScanType;
+  color: string;
+  opacity: number;
+  visible: boolean;
+  /** 4×4 column-major transform (vtk userMatrix); registration result */
+  transform: number[];
+  /** Source file name (the mesh geometry itself is kept in memory, not persisted) */
+  fileName: string;
+}
+
+export const SCAN_DEFAULTS: Record<ScanType, { color: string; opacity: number }> = {
+  oral: { color: '#e8c0a8', opacity: 1 },
+  bite: { color: '#c0c0ff', opacity: 0.85 },
+  antagonist: { color: '#b0e0b0', opacity: 0.85 },
+  toothSetup: { color: '#ffffff', opacity: 0.9 },
+};
+
+export const SCAN_TYPES: ScanType[] = ['oral', 'bite', 'antagonist', 'toothSetup'];
 
 // ── Safety: anatomy markers (nerve canal, sinus floor) ─────────
 

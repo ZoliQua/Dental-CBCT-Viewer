@@ -11,6 +11,8 @@ import { useViewer } from '@/context/ViewerContext';
 import { getImplantSystem } from '@/types/dicom';
 import { RENDERING_ENGINE_ID, VP_AXIAL } from '@/core/constants';
 import { nearestArchFrame, implantAxis, radiusProfile } from '@/core/implantGeometry';
+import { slicePlaneSegments } from '@/core/meshSlice';
+import { scanTriangleSoupWorld } from '@/core/scanMesh';
 
 export function ImplantAxialOverlay() {
   const { state } = useViewer();
@@ -31,7 +33,7 @@ export function ImplantAxialOverlay() {
     return () => el.removeEventListener(Enums.Events.CAMERA_MODIFIED, handler);
   }, [getViewport]);
 
-  if ((state.implants.length === 0 && state.anatomy.length === 0) || !state.archCurveControlPoints) return null;
+  if ((state.implants.length === 0 && state.anatomy.length === 0 && state.scans.length === 0) || !state.archCurveControlPoints) return null;
   const vp = getViewport();
   if (!vp) return null;
   const zFocal = vp.getCamera().focalPoint?.[2];
@@ -40,6 +42,21 @@ export function ImplantAxialOverlay() {
   return (
     <div className="absolute inset-0" style={{ zIndex: 11, pointerEvents: 'none' }}>
       <svg className="w-full h-full">
+        {/* Registered scan contours where they cross this axial slice */}
+        {state.scans.filter(s => s.visible).map(s => {
+          const soup = scanTriangleSoupWorld(s.id, s.transform);
+          if (!soup) return null;
+          const segs = slicePlaneSegments(soup, [0, 0, zFocal], [0, 0, 1]);
+          return (
+            <g key={`scan-${s.id}`}>
+              {segs.map((seg, i) => {
+                const a = vp.worldToCanvas([seg[0][0], seg[0][1], zFocal] as any);
+                const b = vp.worldToCanvas([seg[1][0], seg[1][1], zFocal] as any);
+                return <line key={i} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={s.color} strokeWidth={1.25} strokeOpacity={0.9} />;
+              })}
+            </g>
+          );
+        })}
         {/* Anatomy markers where the polyline crosses this axial slice */}
         {state.anatomy.filter(a => a.visible && a.points.length >= 2).map(m => {
           const nodes: React.ReactNode[] = [];

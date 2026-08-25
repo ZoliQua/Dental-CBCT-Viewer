@@ -10,12 +10,14 @@ import { useI18n } from '@/i18n/I18nContext';
 import { useTheme } from '@/context/ThemeContext';
 import { LANGUAGES } from '@/i18n/translations';
 import { useLayoutSwitch } from '@/hooks/useLayoutSwitch';
+import { LayoutConfigButton } from './LayoutConfigButton';
 import { exportViewPdf } from '@/core/pdfExport';
 import { serializePlan, planFromObject } from '@/core/planIO';
 import { implantWorldAxis } from '@/core/implantGeometry';
 import { getVolumeData } from '@/core/cprEngine';
 import { sampleImplantBoneHU } from '@/core/boneQuality';
-import { VIEW_LABEL_KEYS, type LayoutMode, type ViewMode } from '@/types/dicom';
+import { loadScanPolyData, setScanPolyData, polyDataCenter, translation16, IDENTITY16, scanTriangleSoupWorld } from '@/core/scanMesh';
+import { SCAN_DEFAULTS, VIEW_LABEL_KEYS, getImplantSystem, type LayoutMode, type ViewMode } from '@/types/dicom';
 
 const LAYOUTS: { id: LayoutMode; labelKey?: string; label?: string }[] = [
   { id: '1x1', label: '1×1' },
@@ -98,6 +100,16 @@ function NewLoadIcon() {
   );
 }
 
+function ScanIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2 2 7l10 5 10-5-10-5z" />
+      <path d="M2 17l10 5 10-5" />
+      <path d="M2 12l10 5 10-5" />
+    </svg>
+  );
+}
+
 function TopBarButton({
   title, active = false, onClick, children,
 }: {
@@ -149,6 +161,98 @@ export function TopBar() {
     link.click();
     URL.revokeObjectURL(url);
     setExportOpen(false);
+  };
+
+  const scanInputRef = useRef<HTMLInputElement>(null);
+  const [guideBusy, setGuideBusy] = useState(false);
+
+  const hasGuided = state.implants.some(i => i.guided?.enabled);
+
+  /** Build and download the printable drill guide (STL) via CSG (manifold-3d). */
+  const exportGuide = async () => {
+    setExportOpen(false);
+    const cps = state.archCurveControlPoints;
+    const guided = state.implants.filter(i => i.guided?.enabled);
+    if (!cps || guided.length === 0) { window.alert(t('guide.noImplants')); return; }
+
+    setGuideBusy(true);
+    try {
+      const { buildDrillGuide } = await import('@/core/guideBuilder');
+      const { triMeshToBinarySTL } = await import('@/core/guideExport');
+
+      const implants = guided.flatMap(imp => {
+        const wa = implantWorldAxis(cps, imp);
+        if (!wa) return [];
+        const sys = getImplantSystem(imp.systemId);
+        return [{
+          entry: wa.entry,
+          axis: wa.axis,
+          length: imp.length,
+          sleeveDiameter: sys.sleeveDiameter,
+          sleeveOffset: imp.guided!.sleeveOffset,
+          sleeveHeight: imp.guided!.sleeveHeight,
+        }];
+      });
+      if (implants.length === 0) { window.alert(t('guide.noImplants')); return; }
+
+      const scanSoups = state.scans
+        .filter(s => s.visible)
+        .map(s => scanTriangleSoupWorld(s.id, s.transform))
+        .filter((x): x is Float32Array => !!x);
+
+      const result = await buildDrillGuide({ controlPoints: cps, implants, scanSoups, params: state.guide });
+      const stl = triMeshToBinarySTL(result.mesh);
+      const blob = new Blob([stl], { type: 'model/stl' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = `guide_${new Date().toISOString().slice(0, 10)}.stl`;
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+      if (result.warnings.includes('scan-not-watertight')) window.alert(t('guide.warnScan'));
+    } catch (err) {
+      console.error('[guide] export failed', err);
+      window.alert(t('guide.error'));
+    } finally {
+      setGuideBusy(false);
+    }
+  };
+
+  const importScan = async (file: File) => {
+    const pd = await loadScanPolyData(file);
+    if (!pd) {
+      window.alert(t('scan.invalid'));
+      return;
+    }
+    const id = `scan_${Date.now()}`;
+    setScanPolyData(id, pd);
+    // Rough initial placement: translate the scan's center onto the volume center
+    let transform = IDENTITY16;
+    const vol = state.volumeId ? getVolumeData(state.volumeId) : null;
+    if (vol) {
+      const sc = polyDataCenter(pd);
+      const sp = [1 / vol.invSx, 1 / vol.invSy, 1 / vol.invSz];
+      const vc = [
+        vol.origin[0] + (vol.dims[0] - 1) * sp[0] / 2,
+        vol.origin[1] + (vol.dims[1] - 1) * sp[1] / 2,
+        vol.origin[2] + (vol.dims[2] - 1) * sp[2] / 2,
+      ];
+      transform = translation16(vc[0] - sc[0], vc[1] - sc[1], vc[2] - sc[2]);
+    }
+    const def = SCAN_DEFAULTS.oral;
+    dispatch({
+      type: 'ADD_SCAN',
+      payload: {
+        id,
+        name: file.name.replace(/\.[^.]+$/, ''),
+        type: 'oral',
+        color: def.color,
+        opacity: def.opacity,
+        visible: true,
+        transform,
+        fileName: file.name,
+      },
+    });
   };
 
   const loadPlanFile = async (file: File) => {
@@ -207,6 +311,14 @@ export function TopBar() {
 
   return (
     <div className="flex items-center justify-between px-4 py-1.5 bg-white border-b border-gray-300 dark:bg-gray-900 dark:border-gray-700">
+      {guideBusy && (
+        <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-3 bg-black/60 select-none">
+          <div className="w-12 h-12 border-4 border-dental-400 border-t-transparent rounded-full animate-spin" />
+          <span className="text-dental-200 text-xl font-semibold [text-shadow:_0_1px_4px_rgb(0_0_0)]">
+            {t('guide.building')}
+          </span>
+        </div>
+      )}
       <div className="flex items-center gap-2 select-none">
         <span className="text-base">🦷</span>
         <span className="text-sm font-semibold text-dental-600 dark:text-dental-400">{t('app.title')}</span>
@@ -230,6 +342,7 @@ export function TopBar() {
               {l.labelKey ? t(l.labelKey) : l.label}
             </button>
           ))}
+          {state.layoutMode === '1+3' && <LayoutConfigButton />}
           {state.layoutMode === '1x1' && (
             <>
               <div className="w-px h-5 mx-1 bg-gray-300 dark:bg-gray-600" />
@@ -254,6 +367,31 @@ export function TopBar() {
       )}
 
       <div className="flex items-center gap-1">
+        {/* Import scan mesh (STL / OBJ / PLY) */}
+        {state.study && (
+          <>
+            <button
+              onClick={() => scanInputRef.current?.click()}
+              title={t('scan.importTitle')}
+              className="h-8 px-2 flex items-center gap-1.5 rounded text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+            >
+              <ScanIcon />
+              <span className="text-xs">{t('scan.import')}</span>
+            </button>
+            <input
+              ref={scanInputRef}
+              type="file"
+              accept=".stl,.obj,.ply,model/stl,model/obj"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void importScan(f);
+                e.target.value = '';
+              }}
+            />
+          </>
+        )}
+
         {/* New load (reset to landing) */}
         {state.study && (
           <button
@@ -324,6 +462,14 @@ export function TopBar() {
                   className="w-full px-3 py-1.5 text-xs text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
                 >
                   {t('export.savePdf')}
+                </button>
+                <button
+                  onClick={exportGuide}
+                  disabled={!hasGuided}
+                  title={hasGuided ? undefined : t('guide.noImplants')}
+                  className="w-full px-3 py-1.5 text-xs text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                >
+                  {t('guide.export')}
                 </button>
                 <div className="my-1 border-t border-gray-200 dark:border-gray-700" />
                 <button

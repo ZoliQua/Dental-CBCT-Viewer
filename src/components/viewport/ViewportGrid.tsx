@@ -1,4 +1,5 @@
 import { useViewer } from '@/context/ViewerContext';
+import type { ViewKey } from '@/types/dicom';
 import { Viewport2D } from './Viewport2D';
 import { ViewportMPR } from './ViewportMPR';
 import { Viewport3D } from './Viewport3D';
@@ -37,23 +38,28 @@ export function ViewportGrid() {
     );
   }
 
-  // 1+3 layout: large axial on left, 3 small on right
+  // 1+3 layout: one big panel + three small ones, configurable via state.panel
   if (state.layoutMode === '1+3') {
+    const vid = state.volumeId;
+    const renderView = (key: ViewKey) =>
+      key === '3D' ? <Viewport3D volumeId={vid} /> : <ViewportMPR orientation={key} volumeId={vid} />;
+    const { big, small, arrangement } = state.panel;
+
+    if (arrangement === 'top') {
+      return (
+        <div className="flex flex-col w-full h-full gap-px bg-gray-700">
+          <div className="flex-1 min-h-0">{renderView(big)}</div>
+          <div className="h-1/3 flex gap-px min-h-0">
+            {small.map((k, i) => <div key={i} className="flex-1 min-w-0">{renderView(k)}</div>)}
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="flex w-full h-full gap-px bg-gray-700">
-        <div className="flex-1 h-full">
-          <ViewportMPR orientation="AXIAL" volumeId={state.volumeId} />
-        </div>
+        <div className="flex-1 h-full min-w-0">{renderView(big)}</div>
         <div className="w-1/3 h-full flex flex-col gap-px">
-          <div className="flex-1">
-            <ViewportMPR orientation="SAGITTAL" volumeId={state.volumeId} />
-          </div>
-          <div className="flex-1">
-            <ViewportMPR orientation="CORONAL" volumeId={state.volumeId} />
-          </div>
-          <div className="flex-1">
-            <Viewport3D volumeId={state.volumeId} />
-          </div>
+          {small.map((k, i) => <div key={i} className="flex-1 min-h-0">{renderView(k)}</div>)}
         </div>
       </div>
     );

@@ -9,6 +9,8 @@ import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
 import { ImplantEditPopup } from '@/components/implant/ImplantEditPopup';
 import { setAnnotationVisible, removeAnnotationByUid } from '@/core/annotationLayer';
+import { removeScanPolyData } from '@/core/scanMesh';
+import { SCAN_TYPES, SCAN_DEFAULTS, type ScanType } from '@/types/dicom';
 
 // ── Tiny inline icons ──────────────────────────────────────────
 
@@ -242,6 +244,64 @@ export function LayersPanel() {
               onDelete={() => dispatch({ type: 'REMOVE_ANATOMY', payload: m.id })}
               onRename={(name) => dispatch({ type: 'UPDATE_ANATOMY', payload: { ...m, name } })}
             />
+          ))}
+
+          {/* Imported scan meshes */}
+          {state.scans.length > 0 && (
+            <div className="text-[10px] uppercase tracking-wide text-gray-500 px-1 pt-2 select-none">
+              {t('layers.scans')}
+            </div>
+          )}
+          {state.scans.map(sc => (
+            <div key={sc.id} className="rounded border border-transparent px-1 pb-1">
+              <LayerRow
+                name={sc.name}
+                visible={sc.visible}
+                onToggleVisible={() => dispatch({ type: 'UPDATE_SCAN', payload: { ...sc, visible: !sc.visible } })}
+                onDelete={() => { removeScanPolyData(sc.id); dispatch({ type: 'REMOVE_SCAN', payload: sc.id }); }}
+                onRename={(name) => dispatch({ type: 'UPDATE_SCAN', payload: { ...sc, name } })}
+              />
+              <div className="flex items-center gap-2 px-2 pt-0.5">
+                <select
+                  value={sc.type}
+                  onChange={(e) => {
+                    const type = e.target.value as ScanType;
+                    dispatch({ type: 'UPDATE_SCAN', payload: { ...sc, type, color: SCAN_DEFAULTS[type].color } });
+                  }}
+                  className="flex-1 min-w-0 bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 text-[11px] rounded px-1 py-0.5 border"
+                >
+                  {SCAN_TYPES.map(ty => (
+                    <option key={ty} value={ty}>{t(`scan.${ty}`)}</option>
+                  ))}
+                </select>
+                <input
+                  type="color"
+                  value={sc.color}
+                  onChange={(e) => dispatch({ type: 'UPDATE_SCAN', payload: { ...sc, color: e.target.value } })}
+                  className="h-5 w-6 rounded border border-gray-300 dark:border-gray-600 bg-transparent cursor-pointer"
+                  title={t('safety.color')}
+                />
+                <input
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.05}
+                  value={sc.opacity}
+                  onChange={(e) => dispatch({ type: 'UPDATE_SCAN', payload: { ...sc, opacity: Number(e.target.value) } })}
+                  className="w-14 h-1 accent-dental-400"
+                  title={`${Math.round(sc.opacity * 100)}%`}
+                />
+              </div>
+              <button
+                onClick={() => {
+                  dispatch({ type: 'SET_LAYOUT_MODE', payload: '2x2' });
+                  dispatch({ type: 'START_REGISTRATION', payload: sc.id });
+                }}
+                className="mt-1 ml-2 px-2 py-0.5 text-[11px] rounded bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
+                {t('reg.start')}
+              </button>
+            </div>
           ))}
 
           {/* Measurement layers — one row per measurement */}

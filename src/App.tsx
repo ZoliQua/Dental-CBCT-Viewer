@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import { initCornerstone } from '@/core/init';
 import { setActiveTool } from '@/core/toolManager';
 import { LandingPage } from '@/components/dicom/LandingPage';
+import { DisclaimerBanner } from '@/components/dicom/DisclaimerBanner';
 import { ViewerShell } from '@/components/layout/ViewerShell';
 import { TopBar } from '@/components/layout/TopBar';
 import { SettingsPanel } from '@/components/panels/SettingsPanel';
@@ -99,6 +100,7 @@ function ViewerApp() {
       <div className="flex-1 overflow-hidden">{content}</div>
       <SettingsPanel />
       <HelpPanel />
+      <DisclaimerBanner />
     </div>
   );
 }

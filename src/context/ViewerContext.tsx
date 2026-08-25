@@ -1,5 +1,6 @@
 import { createContext, useContext, useReducer, type ReactNode, type Dispatch } from 'react';
-import type { DicomStudyInfo, ViewportTool, LayoutMode, ViewMode, ProjectionMode, ImplantData, MeasurementLayer, AnatomyMarker, AnatomyType } from '@/types/dicom';
+import type { DicomStudyInfo, ViewportTool, LayoutMode, ViewMode, ProjectionMode, ImplantData, MeasurementLayer, AnatomyMarker, AnatomyType, ScanMesh, GuideParams, PanelConfig } from '@/types/dicom';
+import { GUIDE_DEFAULTS, DEFAULT_PANEL } from '@/types/dicom';
 import type { PlanData } from '@/core/planIO';
 
 export interface ViewerState {
@@ -10,6 +11,8 @@ export interface ViewerState {
   activeSeriesUID: string | null;
   activeTool: ViewportTool;
   layoutMode: LayoutMode;
+  /** Panel assignment for the configurable 1+3 layout */
+  panel: PanelConfig;
   volumeId: string | null;
   viewMode: ViewMode;
   currentSliceIndex: number;
@@ -41,6 +44,12 @@ export interface ViewerState {
   anatomy: AnatomyMarker[];
   anatomyDrawMode: AnatomyType | null;
   activeAnatomyId: string | null;
+  // Drill-guide (surgical template) export parameters
+  guide: GuideParams;
+  // Imported scan meshes (geometry lives in scanMesh registry, not in state)
+  scans: ScanMesh[];
+  // Active landmark registration session (null = not registering)
+  registration: RegistrationSession | null;
   // Editable report header fields (shown in the PDF report)
   report: ReportFields;
   // Individual measurement layers (Cornerstone annotations + canvas drawings)
@@ -54,6 +63,20 @@ export interface ReportFields {
   statusDescription: string;
 }
 
+/** One landmark pair (scan point + corresponding CBCT point), world mm. */
+export interface RegPair {
+  scan: [number, number, number] | null;
+  cbct: [number, number, number] | null;
+}
+
+/** Active 3-point landmark registration session for one scan. */
+export interface RegistrationSession {
+  scanId: string;
+  pairs: RegPair[];
+  /** Which slot/side is currently awaiting a click, if any */
+  picking: { slot: number; kind: 'scan' | 'cbct' } | null;
+}
+
 type ViewerAction =
   | { type: 'SET_INITIALIZED' }
   | { type: 'SET_LOADING'; payload: boolean }
@@ -62,6 +85,7 @@ type ViewerAction =
   | { type: 'SET_ACTIVE_SERIES'; payload: string }
   | { type: 'SET_ACTIVE_TOOL'; payload: ViewportTool }
   | { type: 'SET_LAYOUT_MODE'; payload: LayoutMode }
+  | { type: 'SET_PANEL'; payload: Partial<PanelConfig> }
   | { type: 'SET_VOLUME_ID'; payload: string }
   | { type: 'SET_VIEW_MODE'; payload: ViewMode }
   | { type: 'SET_SLICE_INFO'; payload: { index: number; total: number } }
@@ -83,12 +107,20 @@ type ViewerAction =
   | { type: 'TOGGLE_LAYERS' }
   | { type: 'SET_WINDOW_LEVEL'; payload: { wc: number; ww: number } }
   | { type: 'SET_SAFETY'; payload: Partial<{ marginMm: number; color: string; nerveMm: number; sinusMm: number; neighborMm: number }> }
+  | { type: 'SET_GUIDE'; payload: Partial<GuideParams> }
   | { type: 'SET_REPORT'; payload: Partial<ReportFields> }
   | { type: 'ADD_ANATOMY'; payload: AnatomyMarker }
   | { type: 'UPDATE_ANATOMY'; payload: AnatomyMarker }
   | { type: 'REMOVE_ANATOMY'; payload: string }
   | { type: 'SET_ANATOMY_DRAW_MODE'; payload: AnatomyType | null }
   | { type: 'SET_ACTIVE_ANATOMY'; payload: string | null }
+  | { type: 'ADD_SCAN'; payload: ScanMesh }
+  | { type: 'UPDATE_SCAN'; payload: ScanMesh }
+  | { type: 'REMOVE_SCAN'; payload: string }
+  | { type: 'START_REGISTRATION'; payload: string }
+  | { type: 'SET_REG_PICKING'; payload: { slot: number; kind: 'scan' | 'cbct' } | null }
+  | { type: 'SET_REG_POINT'; payload: { slot: number; kind: 'scan' | 'cbct'; point: [number, number, number] } }
+  | { type: 'END_REGISTRATION' }
   | { type: 'LOAD_PLAN'; payload: PlanData }
   | { type: 'ADD_MEASUREMENT'; payload: MeasurementLayer }
   | { type: 'UPDATE_MEASUREMENT'; payload: MeasurementLayer }
@@ -102,7 +134,8 @@ const initialState: ViewerState = {
   study: null,
   activeSeriesUID: null,
   activeTool: 'windowLevel',
-  layoutMode: '1x1',
+  layoutMode: '1+3',
+  panel: DEFAULT_PANEL,
   volumeId: null,
   viewMode: 'AXIAL' as ViewMode,
   currentSliceIndex: 0,
@@ -122,9 +155,12 @@ const initialState: ViewerState = {
   layersOpen: false,
   windowLevel: { wc: 300, ww: 2500 },
   safety: { marginMm: 1, color: '#ff3c3c', nerveMm: 2, sinusMm: 1, neighborMm: 3 },
+  guide: { ...GUIDE_DEFAULTS },
   anatomy: [],
   anatomyDrawMode: null,
   activeAnatomyId: null,
+  scans: [],
+  registration: null,
   report: { patientName: '', patientAge: '', quoteNumber: '', statusDescription: '' },
   measurements: [],
 };
@@ -151,6 +187,8 @@ function viewerReducer(state: ViewerState, action: ViewerAction): ViewerState {
       return { ...state, activeTool: action.payload };
     case 'SET_LAYOUT_MODE':
       return { ...state, layoutMode: action.payload, viewMode: 'AXIAL' };
+    case 'SET_PANEL':
+      return { ...state, panel: { ...state.panel, ...action.payload } };
     case 'SET_VOLUME_ID':
       return { ...state, volumeId: action.payload };
     case 'SET_VIEW_MODE':
@@ -200,6 +238,8 @@ function viewerReducer(state: ViewerState, action: ViewerAction): ViewerState {
       return { ...state, windowLevel: action.payload };
     case 'SET_SAFETY':
       return { ...state, safety: { ...state.safety, ...action.payload } };
+    case 'SET_GUIDE':
+      return { ...state, guide: { ...state.guide, ...action.payload } };
     case 'ADD_ANATOMY':
       return { ...state, anatomy: [...state.anatomy, action.payload], activeAnatomyId: action.payload.id };
     case 'UPDATE_ANATOMY':
@@ -214,6 +254,35 @@ function viewerReducer(state: ViewerState, action: ViewerAction): ViewerState {
       return { ...state, anatomyDrawMode: action.payload };
     case 'SET_ACTIVE_ANATOMY':
       return { ...state, activeAnatomyId: action.payload };
+    case 'ADD_SCAN':
+      return { ...state, scans: [...state.scans, action.payload] };
+    case 'UPDATE_SCAN':
+      return { ...state, scans: state.scans.map(s => s.id === action.payload.id ? action.payload : s) };
+    case 'REMOVE_SCAN':
+      return {
+        ...state,
+        scans: state.scans.filter(s => s.id !== action.payload),
+        registration: state.registration?.scanId === action.payload ? null : state.registration,
+      };
+    case 'START_REGISTRATION':
+      return {
+        ...state,
+        registration: {
+          scanId: action.payload,
+          pairs: [{ scan: null, cbct: null }, { scan: null, cbct: null }, { scan: null, cbct: null }],
+          picking: null,
+        },
+      };
+    case 'SET_REG_PICKING':
+      return state.registration ? { ...state, registration: { ...state.registration, picking: action.payload } } : state;
+    case 'SET_REG_POINT': {
+      if (!state.registration) return state;
+      const pairs = state.registration.pairs.map((p, i) =>
+        i === action.payload.slot ? { ...p, [action.payload.kind]: action.payload.point } : p);
+      return { ...state, registration: { ...state.registration, pairs, picking: null } };
+    }
+    case 'END_REGISTRATION':
+      return { ...state, registration: null };
     case 'LOAD_PLAN':
       // Replace the persistable slices in one shot; clear transient selection
       return {

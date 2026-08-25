@@ -131,6 +131,32 @@ export function SettingsPanel() {
           </div>
         </div>
 
+        {/* Drill-guide (surgical template) export parameters */}
+        <div className="space-y-2">
+          <SectionLabel>{t('settings.guide')}</SectionLabel>
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              ['wallMm', t('guide.wall'), 0.5, 4, 0.1],
+              ['baseWidthMm', t('guide.baseWidth'), 2, 10, 0.5],
+              ['baseHeightMm', t('guide.baseHeight'), 2, 10, 0.5],
+              ['channelTolMm', t('guide.channelTol'), 0, 0.5, 0.05],
+            ] as const).map(([key, label, min, max, step]) => (
+              <label key={key} className="space-y-1">
+                <span className="block text-[11px] text-gray-600 dark:text-gray-400">{label}</span>
+                <input
+                  type="number"
+                  min={min}
+                  max={max}
+                  step={step}
+                  value={state.guide[key]}
+                  onChange={(e) => dispatch({ type: 'SET_GUIDE', payload: { [key]: Number(e.target.value) } })}
+                  className={FIELD}
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+
         {/* Panoramic / cross-section controls */}
         {state.study && isOPG && (
           <div className="space-y-3">

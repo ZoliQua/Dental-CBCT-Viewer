@@ -31,6 +31,8 @@ import {
   type Vec3,
 } from '@/core/implantGeometry';
 import { evaluateImplant, type ImplantSeg } from '@/core/safety';
+import { slicePlaneSegments } from '@/core/meshSlice';
+import { scanTriangleSoupWorld } from '@/core/scanMesh';
 
 interface ImplantOverlayProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -78,6 +80,16 @@ export function ImplantOverlay({ containerRef, canvasRef, widthMm, zMin, zMax }:
       : null,
     [state.archCurveControlPoints, state.crossSectionPosition, state.crossSectionTiltDeg, zMin, zMax],
   );
+
+  // Registered scan contours where they cross this cross-section plane
+  const scanContours = useMemo(() => {
+    if (!frame) return [];
+    const n = cross3(frame.eU, frame.eV);
+    return state.scans.filter(s => s.visible).map(s => {
+      const soup = scanTriangleSoupWorld(s.id, s.transform);
+      return { id: s.id, color: s.color, segs: soup ? slicePlaneSegments(soup, frame.origin, n) : [] };
+    });
+  }, [state.scans, frame]);
 
   // ── Image (h, zImg) ↔ pixel mapping ─────────────────────────
   // h: mm from plane center horizontally; zImg: vertical image coordinate in
@@ -287,6 +299,20 @@ export function ImplantOverlay({ containerRef, canvasRef, widthMm, zMin, zMax }:
       }}
       onPointerDown={handlePlacePointerDown}
     >
+      {/* Registered scan contours where they cross this plane */}
+      {frame && scanContours.map(sc => (
+        <g key={`scan-${sc.id}`} style={{ pointerEvents: 'none' }}>
+          {sc.segs.map((seg, i) => {
+            const pa = projectToPlane(seg[0], frame);
+            const pb = projectToPlane(seg[1], frame);
+            const a = mmToPixel(pa[0], zMid + pa[1]);
+            const b = mmToPixel(pb[0], zMid + pb[1]);
+            if (!a || !b) return null;
+            return <line key={i} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={sc.color} strokeWidth={1.5} strokeOpacity={0.9} />;
+          })}
+        </g>
+      ))}
+
       {/* Anatomy markers where the tube crosses this plane (chord disc) */}
       {frame && state.anatomy.filter(a => a.visible).map(m => {
         const discs = m.points.map((p, i) => {

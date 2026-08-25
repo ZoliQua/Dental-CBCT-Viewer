@@ -6,7 +6,8 @@
  * studyInstanceUID; loading onto a different scan should be confirmed first.
  */
 
-import type { ImplantData, AnatomyMarker, MeasurementLayer, ProjectionMode } from '@/types/dicom';
+import type { ImplantData, AnatomyMarker, MeasurementLayer, ProjectionMode, GuideParams } from '@/types/dicom';
+import { GUIDE_DEFAULTS } from '@/types/dicom';
 import type { ReportFields } from '@/context/ViewerContext';
 
 export const PLAN_VERSION = 1;
@@ -23,6 +24,7 @@ export interface PlanData {
   panoramicProjection: ProjectionMode;
   panoramicResolution: number;
   safety: { marginMm: number; color: string; nerveMm: number; sinusMm: number; neighborMm: number };
+  guide: GuideParams;
   windowLevel: { wc: number; ww: number };
   report: ReportFields;
 }
@@ -47,6 +49,7 @@ export function extractPlan(s: PlanData): PlanData {
     panoramicProjection: s.panoramicProjection,
     panoramicResolution: s.panoramicResolution,
     safety: s.safety,
+    guide: s.guide,
     windowLevel: s.windowLevel,
     report: s.report,
   };
@@ -66,6 +69,7 @@ const str = (v: unknown, fallback: string): string => (typeof v === 'string' ? v
 export function planFromObject(obj: any): PlanData | null {
   if (!obj || typeof obj !== 'object' || typeof obj.version !== 'number') return null;
   const s = obj.safety ?? {};
+  const g = obj.guide ?? {};
   const wl = obj.windowLevel ?? {};
   const r = obj.report ?? {};
   return {
@@ -84,6 +88,13 @@ export function planFromObject(obj: any): PlanData | null {
       nerveMm: num(s.nerveMm, 2),
       sinusMm: num(s.sinusMm, 1),
       neighborMm: num(s.neighborMm, 3),
+    },
+    guide: {
+      wallMm: num(g.wallMm, GUIDE_DEFAULTS.wallMm),
+      baseWidthMm: num(g.baseWidthMm, GUIDE_DEFAULTS.baseWidthMm),
+      baseHeightMm: num(g.baseHeightMm, GUIDE_DEFAULTS.baseHeightMm),
+      channelTolMm: num(g.channelTolMm, GUIDE_DEFAULTS.channelTolMm),
+      segments: num(g.segments, GUIDE_DEFAULTS.segments),
     },
     windowLevel: { wc: num(wl.wc, 300), ww: num(wl.ww, 2500) },
     report: {

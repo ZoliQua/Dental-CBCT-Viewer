@@ -27,6 +27,7 @@ const sample: PlanData = {
   panoramicProjection: 'MIP',
   panoramicResolution: 0.15,
   safety: { marginMm: 1.5, color: '#00ff00', nerveMm: 2, sinusMm: 1, neighborMm: 3 },
+  guide: { wallMm: 1.5, baseWidthMm: 5, baseHeightMm: 4, channelTolMm: 0.1, segments: 48 },
   windowLevel: { wc: 749, ww: 3439 },
   report: { patientName: 'Teszt', patientAge: '45', quoteNumber: 'Q-7', statusDescription: 'felső 6-os' },
 };
@@ -55,6 +56,7 @@ describe('planFromObject validation', () => {
     expect(r.archCurveControlPoints).toBeNull();
     expect(r.panoramicProjection).toBe('AVG');
     expect(r.safety).toEqual({ marginMm: 1, color: '#ff3c3c', nerveMm: 2, sinusMm: 1, neighborMm: 3 });
+    expect(r.guide).toEqual({ wallMm: 1.5, baseWidthMm: 5, baseHeightMm: 4, channelTolMm: 0.1, segments: 48 });
     expect(r.windowLevel).toEqual({ wc: 300, ww: 2500 });
     expect(r.report.patientName).toBe('');
   });

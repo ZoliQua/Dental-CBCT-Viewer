@@ -6,6 +6,11 @@ import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
 import { ViewportOverlay } from './ViewportOverlay';
 import { Implant3DActors } from './Implant3DActors';
+import { ScanActors } from './ScanActors';
+import { Slice3DActors } from './Slice3DActors';
+import { CropController } from './CropController';
+import { SLICE_AXES, type SliceAxis } from '@/core/slice3D';
+import { NO_CROP, type CropBox } from '@/core/cropBox';
 import type { Implant3DLayers } from '@/core/implant3D';
 import { VOLUME_3D_PRESETS, type Volume3DPreset } from '@/types/dicom';
 
@@ -23,6 +28,18 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
   const [slabThickness, setSlabThickness] = useState<number>(0); // 0 = no clipping
   const [ready, setReady] = useState(false); // volume loaded → safe to add actors
   const [layers3D, setLayers3D] = useState<Implant3DLayers>({ implant: true, sleeve: true, axis: true });
+  const [sliceAxes, setSliceAxes] = useState<Record<SliceAxis, boolean>>({ AXIAL: false, SAGITTAL: false, CORONAL: false });
+  const [cropEnabled, setCropEnabled] = useState(false);
+  const [crop, setCrop] = useState<CropBox>(NO_CROP);
+
+  const setCropVal = (axis: number, which: 'min' | 'max', v: number) => {
+    setCrop((c) => {
+      const next: CropBox = { min: [...c.min] as CropBox['min'], max: [...c.max] as CropBox['max'] };
+      if (which === 'min') next.min[axis] = Math.min(v, c.max[axis] - 0.02);
+      else next.max[axis] = Math.max(v, c.min[axis] + 0.02);
+      return next;
+    });
+  };
 
   const handleResize = useCallback(() => {
     const engine = getRenderingEngine(RENDERING_ENGINE_ID);
@@ -152,6 +169,9 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
 
       {/* Implant / sleeve / axis 3D meshes (added once the volume is loaded) */}
       {ready && <Implant3DActors layers={layers3D} />}
+      {ready && <ScanActors />}
+      {ready && <Slice3DActors axes={sliceAxes} />}
+      {ready && <CropController crop={crop} enabled={cropEnabled} />}
 
       {/* 3D label */}
       <div className="absolute top-1 left-1/2 -translate-x-1/2 text-yellow-400 text-xs font-mono font-bold pointer-events-none select-none [text-shadow:_0_1px_2px_rgb(0_0_0_/_80%)]">
@@ -176,6 +196,55 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
               {label}
             </label>
           ))}
+        </div>
+      )}
+
+      {/* 3D slice-plane toggles + crop box (top-right column) */}
+      {state.volumeId && (
+        <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 items-end">
+          <div className="flex flex-col gap-1 bg-gray-900/70 rounded p-1.5">
+            <span className="text-[10px] font-semibold text-gray-300 select-none">{t('view3d.slices')}</span>
+            {SLICE_AXES.map((axis) => (
+              <label key={axis} className="flex items-center gap-1.5 text-[10px] text-gray-200 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={sliceAxes[axis]}
+                  onChange={(e) => setSliceAxes((p) => ({ ...p, [axis]: e.target.checked }))}
+                  className="accent-dental-400 w-3 h-3"
+                />
+                {t(`view.${axis.toLowerCase()}`)}
+              </label>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-1 bg-gray-900/70 rounded p-1.5 w-32">
+            <label className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-300 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={cropEnabled}
+                onChange={(e) => setCropEnabled(e.target.checked)}
+                className="accent-dental-400 w-3 h-3"
+              />
+              {t('view3d.crop')}
+            </label>
+            {cropEnabled && ['X', 'Y', 'Z'].map((label, a) => (
+              <div key={label} className="flex items-center gap-1">
+                <span className="text-[10px] text-gray-400 w-2 select-none">{label}</span>
+                <input
+                  type="range" min={0} max={100} step={1}
+                  value={Math.round(crop.min[a] * 100)}
+                  onChange={(e) => setCropVal(a, 'min', Number(e.target.value) / 100)}
+                  className="w-full h-1 accent-dental-400"
+                />
+                <input
+                  type="range" min={0} max={100} step={1}
+                  value={Math.round(crop.max[a] * 100)}
+                  onChange={(e) => setCropVal(a, 'max', Number(e.target.value) / 100)}
+                  className="w-full h-1 accent-dental-400"
+                />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
