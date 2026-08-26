@@ -21,10 +21,8 @@ import { SCAN_DEFAULTS, VIEW_LABEL_KEYS, getImplantSystem, type LayoutMode, type
 
 const LAYOUTS: { id: LayoutMode; labelKey?: string; label?: string }[] = [
   { id: '1x1', label: '1×1' },
-  { id: '2x2', label: '2×2' },
-  { id: '1+3', label: '1+3' },
-  { id: 'OPG', label: 'Pan 1×2' },
-  { id: 'OPG2+1', labelKey: 'viewport.crossSection' },
+  { id: '1+3', labelKey: 'layout.view3d' },
+  { id: 'OPG2+1', labelKey: 'layout.panoramic' },
 ];
 
 const VIEW_MODES: ViewMode[] = ['AXIAL', 'SAGITTAL', 'CORONAL', '3D'];
@@ -70,6 +68,15 @@ function GearIcon() {
   );
 }
 
+function SparkleIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3l1.6 4.2L18 9l-4.4 1.8L12 15l-1.6-4.2L6 9l4.4-1.8L12 3z" />
+      <path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z" />
+    </svg>
+  );
+}
+
 function HelpIcon() {
   return (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -110,6 +117,16 @@ function ScanIcon() {
   );
 }
 
+function UsersIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
 function TopBarButton({
   title, active = false, onClick, children,
 }: {
@@ -126,7 +143,7 @@ function TopBarButton({
         w-8 h-8 flex items-center justify-center rounded transition-colors
         ${active
           ? 'bg-dental-600 text-white'
-          : 'text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700'}
+          : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'}
       `}
     >
       {children}
@@ -145,6 +162,8 @@ export function TopBar() {
   const langRef = useRef<HTMLDivElement>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+  const [newLoadOpen, setNewLoadOpen] = useState(false);
+  const newLoadRef = useRef<HTMLDivElement>(null);
   const planInputRef = useRef<HTMLInputElement>(null);
 
   const savePlan = () => {
@@ -285,6 +304,16 @@ export function TopBar() {
     return () => window.removeEventListener('mousedown', handler);
   }, [exportOpen]);
 
+  // Close the new-load dropdown on outside click
+  useEffect(() => {
+    if (!newLoadOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (newLoadRef.current && !newLoadRef.current.contains(e.target as Node)) setNewLoadOpen(false);
+    };
+    window.addEventListener('mousedown', handler);
+    return () => window.removeEventListener('mousedown', handler);
+  }, [newLoadOpen]);
+
   const exportCanvas = (selector: string, filename: string) => {
     const canvas = document.querySelector(selector) as HTMLCanvasElement | null;
     if (!canvas) return;
@@ -310,7 +339,7 @@ export function TopBar() {
   const current = LANGUAGES.find(l => l.id === lang)!;
 
   return (
-    <div className="flex items-center justify-between px-4 py-1.5 bg-white border-b border-gray-300 dark:bg-gray-900 dark:border-gray-700">
+    <div className="flex items-center justify-between px-4 py-1.5 bg-white/95 border-b border-slate-200 dark:bg-slate-900/95 dark:border-slate-800 backdrop-blur-sm">
       {guideBusy && (
         <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-3 bg-black/60 select-none">
           <div className="w-12 h-12 border-4 border-dental-400 border-t-transparent rounded-full animate-spin" />
@@ -319,10 +348,14 @@ export function TopBar() {
           </span>
         </div>
       )}
-      <div className="flex items-center gap-2 select-none">
+      <button
+        onClick={() => { if (state.study) dispatch({ type: 'RESET' }); }}
+        title={state.study ? t('topbar.newLoad') : t('app.title')}
+        className="flex items-center gap-2 select-none rounded px-1 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+      >
         <span className="text-base">🦷</span>
         <span className="text-sm font-semibold text-dental-600 dark:text-dental-400">{t('app.title')}</span>
-      </div>
+      </button>
 
       {/* Center: layout switcher (+ view modes in 1x1) */}
       {state.study && (
@@ -335,14 +368,14 @@ export function TopBar() {
                 px-2 py-1 text-xs rounded font-mono transition-colors
                 ${state.layoutMode === l.id
                   ? 'bg-dental-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}
+                  : 'bg-slate-100/70 text-slate-600 hover:bg-slate-200 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700'}
               `}
               title={t('toolbar.layout', { label: l.labelKey ? t(l.labelKey) : l.label! })}
             >
               {l.labelKey ? t(l.labelKey) : l.label}
             </button>
           ))}
-          {state.layoutMode === '1+3' && <LayoutConfigButton />}
+          {(state.layoutMode === '1+3' || state.layoutMode === 'OPG2+1') && <LayoutConfigButton />}
           {state.layoutMode === '1x1' && (
             <>
               <div className="w-px h-5 mx-1 bg-gray-300 dark:bg-gray-600" />
@@ -354,7 +387,7 @@ export function TopBar() {
                     px-2 py-1 text-xs rounded transition-colors
                     ${state.viewMode === v
                       ? 'bg-dental-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}
+                      : 'bg-slate-100/70 text-slate-600 hover:bg-slate-200 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700'}
                   `}
                   title={t(VIEW_LABEL_KEYS[v])}
                 >
@@ -367,17 +400,35 @@ export function TopBar() {
       )}
 
       <div className="flex items-center gap-1">
-        {/* Import scan mesh (STL / OBJ / PLY) */}
+        {/* New load dropdown: Import Scan (STL/OBJ/PLY) + Load Sample (soon) */}
         {state.study && (
-          <>
+          <div className="relative" ref={newLoadRef}>
             <button
-              onClick={() => scanInputRef.current?.click()}
-              title={t('scan.importTitle')}
-              className="h-8 px-2 flex items-center gap-1.5 rounded text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+              onClick={() => setNewLoadOpen(o => !o)}
+              title={t('topbar.newLoad')}
+              className="h-8 px-2 flex items-center gap-1.5 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white transition-colors"
             >
-              <ScanIcon />
-              <span className="text-xs">{t('scan.import')}</span>
+              <NewLoadIcon />
+              <span className="text-xs">{t('topbar.newLoad')}</span>
             </button>
+            {newLoadOpen && (
+              <div className="absolute right-0 top-9 z-50 w-44 bg-white/95 border border-slate-200 rounded-lg shadow-xl py-1 dark:bg-slate-800/95 dark:border-slate-700 backdrop-blur-sm">
+                <button
+                  onClick={() => { setNewLoadOpen(false); scanInputRef.current?.click(); }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+                >
+                  <ScanIcon />
+                  {t('scan.import')}
+                </button>
+                <button
+                  disabled
+                  title={t('newload.sampleSoon')}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left text-gray-400 dark:text-gray-600 cursor-not-allowed"
+                >
+                  {t('newload.loadSample')}
+                </button>
+              </div>
+            )}
             <input
               ref={scanInputRef}
               type="file"
@@ -389,19 +440,7 @@ export function TopBar() {
                 e.target.value = '';
               }}
             />
-          </>
-        )}
-
-        {/* New load (reset to landing) */}
-        {state.study && (
-          <button
-            onClick={() => dispatch({ type: 'RESET' })}
-            title={t('topbar.newLoad')}
-            className="h-8 px-2 flex items-center gap-1.5 rounded text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
-          >
-            <NewLoadIcon />
-            <span className="text-xs">{t('topbar.newLoad')}</span>
-          </button>
+          </div>
         )}
 
         {/* Export dropdown */}
@@ -410,24 +449,24 @@ export function TopBar() {
             <button
               onClick={() => setExportOpen(o => !o)}
               title={t('export.button')}
-              className="h-8 px-2 flex items-center gap-1.5 rounded text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+              className="h-8 px-2 flex items-center gap-1.5 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white transition-colors"
             >
               <DownloadIcon />
               <span className="text-xs">{t('export.button')}</span>
             </button>
             {exportOpen && (
-              <div className="absolute right-0 top-9 z-50 w-44 bg-white border border-gray-300 rounded-lg shadow-xl py-1 dark:bg-gray-800 dark:border-gray-600">
+              <div className="absolute right-0 top-9 z-50 w-44 bg-white/95 border border-slate-200 rounded-lg shadow-xl py-1 dark:bg-slate-800/95 dark:border-slate-700 backdrop-blur-sm">
                 <button
                   onClick={() => exportCanvas('[data-panoramic-canvas]', `panorama_${Date.now()}.png`)}
                   disabled={state.layoutMode !== 'OPG' && state.layoutMode !== 'OPG2+1'}
-                  className="w-full px-3 py-1.5 text-xs text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                  className="w-full px-3 py-1.5 text-xs text-left text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
                 >
                   {t('opg.savePng')}
                 </button>
                 <button
                   onClick={() => exportCanvas('[data-crosssection-canvas]', `crosssection_${Date.now()}.png`)}
                   disabled={state.layoutMode !== 'OPG2+1'}
-                  className="w-full px-3 py-1.5 text-xs text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                  className="w-full px-3 py-1.5 text-xs text-left text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
                 >
                   {t('opg.sectionPng')}
                 </button>
@@ -459,7 +498,7 @@ export function TopBar() {
                       lang,
                     });
                   }}
-                  className="w-full px-3 py-1.5 text-xs text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+                  className="w-full px-3 py-1.5 text-xs text-left text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
                 >
                   {t('export.savePdf')}
                 </button>
@@ -467,20 +506,20 @@ export function TopBar() {
                   onClick={exportGuide}
                   disabled={!hasGuided}
                   title={hasGuided ? undefined : t('guide.noImplants')}
-                  className="w-full px-3 py-1.5 text-xs text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                  className="w-full px-3 py-1.5 text-xs text-left text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
                 >
                   {t('guide.export')}
                 </button>
                 <div className="my-1 border-t border-gray-200 dark:border-gray-700" />
                 <button
                   onClick={savePlan}
-                  className="w-full px-3 py-1.5 text-xs text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+                  className="w-full px-3 py-1.5 text-xs text-left text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
                 >
                   {t('plan.save')}
                 </button>
                 <button
                   onClick={() => { setExportOpen(false); planInputRef.current?.click(); }}
-                  className="w-full px-3 py-1.5 text-xs text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+                  className="w-full px-3 py-1.5 text-xs text-left text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
                 >
                   {t('plan.load')}
                 </button>
@@ -505,13 +544,13 @@ export function TopBar() {
           <button
             onClick={() => setLangOpen(o => !o)}
             title={t('topbar.language')}
-            className="h-8 px-2 flex items-center gap-1.5 rounded text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+            className="h-8 px-2 flex items-center gap-1.5 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white transition-colors"
           >
             <GlobeIcon />
             <span className="text-xs font-mono uppercase">{current.id}</span>
           </button>
           {langOpen && (
-            <div className="absolute right-0 top-9 z-50 w-36 bg-white border border-gray-300 rounded-lg shadow-xl py-1 dark:bg-gray-800 dark:border-gray-600">
+            <div className="absolute right-0 top-9 z-50 w-36 bg-white/95 border border-slate-200 rounded-lg shadow-xl py-1 dark:bg-slate-800/95 dark:border-slate-700 backdrop-blur-sm">
               {LANGUAGES.map(l => (
                 <button
                   key={l.id}
@@ -520,7 +559,7 @@ export function TopBar() {
                     w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors
                     ${l.id === lang
                       ? 'text-dental-600 dark:text-dental-400 font-semibold'
-                      : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}
+                      : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'}
                   `}
                 >
                   <span>{l.flag}</span>
@@ -536,6 +575,17 @@ export function TopBar() {
           {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
         </TopBarButton>
 
+        {/* Patients */}
+        {state.study && (
+          <TopBarButton
+            title={t('topbar.patients')}
+            active={state.activePanel === 'patients'}
+            onClick={() => dispatch({ type: 'TOGGLE_PANEL', payload: 'patients' })}
+          >
+            <UsersIcon />
+          </TopBarButton>
+        )}
+
         {/* Settings */}
         <TopBarButton
           title={t('topbar.settings')}
@@ -543,6 +593,15 @@ export function TopBar() {
           onClick={() => dispatch({ type: 'TOGGLE_PANEL', payload: 'settings' })}
         >
           <GearIcon />
+        </TopBarButton>
+
+        {/* Intro tour */}
+        <TopBarButton
+          title={t('topbar.intro')}
+          active={state.activePanel === 'intro'}
+          onClick={() => dispatch({ type: 'TOGGLE_PANEL', payload: 'intro' })}
+        >
+          <SparkleIcon />
         </TopBarButton>
 
         {/* Help */}

@@ -57,18 +57,24 @@ export type ViewKey = 'AXIAL' | 'SAGITTAL' | 'CORONAL' | '3D';
 
 export const VIEW_KEYS: ViewKey[] = ['AXIAL', 'SAGITTAL', 'CORONAL', '3D'];
 
-/** Panel assignment for the 1+3 layout: one big slot + three small slots. */
+/** Panel assignment for the "3D view" layout: one big slot + three small slots. */
 export interface PanelConfig {
   big: ViewKey;
   small: [ViewKey, ViewKey, ViewKey];
   /** 'left' = big on the left, 3 stacked right; 'top' = big on top, 3 in a row below */
   arrangement: 'left' | 'top';
+  /** '1+3' = one big + three small; '2x2' = four equal panels */
+  grid: '1+3' | '2x2';
+  /** Panoramic view arrangement: 'top' = big panoramic on top, 3 below; 'left' = big left */
+  panoArrangement: 'left' | 'top';
 }
 
 export const DEFAULT_PANEL: PanelConfig = {
   big: '3D',
   small: ['AXIAL', 'SAGITTAL', 'CORONAL'],
   arrangement: 'left',
+  grid: '1+3',
+  panoArrangement: 'top',
 };
 
 export type ProjectionMode = 'AVG' | 'MIP';

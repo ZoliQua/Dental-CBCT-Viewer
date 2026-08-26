@@ -71,7 +71,7 @@ export function Slice3DActors({ axes }: { axes: Record<SliceAxis, boolean> }) {
     };
 
     const addAxis = (axis: SliceAxis, index: number) => {
-      const actor = buildSliceActor(vi!, axis, index, voi);
+      const actor = buildSliceActor(vi!, axis, index, voi, state.display.sliceOpacity);
       const uid = `slice3d:${axis}`;
       viewport.addActor({ uid, actor });
       addedRef.current.push(uid);
@@ -128,7 +128,7 @@ export function Slice3DActors({ axes }: { axes: Record<SliceAxis, boolean> }) {
         addedRef.current = [];
       }
     };
-  }, [axes, state.windowLevel, state.volumeId, state.layoutMode, state.panel]);
+  }, [axes, state.windowLevel, state.volumeId, state.layoutMode, state.panel, state.display.sliceOpacity]);
 
   return null;
 }

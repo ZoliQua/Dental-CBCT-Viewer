@@ -6,6 +6,7 @@ import { VIEW_LABEL_KEYS, type MPROrientation } from '@/types/dicom';
 import { useI18n } from '@/i18n/I18nContext';
 import { ViewportOverlay } from './ViewportOverlay';
 import { SliceIndicator } from './SliceIndicator';
+import { OrientationLabel } from './OrientationLabel';
 
 interface ViewportMPRProps {
   orientation: MPROrientation;
@@ -144,7 +145,7 @@ export function ViewportMPR({ orientation, volumeId }: ViewportMPRProps) {
   );
 
   return (
-    <div className="relative w-full h-full bg-black">
+    <div className="relative w-full h-full bg-black" data-vp={orientation} data-vp-title={t(VIEW_LABEL_KEYS[orientation])}>
       <div
         ref={elementRef}
         className="w-full h-full"
@@ -152,9 +153,7 @@ export function ViewportMPR({ orientation, volumeId }: ViewportMPRProps) {
       />
       <ViewportOverlay sliceIndex={sliceIndex} totalSlices={totalSlices} />
       {/* Orientation label */}
-      <div className="absolute top-1 left-1/2 -translate-x-1/2 text-yellow-400 text-xs font-mono font-bold pointer-events-none select-none [text-shadow:_0_1px_2px_rgb(0_0_0_/_80%)]">
-        {t(VIEW_LABEL_KEYS[orientation])}
-      </div>
+      <OrientationLabel text={t(VIEW_LABEL_KEYS[orientation])} />
       {totalSlices > 1 && (
         <SliceIndicator
           onJumpToSlice={handleJumpToSlice}

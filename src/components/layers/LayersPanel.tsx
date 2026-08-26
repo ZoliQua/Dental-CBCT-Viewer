@@ -1,13 +1,12 @@
 /**
- * Right-side slide-in layers panel. Lists every overlay layer (implants,
- * measurements, future additions) with 4 actions per row:
- * show/hide · edit (popup) · delete · rename.
+ * Layers list content (implants, anatomy, scans, measurements) with 4 actions
+ * per row: show/hide · edit (popup) · delete · rename. Rendered inside the
+ * unified LeftPanel; the edit popup itself lives in LeftPanel.
  */
 
 import { useState } from 'react';
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
-import { ImplantEditPopup } from '@/components/implant/ImplantEditPopup';
 import { setAnnotationVisible, removeAnnotationByUid } from '@/core/annotationLayer';
 import { removeScanPolyData } from '@/core/scanMesh';
 import { SCAN_TYPES, SCAN_DEFAULTS, type ScanType } from '@/types/dicom';
@@ -52,7 +51,7 @@ function PencilIcon() {
   );
 }
 
-function StackIcon() {
+export function StackIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polygon points="12 2 2 7 12 12 22 7 12 2" />
@@ -163,42 +162,14 @@ function LayerRow({ name, visible, active = false, onToggleVisible, onEdit, onDe
   );
 }
 
-// ── Panel ──────────────────────────────────────────────────────
+// ── Layers list content (rendered inside LeftPanel) ────────────
 
-export function LayersPanel() {
+export function LayersContent() {
   const { state, dispatch } = useViewer();
   const { t } = useI18n();
-  const editingId = state.editingImplantId;
-  const open = state.layersOpen;
 
   return (
-    <>
-      {/* Left rail (always visible) + expandable layers panel */}
-      <div className="absolute left-0 top-0 bottom-0 z-30 flex">
-        <button
-          onClick={() => dispatch({ type: 'TOGGLE_LAYERS' })}
-          title={t('layers.title')}
-          className={`
-            w-9 shrink-0 flex flex-col items-center gap-2 pt-3 border-r transition-colors
-            ${open
-              ? 'bg-dental-600 text-white border-dental-700'
-              : 'bg-white/95 text-gray-600 border-gray-300 hover:bg-gray-100 dark:bg-gray-800/95 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700'}
-          `}
-        >
-          <StackIcon />
-          <span className="text-[10px] tracking-wide select-none [writing-mode:vertical-rl] rotate-180">
-            {t('layers.title')}
-          </span>
-        </button>
-
-        <div
-          className={`
-            h-full bg-white border-r border-gray-300 shadow-xl overflow-hidden
-            dark:bg-gray-800 dark:border-gray-700 transition-all duration-200
-            ${open ? 'w-72' : 'w-0'}
-          `}
-        >
-          <div className="w-72 h-full overflow-y-auto p-3 space-y-1">
+    <div className="space-y-1">
           {/* Implant layers */}
           {state.implants.length > 0 && (
             <div className="text-[10px] uppercase tracking-wide text-gray-500 px-1 pt-1 select-none">
@@ -327,17 +298,6 @@ export function LayersPanel() {
               onRename={(name) => dispatch({ type: 'UPDATE_MEASUREMENT', payload: { ...m, name } })}
             />
           ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Edit popup (opened from a layer row or by double-clicking an implant) */}
-      {editingId && (
-        <ImplantEditPopup
-          implantId={editingId}
-          onClose={() => dispatch({ type: 'SET_EDITING_IMPLANT', payload: null })}
-        />
-      )}
-    </>
+    </div>
   );
 }

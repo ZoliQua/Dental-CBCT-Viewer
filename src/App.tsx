@@ -9,6 +9,8 @@ import { DisclaimerBanner } from '@/components/dicom/DisclaimerBanner';
 import { ViewerShell } from '@/components/layout/ViewerShell';
 import { TopBar } from '@/components/layout/TopBar';
 import { SettingsPanel } from '@/components/panels/SettingsPanel';
+import { PatientsPanel } from '@/components/panels/PatientsPanel';
+import { IntroTour } from '@/components/panels/IntroTour';
 import { HelpPanel } from '@/components/panels/HelpPanel';
 import type { ViewportTool } from '@/types/dicom';
 
@@ -99,6 +101,8 @@ function ViewerApp() {
       <TopBar />
       <div className="flex-1 overflow-hidden">{content}</div>
       <SettingsPanel />
+      <PatientsPanel />
+      <IntroTour />
       <HelpPanel />
       <DisclaimerBanner />
     </div>

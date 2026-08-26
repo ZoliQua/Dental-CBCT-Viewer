@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, type ReactNode, type Dispatch } from 'react';
 import type { DicomStudyInfo, ViewportTool, LayoutMode, ViewMode, ProjectionMode, ImplantData, MeasurementLayer, AnatomyMarker, AnatomyType, ScanMesh, GuideParams, PanelConfig } from '@/types/dicom';
-import { GUIDE_DEFAULTS, DEFAULT_PANEL } from '@/types/dicom';
+import { GUIDE_DEFAULTS, DEFAULT_PANEL, DEFAULT_IMPLANT_SYSTEM_ID } from '@/types/dicom';
 import type { PlanData } from '@/core/planIO';
 
 export interface ViewerState {
@@ -33,7 +33,7 @@ export interface ViewerState {
   /** Implant whose edit popup is open (null = closed) */
   editingImplantId: string | null;
   // Right-side slide-in panels (one open at a time)
-  activePanel: 'layers' | 'settings' | 'help' | null;
+  activePanel: 'layers' | 'settings' | 'help' | 'patients' | 'intro' | null;
   // Left layers rail expanded?
   layersOpen: boolean;
   // Shared window/level (applies to panoramic, cross-section and MPR)
@@ -46,12 +46,16 @@ export interface ViewerState {
   activeAnatomyId: string | null;
   // Drill-guide (surgical template) export parameters
   guide: GuideParams;
+  // Default implant system for newly placed implants
+  defaultSystemId: string;
   // Imported scan meshes (geometry lives in scanMesh registry, not in state)
   scans: ScanMesh[];
   // Active landmark registration session (null = not registering)
   registration: RegistrationSession | null;
   // Editable report header fields (shown in the PDF report)
   report: ReportFields;
+  // On-image display + overlay styling preferences
+  display: DisplayConfig;
   // Individual measurement layers (Cornerstone annotations + canvas drawings)
   measurements: MeasurementLayer[];
 }
@@ -59,9 +63,36 @@ export interface ViewerState {
 export interface ReportFields {
   patientName: string;
   patientAge: string;
+  patientBirthDate: string;
   quoteNumber: string;
   statusDescription: string;
 }
+
+/** On-image display + overlay styling preferences (Settings → General). */
+export interface DisplayConfig {
+  showName: boolean;
+  showBirth: boolean;
+  showDate: boolean;
+  showClinic: boolean;
+  /** Orientation label color (Axial/Sagittal/Coronal) */
+  labelColor: string;
+  /** Orientation label font size, px */
+  labelSize: number;
+  labelAlign: 'left' | 'center' | 'right';
+  /** 3D slice-plane opacity (0.2–1) */
+  sliceOpacity: number;
+}
+
+export const DISPLAY_DEFAULTS: DisplayConfig = {
+  showName: true,
+  showBirth: true,
+  showDate: true,
+  showClinic: true,
+  labelColor: '#fbbf24',
+  labelSize: 12,
+  labelAlign: 'center',
+  sliceOpacity: 0.7,
+};
 
 /** One landmark pair (scan point + corresponding CBCT point), world mm. */
 export interface RegPair {
@@ -102,13 +133,15 @@ type ViewerAction =
   | { type: 'SET_ACTIVE_IMPLANT'; payload: string | null }
   | { type: 'SET_IMPLANT_PLACEMENT_MODE'; payload: boolean }
   | { type: 'SET_EDITING_IMPLANT'; payload: string | null }
-  | { type: 'SET_ACTIVE_PANEL'; payload: 'layers' | 'settings' | 'help' | null }
-  | { type: 'TOGGLE_PANEL'; payload: 'layers' | 'settings' | 'help' }
+  | { type: 'SET_ACTIVE_PANEL'; payload: 'layers' | 'settings' | 'help' | 'patients' | 'intro' | null }
+  | { type: 'TOGGLE_PANEL'; payload: 'layers' | 'settings' | 'help' | 'patients' | 'intro' }
   | { type: 'TOGGLE_LAYERS' }
   | { type: 'SET_WINDOW_LEVEL'; payload: { wc: number; ww: number } }
   | { type: 'SET_SAFETY'; payload: Partial<{ marginMm: number; color: string; nerveMm: number; sinusMm: number; neighborMm: number }> }
   | { type: 'SET_GUIDE'; payload: Partial<GuideParams> }
+  | { type: 'SET_DEFAULT_SYSTEM'; payload: string }
   | { type: 'SET_REPORT'; payload: Partial<ReportFields> }
+  | { type: 'SET_DISPLAY'; payload: Partial<DisplayConfig> }
   | { type: 'ADD_ANATOMY'; payload: AnatomyMarker }
   | { type: 'UPDATE_ANATOMY'; payload: AnatomyMarker }
   | { type: 'REMOVE_ANATOMY'; payload: string }
@@ -156,12 +189,14 @@ const initialState: ViewerState = {
   windowLevel: { wc: 300, ww: 2500 },
   safety: { marginMm: 1, color: '#ff3c3c', nerveMm: 2, sinusMm: 1, neighborMm: 3 },
   guide: { ...GUIDE_DEFAULTS },
+  defaultSystemId: DEFAULT_IMPLANT_SYSTEM_ID,
   anatomy: [],
   anatomyDrawMode: null,
   activeAnatomyId: null,
   scans: [],
   registration: null,
-  report: { patientName: '', patientAge: '', quoteNumber: '', statusDescription: '' },
+  report: { patientName: 'John Doe', patientAge: '', patientBirthDate: '1980-01-01', quoteNumber: '0001', statusDescription: 'healthy' },
+  display: DISPLAY_DEFAULTS,
   measurements: [],
 };
 
@@ -240,6 +275,8 @@ function viewerReducer(state: ViewerState, action: ViewerAction): ViewerState {
       return { ...state, safety: { ...state.safety, ...action.payload } };
     case 'SET_GUIDE':
       return { ...state, guide: { ...state.guide, ...action.payload } };
+    case 'SET_DEFAULT_SYSTEM':
+      return { ...state, defaultSystemId: action.payload };
     case 'ADD_ANATOMY':
       return { ...state, anatomy: [...state.anatomy, action.payload], activeAnatomyId: action.payload.id };
     case 'UPDATE_ANATOMY':
@@ -296,6 +333,8 @@ function viewerReducer(state: ViewerState, action: ViewerAction): ViewerState {
       };
     case 'SET_REPORT':
       return { ...state, report: { ...state.report, ...action.payload } };
+    case 'SET_DISPLAY':
+      return { ...state, display: { ...state.display, ...action.payload } };
     case 'ADD_MEASUREMENT':
       return { ...state, measurements: [...state.measurements, action.payload] };
     case 'UPDATE_MEASUREMENT':

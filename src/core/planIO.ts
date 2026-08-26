@@ -8,7 +8,8 @@
 
 import type { ImplantData, AnatomyMarker, MeasurementLayer, ProjectionMode, GuideParams } from '@/types/dicom';
 import { GUIDE_DEFAULTS } from '@/types/dicom';
-import type { ReportFields } from '@/context/ViewerContext';
+import type { ReportFields, DisplayConfig } from '@/context/ViewerContext';
+import { DISPLAY_DEFAULTS } from '@/context/ViewerContext';
 
 export const PLAN_VERSION = 1;
 
@@ -27,6 +28,7 @@ export interface PlanData {
   guide: GuideParams;
   windowLevel: { wc: number; ww: number };
   report: ReportFields;
+  display: DisplayConfig;
 }
 
 export interface PlanFile extends PlanData {
@@ -52,6 +54,7 @@ export function extractPlan(s: PlanData): PlanData {
     guide: s.guide,
     windowLevel: s.windowLevel,
     report: s.report,
+    display: s.display,
   };
 }
 
@@ -64,6 +67,7 @@ export function serializePlan(
 
 const num = (v: unknown, fallback: number): number => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
 const str = (v: unknown, fallback: string): string => (typeof v === 'string' ? v : fallback);
+const bool = (v: unknown, fallback: boolean): boolean => (typeof v === 'boolean' ? v : fallback);
 
 /** Validate + coerce a parsed JSON object into PlanData (best-effort). */
 export function planFromObject(obj: any): PlanData | null {
@@ -72,6 +76,7 @@ export function planFromObject(obj: any): PlanData | null {
   const g = obj.guide ?? {};
   const wl = obj.windowLevel ?? {};
   const r = obj.report ?? {};
+  const d2 = obj.display ?? {};
   return {
     implants: Array.isArray(obj.implants) ? obj.implants : [],
     anatomy: Array.isArray(obj.anatomy) ? obj.anatomy : [],
@@ -100,8 +105,19 @@ export function planFromObject(obj: any): PlanData | null {
     report: {
       patientName: str(r.patientName, ''),
       patientAge: str(r.patientAge, ''),
+      patientBirthDate: str(r.patientBirthDate, ''),
       quoteNumber: str(r.quoteNumber, ''),
       statusDescription: str(r.statusDescription, ''),
+    },
+    display: {
+      showName: bool(d2.showName, DISPLAY_DEFAULTS.showName),
+      showBirth: bool(d2.showBirth, DISPLAY_DEFAULTS.showBirth),
+      showDate: bool(d2.showDate, DISPLAY_DEFAULTS.showDate),
+      showClinic: bool(d2.showClinic, DISPLAY_DEFAULTS.showClinic),
+      labelColor: str(d2.labelColor, DISPLAY_DEFAULTS.labelColor),
+      labelSize: num(d2.labelSize, DISPLAY_DEFAULTS.labelSize),
+      labelAlign: d2.labelAlign === 'left' || d2.labelAlign === 'right' ? d2.labelAlign : 'center',
+      sliceOpacity: num(d2.sliceOpacity, DISPLAY_DEFAULTS.sliceOpacity),
     },
   };
 }

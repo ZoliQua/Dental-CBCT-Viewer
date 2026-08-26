@@ -3,6 +3,7 @@ import { getRenderingEngine, Enums } from '@cornerstonejs/core';
 import { useViewer } from '@/context/ViewerContext';
 import { CanvasMeasurementOverlay } from '@/components/measurements/CanvasMeasurementOverlay';
 import { useI18n } from '@/i18n/I18nContext';
+import { OrientationLabel } from './OrientationLabel';
 import { generatePanoramic, type CPRResult } from '@/core/cprEngine';
 import { RENDERING_ENGINE_ID, VP_AXIAL } from '@/core/constants';
 import { ImplantShape } from '@/components/implant/ImplantShape';
@@ -700,6 +701,8 @@ export function ViewportPanoramic({ volumeId, showCrossSectionLine = false }: Vi
     <div
       ref={containerRef}
       data-panoramic-view
+      data-vp="PANORAMA"
+      data-vp-title={t('viewport.panorama')}
       className="relative w-full h-full bg-black overflow-hidden select-none"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -791,9 +794,7 @@ export function ViewportPanoramic({ volumeId, showCrossSectionLine = false }: Vi
       {renderImplants()}
 
       {/* Label */}
-      <div className="absolute top-1 left-1/2 -translate-x-1/2 text-yellow-400 text-xs font-mono font-bold pointer-events-none select-none [text-shadow:_0_1px_2px_rgb(0_0_0_/_80%)]">
-        {t('viewport.panorama')}
-      </div>
+      <OrientationLabel text={t('viewport.panorama')} />
 
       {/* W/L info */}
       <div className="absolute bottom-1 left-2 text-gray-400 text-[10px] font-mono pointer-events-none select-none [text-shadow:_0_1px_2px_rgb(0_0_0_/_80%)]">

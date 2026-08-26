@@ -9,6 +9,7 @@ import { Implant3DActors } from './Implant3DActors';
 import { ScanActors } from './ScanActors';
 import { Slice3DActors } from './Slice3DActors';
 import { CropController } from './CropController';
+import { OrientationLabel } from './OrientationLabel';
 import { SLICE_AXES, type SliceAxis } from '@/core/slice3D';
 import { NO_CROP, type CropBox } from '@/core/cropBox';
 import type { Implant3DLayers } from '@/core/implant3D';
@@ -31,6 +32,8 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
   const [sliceAxes, setSliceAxes] = useState<Record<SliceAxis, boolean>>({ AXIAL: false, SAGITTAL: false, CORONAL: false });
   const [cropEnabled, setCropEnabled] = useState(false);
   const [crop, setCrop] = useState<CropBox>(NO_CROP);
+  const [presetOpen, setPresetOpen] = useState(false);
+  const [cropOpen, setCropOpen] = useState(false);
 
   const setCropVal = (axis: number, which: 'min' | 'max', v: number) => {
     setCrop((c) => {
@@ -158,7 +161,7 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
   );
 
   return (
-    <div className="relative w-full h-full bg-black">
+    <div className="relative w-full h-full bg-black" data-vp="3D" data-vp-title="3D">
       <div
         ref={elementRef}
         className="w-full h-full"
@@ -174,19 +177,17 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
       {ready && <CropController crop={crop} enabled={cropEnabled} />}
 
       {/* 3D label */}
-      <div className="absolute top-1 left-1/2 -translate-x-1/2 text-yellow-400 text-xs font-mono font-bold pointer-events-none select-none [text-shadow:_0_1px_2px_rgb(0_0_0_/_80%)]">
-        3D
-      </div>
+      <OrientationLabel text="3D" />
 
-      {/* 3D implant layer toggles */}
+      {/* 3D implant layer toggles (top-left, translucent) */}
       {state.implants.length > 0 && (
-        <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 bg-gray-900/70 rounded p-1.5">
+        <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 rounded-lg bg-slate-900/70 backdrop-blur-sm border border-slate-700/60 p-1.5">
           {([
             ['implant', t('view3d.implant')],
             ['sleeve', t('view3d.sleeve')],
             ['axis', t('view3d.axis')],
           ] as [keyof Implant3DLayers, string][]).map(([key, label]) => (
-            <label key={key} className="flex items-center gap-1.5 text-[10px] text-gray-200 cursor-pointer select-none">
+            <label key={key} className="flex items-center gap-1.5 text-[10px] text-slate-200 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={layers3D[key]}
@@ -199,92 +200,106 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
         </div>
       )}
 
-      {/* 3D slice-plane toggles + crop box (top-right column) */}
+      {/* Unified bottom control bar: preset · slice planes · crop · slab */}
       {state.volumeId && (
-        <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 items-end">
-          <div className="flex flex-col gap-1 bg-gray-900/70 rounded p-1.5">
-            <span className="text-[10px] font-semibold text-gray-300 select-none">{t('view3d.slices')}</span>
-            {SLICE_AXES.map((axis) => (
-              <label key={axis} className="flex items-center gap-1.5 text-[10px] text-gray-200 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={sliceAxes[axis]}
-                  onChange={(e) => setSliceAxes((p) => ({ ...p, [axis]: e.target.checked }))}
-                  className="accent-dental-400 w-3 h-3"
-                />
-                {t(`view.${axis.toLowerCase()}`)}
-              </label>
-            ))}
-          </div>
-
-          <div className="flex flex-col gap-1 bg-gray-900/70 rounded p-1.5 w-32">
-            <label className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-300 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={cropEnabled}
-                onChange={(e) => setCropEnabled(e.target.checked)}
-                className="accent-dental-400 w-3 h-3"
-              />
-              {t('view3d.crop')}
-            </label>
-            {cropEnabled && ['X', 'Y', 'Z'].map((label, a) => (
-              <div key={label} className="flex items-center gap-1">
-                <span className="text-[10px] text-gray-400 w-2 select-none">{label}</span>
-                <input
-                  type="range" min={0} max={100} step={1}
-                  value={Math.round(crop.min[a] * 100)}
-                  onChange={(e) => setCropVal(a, 'min', Number(e.target.value) / 100)}
-                  className="w-full h-1 accent-dental-400"
-                />
-                <input
-                  type="range" min={0} max={100} step={1}
-                  value={Math.round(crop.max[a] * 100)}
-                  onChange={(e) => setCropVal(a, 'max', Number(e.target.value) / 100)}
-                  className="w-full h-1 accent-dental-400"
-                />
+        <div className={`absolute ${state.layoutMode === '1x1' ? 'bottom-14' : 'bottom-2'} left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 rounded-lg bg-slate-900/70 backdrop-blur-sm border border-slate-700/60 px-2 py-1.5 shadow-lg`}>
+          {/* Preset popup */}
+          <div className="relative">
+            <button
+              onClick={() => { setPresetOpen((o) => !o); setCropOpen(false); }}
+              title={t('view3d.preset')}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] text-slate-200 hover:bg-slate-700/60 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+                <path d="M12 2 21 7v10l-9 5-9-5V7l9-5z" /><path d="M3 7l9 5 9-5M12 12v10" />
+              </svg>
+              <span>{t(VOLUME_3D_PRESETS.find((p) => p.id === activePreset)?.labelKey ?? 'preset3d.bone')}</span>
+            </button>
+            {presetOpen && (
+              <div className="absolute bottom-9 left-0 w-36 rounded-lg bg-slate-900/95 border border-slate-700 shadow-xl p-1 z-20">
+                {VOLUME_3D_PRESETS.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => { handlePresetChange(p.id); setPresetOpen(false); }}
+                    className={`w-full text-left px-2 py-1 text-[11px] rounded transition-colors ${
+                      activePreset === p.id ? 'bg-dental-600 text-white' : 'text-slate-300 hover:bg-slate-700/60'
+                    }`}
+                  >
+                    {t(p.labelKey)}
+                  </button>
+                ))}
               </div>
+            )}
+          </div>
+
+          <span className="w-px h-4 bg-slate-700/60" />
+
+          {/* Slice-plane toggles */}
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-slate-400 select-none">{t('view3d.slices')}</span>
+            {SLICE_AXES.map((axis) => (
+              <button
+                key={axis}
+                onClick={() => setSliceAxes((p) => ({ ...p, [axis]: !p[axis] }))}
+                title={t(`view.${axis.toLowerCase()}`)}
+                className={`px-1.5 py-1 rounded text-[10px] font-semibold transition-colors ${
+                  sliceAxes[axis] ? 'bg-dental-600 text-white' : 'bg-slate-800/60 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                {axis[0]}
+              </button>
             ))}
           </div>
-        </div>
-      )}
 
-      {/* Preset selector */}
-      <div className="absolute bottom-2 right-2 flex flex-col gap-1 z-10">
-        {VOLUME_3D_PRESETS.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => handlePresetChange(p.id)}
-            className={`
-              px-2 py-1 text-[10px] rounded transition-colors text-left
-              ${
-                activePreset === p.id
-                  ? 'bg-dental-600 text-white'
-                  : 'bg-gray-800/80 text-gray-300 hover:bg-gray-700/80'
-              }
-            `}
-          >
-            {t(p.labelKey)}
-          </button>
-        ))}
-      </div>
+          <span className="w-px h-4 bg-slate-700/60" />
 
-      {/* Slab thickness slider */}
-      {state.volumeId && (
-        <div className="absolute left-2 bottom-2 z-10 flex items-center gap-2">
-          <label className="text-[10px] text-gray-400 font-mono select-none">Vágósík</label>
-          <input
-            type="range"
-            min={0}
-            max={200}
-            step={5}
-            value={slabThickness}
-            onChange={(e) => handleSlabChange(Number(e.target.value))}
-            className="w-20 h-1 accent-dental-400"
-            title={slabThickness === 0 ? 'Ki' : `${slabThickness} mm`}
-          />
-          <span className="text-[10px] text-gray-400 font-mono w-8">
-            {slabThickness === 0 ? 'Ki' : `${slabThickness}`}
-          </span>
+          {/* Crop popover */}
+          <div className="relative">
+            <button
+              onClick={() => { setCropOpen((o) => !o); setPresetOpen(false); }}
+              title={t('view3d.crop')}
+              className={`px-2 py-1 rounded-md text-[11px] transition-colors ${
+                cropEnabled ? 'bg-dental-600 text-white' : 'text-slate-200 hover:bg-slate-700/60'
+              }`}
+            >
+              {t('view3d.crop')}
+            </button>
+            {cropOpen && (
+              <div className="absolute bottom-9 left-0 w-44 rounded-lg bg-slate-900/95 border border-slate-700 shadow-xl p-2 space-y-1.5 z-20">
+                <label className="flex items-center gap-1.5 text-[11px] text-slate-200 cursor-pointer select-none">
+                  <input type="checkbox" checked={cropEnabled} onChange={(e) => setCropEnabled(e.target.checked)} className="accent-dental-400 w-3 h-3" />
+                  {t('view3d.crop')}
+                </label>
+                {['X', 'Y', 'Z'].map((label, a) => (
+                  <div key={label} className="flex items-center gap-1">
+                    <span className="text-[10px] text-slate-400 w-2 select-none">{label}</span>
+                    <input type="range" min={0} max={100} step={1} disabled={!cropEnabled}
+                      value={Math.round(crop.min[a] * 100)}
+                      onChange={(e) => setCropVal(a, 'min', Number(e.target.value) / 100)}
+                      className="w-full h-1 accent-dental-400 disabled:opacity-40" />
+                    <input type="range" min={0} max={100} step={1} disabled={!cropEnabled}
+                      value={Math.round(crop.max[a] * 100)}
+                      onChange={(e) => setCropVal(a, 'max', Number(e.target.value) / 100)}
+                      className="w-full h-1 accent-dental-400 disabled:opacity-40" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <span className="w-px h-4 bg-slate-700/60" />
+
+          {/* Slab thickness */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-slate-400 select-none">{t('view3d.slab')}</span>
+            <input
+              type="range" min={0} max={200} step={5}
+              value={slabThickness}
+              onChange={(e) => handleSlabChange(Number(e.target.value))}
+              className="w-16 h-1 accent-dental-400"
+              title={slabThickness === 0 ? t('common.off') : `${slabThickness} mm`}
+            />
+          </div>
         </div>
       )}
     </div>

@@ -100,7 +100,7 @@ function planeCorners(vi: VolumeInfo, axis: SliceAxis, index: number) {
 }
 
 /** Build a textured plane-mesh actor for one orthogonal slice at `index`. */
-export function buildSliceActor(vi: VolumeInfo, axis: SliceAxis, index: number, voi: VOI): any {
+export function buildSliceActor(vi: VolumeInfo, axis: SliceAxis, index: number, voi: VOI, opacity = SLICE_OPACITY): any {
   const c = planeCorners(vi, axis, index);
   const plane = vtkPlaneSource.newInstance({ xResolution: 1, yResolution: 1 });
   plane.setOrigin(c.origin as any);
@@ -121,6 +121,6 @@ export function buildSliceActor(vi: VolumeInfo, axis: SliceAxis, index: number, 
   const prop = actor.getProperty();
   prop.setAmbient(1);   // show raw texture colors, unaffected by scene lighting
   prop.setDiffuse(0);
-  prop.setOpacity(SLICE_OPACITY); // semi-transparent so the volume shows through
+  prop.setOpacity(opacity); // semi-transparent so the volume shows through
   return actor;
 }

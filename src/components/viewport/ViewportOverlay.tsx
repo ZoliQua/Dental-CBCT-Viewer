@@ -18,20 +18,25 @@ export function ViewportOverlay({ sliceIndex, totalSlices }: ViewportOverlayProp
   if (!study) return null;
 
   const activeSeries = study.series.find((s) => s.seriesInstanceUID === activeSeriesUID);
+  const disp = state.display;
 
   return (
     <>
-      {/* Top-left: Patient info */}
-      <div className="absolute top-2 left-2 text-white text-xs font-mono pointer-events-none select-none [text-shadow:_0_1px_2px_rgb(0_0_0_/_80%)]">
-        <div className="font-semibold">{study.patientName}</div>
-        {study.patientBirthDate && <div>{formatDicomDate(study.patientBirthDate)}</div>}
-      </div>
+      {/* Top-left: Patient info (toggle in Settings → General) */}
+      {(disp.showName || disp.showBirth) && (
+        <div className="absolute top-2 left-2 text-white text-xs font-mono pointer-events-none select-none [text-shadow:_0_1px_2px_rgb(0_0_0_/_80%)]">
+          {disp.showName && <div className="font-semibold">{study.patientName}</div>}
+          {disp.showBirth && study.patientBirthDate && <div>{formatDicomDate(study.patientBirthDate)}</div>}
+        </div>
+      )}
 
       {/* Top-right: Study info */}
-      <div className="absolute top-2 right-2 text-white text-xs font-mono text-right pointer-events-none select-none [text-shadow:_0_1px_2px_rgb(0_0_0_/_80%)]">
-        <div>{formatDicomDate(study.studyDate)}</div>
-        {study.institution && <div>{study.institution}</div>}
-      </div>
+      {(disp.showDate || disp.showClinic) && (
+        <div className="absolute top-2 right-2 text-white text-xs font-mono text-right pointer-events-none select-none [text-shadow:_0_1px_2px_rgb(0_0_0_/_80%)]">
+          {disp.showDate && <div>{formatDicomDate(study.studyDate)}</div>}
+          {disp.showClinic && study.institution && <div>{study.institution}</div>}
+        </div>
+      )}
 
       {/* Bottom-left: Series info */}
       {activeSeries && (

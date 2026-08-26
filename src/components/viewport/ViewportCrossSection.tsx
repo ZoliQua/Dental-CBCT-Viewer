@@ -3,6 +3,7 @@ import { getRenderingEngine, Enums } from '@cornerstonejs/core';
 import { useViewer } from '@/context/ViewerContext';
 import { CanvasMeasurementOverlay } from '@/components/measurements/CanvasMeasurementOverlay';
 import { useI18n } from '@/i18n/I18nContext';
+import { OrientationLabel } from './OrientationLabel';
 import { generateCrossSection, type CrossSectionResult } from '@/core/cprEngine';
 import { RENDERING_ENGINE_ID, VP_AXIAL } from '@/core/constants';
 import { ImplantOverlay } from '@/components/implant/ImplantOverlay';
@@ -279,6 +280,8 @@ export function ViewportCrossSection({ volumeId }: ViewportCrossSectionProps) {
     <div
       ref={containerRef}
       data-crosssection-view
+      data-vp="CROSS"
+      data-vp-title={t('viewport.crossSection')}
       className="relative w-full h-full bg-black overflow-hidden select-none"
       style={state.implantPlacementMode ? { cursor: 'crosshair' } : undefined}
       onPointerDown={handlePointerDown}
@@ -325,9 +328,7 @@ export function ViewportCrossSection({ volumeId }: ViewportCrossSectionProps) {
       )}
 
       {/* Label */}
-      <div className="absolute top-1 left-1/2 -translate-x-1/2 text-yellow-400 text-xs font-mono font-bold pointer-events-none select-none [text-shadow:_0_1px_2px_rgb(0_0_0_/_80%)]">
-        {t('viewport.crossSection')}
-      </div>
+      <OrientationLabel text={t('viewport.crossSection')} />
 
       {/* Tilt info */}
       {state.crossSectionTiltDeg !== 0 && (

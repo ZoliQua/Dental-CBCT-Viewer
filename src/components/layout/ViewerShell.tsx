@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { RenderingEngine, eventTarget } from '@cornerstonejs/core';
 import { Enums as csToolsEnums } from '@cornerstonejs/tools';
-import { Toolbar } from './Toolbar';
+import { LeftPanel } from './LeftPanel';
 import { SeriesList } from '@/components/dicom/SeriesList';
 import { ViewportGrid } from '@/components/viewport/ViewportGrid';
-import { LayersPanel } from '@/components/layers/LayersPanel';
 import { RegistrationPanel } from '@/components/registration/RegistrationPanel';
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
@@ -135,25 +134,22 @@ export function ViewerShell() {
   ]);
 
   return (
-    <div className="flex flex-col h-full w-full bg-gray-100 dark:bg-gray-900">
-      <Toolbar />
-      <div className="flex flex-1 overflow-hidden">
-        {hasSeries && (
-          <div className="w-56 bg-white border-r border-gray-300 dark:bg-gray-800 dark:border-gray-700 overflow-y-auto">
-            <SeriesList />
+    <div className="flex h-full w-full overflow-hidden bg-gray-100 dark:bg-gray-900">
+      <LeftPanel />
+      {hasSeries && (
+        <div className="w-56 bg-white border-r border-gray-300 dark:bg-gray-800 dark:border-gray-700 overflow-y-auto">
+          <SeriesList />
+        </div>
+      )}
+      <div className="flex-1 relative overflow-hidden">
+        {engineReady ? (
+          <ViewportGrid />
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <div className="w-8 h-8 border-4 border-dental-400 border-t-transparent rounded-full animate-spin" />
           </div>
         )}
-        <div className="flex-1 relative overflow-hidden">
-          {engineReady ? (
-            <ViewportGrid />
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <div className="w-8 h-8 border-4 border-dental-400 border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
-          <LayersPanel />
-          <RegistrationPanel />
-        </div>
+        <RegistrationPanel />
       </div>
     </div>
   );

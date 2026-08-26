@@ -87,6 +87,8 @@ interface PdfExportOptions {
 const PAGE_W = 210;
 const PAGE_H = 297;
 const MARGIN = 14;
+const APP_VERSION = '0.1.0';
+const APP_URL = 'github.com/ZoliQua/React-Dental-CBCT-Viewer';
 
 export async function exportViewPdf({ t, study, implants, measurements, report, anatomy, archCurve, thresholds, boneQuality, lang }: PdfExportOptions): Promise<void> {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -117,6 +119,10 @@ export async function exportViewPdf({ t, study, implants, measurements, report, 
   const patientName = report?.patientName?.trim() || study?.patientName || '-';
   doc.text(`${t('pdf.patient')}: ${patientName}${study?.patientId ? ` (${study.patientId})` : ''}`, MARGIN, y);
   y += 5;
+  if (report?.patientBirthDate?.trim()) {
+    doc.text(`${t('report.birthDate')}: ${report.patientBirthDate.trim()}`, MARGIN, y);
+    y += 5;
+  }
   if (report?.patientAge?.trim()) {
     doc.text(`${t('pdf.age')}: ${report.patientAge.trim()}`, MARGIN, y);
     y += 5;
@@ -136,35 +142,41 @@ export async function exportViewPdf({ t, study, implants, measurements, report, 
   }
   y += 3;
 
-  // View captures — snapshot the whole view container (image + overlays) so
-  // the planned implants, sleeves and measurements appear on the picture, not
-  // just the bare generated image. Falls back to the raw canvas on failure.
-  const addView = async (viewSelector: string, canvasSelector: string, title: string) => {
-    const view = document.querySelector(viewSelector) as HTMLElement | null;
+  // Capture every viewport currently on screen (layout-agnostic) into a grid,
+  // so the 3D view exports all four panes, the panoramic view its four, etc.
+  const viewEls = Array.from(document.querySelectorAll('[data-vp]')) as HTMLElement[];
+  const shots: { title: string; canvas: HTMLCanvasElement }[] = [];
+  for (const v of viewEls) {
     let shot: HTMLCanvasElement | null = null;
-    if (view) {
-      try {
-        shot = await captureView(view);
-      } catch {
-        shot = null;
-      }
+    try { shot = await captureView(v); } catch { shot = null; }
+    if (shot && shot.width && shot.height) {
+      shots.push({ title: v.getAttribute('data-vp-title') || v.getAttribute('data-vp') || '', canvas: shot });
     }
-    if (!shot) {
-      shot = document.querySelector(canvasSelector) as HTMLCanvasElement | null;
+  }
+  if (shots.length > 0) {
+    pageBreak(8);
+    doc.setFontSize(12);
+    doc.text(t('pdf.viewsTitle'), MARGIN, y);
+    y += 5;
+    const cols = shots.length === 1 ? 1 : 2;
+    const gap = 4;
+    const cellW = (PAGE_W - 2 * MARGIN - (cols - 1) * gap) / cols;
+    let col = 0;
+    let rowH = 0;
+    let rowTop = y;
+    for (const s of shots) {
+      const cellH = (cellW * s.canvas.height) / s.canvas.width;
+      if (col === 0) { pageBreak(cellH + 8); rowTop = y; }
+      const x = MARGIN + col * (cellW + gap);
+      doc.setFontSize(9);
+      doc.text(s.title, x, rowTop);
+      doc.addImage(s.canvas.toDataURL('image/png'), 'PNG', x, rowTop + 2, cellW, cellH);
+      rowH = Math.max(rowH, cellH);
+      col++;
+      if (col >= cols) { col = 0; y = rowTop + rowH + 8; rowH = 0; }
     }
-    if (!shot || shot.width === 0 || shot.height === 0) return;
-    const wMm = PAGE_W - 2 * MARGIN;
-    const hMm = (wMm * shot.height) / shot.width;
-    pageBreak(hMm + 10);
-    doc.setFontSize(11);
-    doc.text(title, MARGIN, y);
-    y += 4;
-    doc.addImage(shot.toDataURL('image/png'), 'PNG', MARGIN, y, wMm, hMm);
-    y += hMm + 6;
-  };
-
-  await addView('[data-panoramic-view]', '[data-panoramic-canvas]', t('viewport.panorama'));
-  await addView('[data-crosssection-view]', '[data-crosssection-canvas]', t('viewport.crossSection'));
+    if (col !== 0) { y = rowTop + rowH + 8; }
+  }
 
   // Implants
   if (implants.length > 0) {
@@ -251,6 +263,29 @@ export async function exportViewPdf({ t, study, implants, measurements, report, 
       doc.text(line, MARGIN + 2, y);
       y += 4.5 * line.length;
     }
+  }
+
+  // Disclaimer block (research-use-only) at the end of the content
+  pageBreak(20);
+  y += 2;
+  doc.setDrawColor(200);
+  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+  y += 4;
+  doc.setFontSize(7.5);
+  doc.setTextColor(120);
+  const discLines = doc.splitTextToSize(t('disclaimer.text'), PAGE_W - 2 * MARGIN);
+  doc.text(discLines, MARGIN, y);
+  doc.setTextColor(0);
+
+  // Footer on every page: app name, version and contact URL
+  const pages = doc.getNumberOfPages();
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7);
+    doc.setTextColor(140);
+    doc.text(`${t('app.title')} v${APP_VERSION} · ${APP_URL}`, MARGIN, PAGE_H - 6);
+    doc.text(`${i} / ${pages}`, PAGE_W - MARGIN, PAGE_H - 6, { align: 'right' });
+    doc.setTextColor(0);
   }
 
   doc.save(`dental_report_${new Date().toISOString().slice(0, 10)}.pdf`);

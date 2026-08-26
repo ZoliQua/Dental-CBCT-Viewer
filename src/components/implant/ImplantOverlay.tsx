@@ -183,9 +183,10 @@ export function ImplantOverlay({ containerRef, canvasRef, widthMm, zMin, zMax }:
       length: 10.0,
       angleBLDeg: 0,
       angleMDDeg: 0,
+      systemId: state.defaultSystemId,
     };
     dispatch({ type: 'ADD_IMPLANT', payload: implant });
-  }, [state.implantPlacementMode, state.implants.length, pixelToMm, worldFromImage, dispatch, t]);
+  }, [state.implantPlacementMode, state.implants.length, state.defaultSystemId, pixelToMm, worldFromImage, dispatch, t]);
 
   // ── Drag to move (preserves out-of-plane offset) ────────────
 
