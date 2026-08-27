@@ -9,12 +9,13 @@ import { useViewer, type ReportFields, type DisplayConfig } from '@/context/View
 import { useI18n } from '@/i18n/I18nContext';
 import { useTheme } from '@/context/ThemeContext';
 import { WindowLevelPresets } from '@/components/tools/WindowLevel';
-import { IMPLANT_SYSTEMS, type ProjectionMode } from '@/types/dicom';
+import { IMPLANT_SYSTEMS, VOLUME_3D_PRESETS, type ProjectionMode } from '@/types/dicom';
+import { XRAY_PRESET_ID } from '@/core/volume3DPreset';
 
 const FIELD =
   'w-full bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600 text-xs rounded-md px-2 py-1.5 border outline-none focus:border-dental-500';
 
-type Tab = 'general' | 'patient' | 'panoramic' | 'implant' | 'guide';
+type Tab = 'general' | 'patient' | 'threed' | 'panoramic' | 'implant' | 'guide';
 
 function Help({ children }: { children: React.ReactNode }) {
   return <p className="text-[11px] leading-snug text-slate-500 dark:text-slate-400">{children}</p>;
@@ -55,6 +56,7 @@ export function SettingsPanel() {
   const TABS: { id: Tab; label: string }[] = [
     { id: 'general', label: t('settings.tab.general') },
     { id: 'patient', label: t('settings.tab.patient') },
+    { id: 'threed', label: t('settings.tab.threed') },
     { id: 'panoramic', label: t('settings.tab.panoramic') },
     { id: 'implant', label: t('settings.tab.implant') },
     { id: 'guide', label: t('settings.guide') },
@@ -120,11 +122,23 @@ export function SettingsPanel() {
                     ['showBirth', t('report.birthDate')],
                     ['showDate', t('settings.studyDate')],
                     ['showClinic', t('settings.clinic')],
+                    ['showSeries', t('settings.seriesName')],
+                    ['showModality', t('settings.modality')],
+                    ['showSlice', t('settings.sliceNumber')],
                   ] as [keyof DisplayConfig, string][]).map(([key, label]) => (
                     <label key={key} className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
                       <input type="checkbox" checked={d[key] as boolean} onChange={(e) => setDisplay({ [key]: e.target.checked })} className="accent-dental-500 w-3.5 h-3.5" />
                       {label}
                     </label>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-[11px] text-slate-500">{t('settings.scope')}</span>
+                  {(['main', 'all'] as const).map((sc) => (
+                    <button key={sc} onClick={() => setDisplay({ scope: sc })}
+                      className={`px-2 py-1 text-[11px] rounded-md transition-colors ${d.scope === sc ? 'bg-dental-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>
+                      {t(`settings.scope.${sc}`)}
+                    </button>
                   ))}
                 </div>
               </Section>
@@ -151,17 +165,28 @@ export function SettingsPanel() {
                 </div>
               </Section>
 
-              <Section title={t('settings.slice3dOpacity')}>
-                <Help>{t('settings.help.sliceOpacity')}</Help>
-                <div className="flex items-center gap-2">
-                  <input type="range" min={0.2} max={1} step={0.05} value={d.sliceOpacity} onChange={(e) => setDisplay({ sliceOpacity: Number(e.target.value) })} className="flex-1 h-1 accent-dental-400" />
-                  <span className="text-xs font-mono text-slate-600 dark:text-slate-300 w-10">{Math.round(d.sliceOpacity * 100)}%</span>
-                </div>
-              </Section>
-
               <Section title={t('settings.wlPresets')}>
                 <WindowLevelPresets vertical />
                 <Help>{t('settings.wlHint')}</Help>
+              </Section>
+            </>
+          )}
+
+          {tab === 'threed' && (
+            <>
+              <Section title={t('settings.default3dPreset')}>
+                <Help>{t('settings.help.threed')}</Help>
+                <select value={d.preset3d} onChange={(e) => setDisplay({ preset3d: e.target.value })} className={FIELD}>
+                  {VOLUME_3D_PRESETS.map((p) => (<option key={p.id} value={p.id}>{t(p.labelKey)}</option>))}
+                  <option value={XRAY_PRESET_ID}>{t('preset3d.xray')}</option>
+                </select>
+              </Section>
+              <Section title={t('settings.slice3dOpacity')}>
+                <Help>{t('settings.help.sliceOpacity')}</Help>
+                <div className="flex items-center gap-2">
+                  <input type="range" min={0.05} max={1} step={0.05} value={d.sliceOpacity} onChange={(e) => setDisplay({ sliceOpacity: Number(e.target.value) })} className="flex-1 h-1 accent-dental-400" />
+                  <span className="text-xs font-mono text-slate-600 dark:text-slate-300 w-10">{Math.round(d.sliceOpacity * 100)}%</span>
+                </div>
               </Section>
             </>
           )}
@@ -180,6 +205,17 @@ export function SettingsPanel() {
               </Field>
               <Field label={t('report.status')}>
                 <textarea rows={2} className={`${FIELD} resize-none`} value={state.report.statusDescription} onChange={(e) => setReport({ statusDescription: e.target.value })} />
+              </Field>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 pt-1">{t('settings.onImage')}</div>
+              <Help>{t('settings.help.overrides')}</Help>
+              <Field label={t('settings.clinic')}>
+                <input className={FIELD} placeholder={state.study?.institution ?? ''} value={state.report.clinic} onChange={(e) => setReport({ clinic: e.target.value })} />
+              </Field>
+              <Field label={t('settings.studyDate')}>
+                <input className={FIELD} placeholder={state.study?.studyDate ?? ''} value={state.report.studyDate} onChange={(e) => setReport({ studyDate: e.target.value })} />
+              </Field>
+              <Field label={t('settings.seriesName')}>
+                <input className={FIELD} value={state.report.seriesName} onChange={(e) => setReport({ seriesName: e.target.value })} />
               </Field>
             </Section>
           )}

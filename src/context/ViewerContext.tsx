@@ -66,6 +66,10 @@ export interface ReportFields {
   patientBirthDate: string;
   quoteNumber: string;
   statusDescription: string;
+  /** On-image text overrides (empty = use the DICOM value) */
+  clinic: string;
+  studyDate: string;
+  seriesName: string;
 }
 
 /** On-image display + overlay styling preferences (Settings → General). */
@@ -79,8 +83,16 @@ export interface DisplayConfig {
   /** Orientation label font size, px */
   labelSize: number;
   labelAlign: 'left' | 'center' | 'right';
-  /** 3D slice-plane opacity (0.2–1) */
+  /** On-image series/modality/slice-number toggles */
+  showSeries: boolean;
+  showModality: boolean;
+  showSlice: boolean;
+  /** Whether on-image data shows on the main (big) view only, or every view */
+  scope: 'main' | 'all';
+  /** 3D slice-plane opacity (0.05–1) */
   sliceOpacity: number;
+  /** Default 3D volume preset (CT-Bone, …, or the custom "X-Ray") */
+  preset3d: string;
 }
 
 export const DISPLAY_DEFAULTS: DisplayConfig = {
@@ -91,7 +103,12 @@ export const DISPLAY_DEFAULTS: DisplayConfig = {
   labelColor: '#fbbf24',
   labelSize: 12,
   labelAlign: 'center',
-  sliceOpacity: 0.7,
+  showSeries: false,
+  showModality: false,
+  showSlice: true,
+  scope: 'all',
+  sliceOpacity: 0.2,
+  preset3d: 'X-Ray',
 };
 
 /** One landmark pair (scan point + corresponding CBCT point), world mm. */
@@ -195,7 +212,7 @@ const initialState: ViewerState = {
   activeAnatomyId: null,
   scans: [],
   registration: null,
-  report: { patientName: 'John Doe', patientAge: '', patientBirthDate: '1980-01-01', quoteNumber: '0001', statusDescription: 'healthy' },
+  report: { patientName: 'John Doe', patientAge: '', patientBirthDate: '1980-01-01', quoteNumber: '0001', statusDescription: 'healthy', clinic: '', studyDate: '', seriesName: '' },
   display: DISPLAY_DEFAULTS,
   measurements: [],
 };

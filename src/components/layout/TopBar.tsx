@@ -17,15 +17,13 @@ import { implantWorldAxis } from '@/core/implantGeometry';
 import { getVolumeData } from '@/core/cprEngine';
 import { sampleImplantBoneHU } from '@/core/boneQuality';
 import { loadScanPolyData, setScanPolyData, polyDataCenter, translation16, IDENTITY16, scanTriangleSoupWorld } from '@/core/scanMesh';
-import { SCAN_DEFAULTS, VIEW_LABEL_KEYS, getImplantSystem, type LayoutMode, type ViewMode } from '@/types/dicom';
+import { SCAN_DEFAULTS, getImplantSystem, type LayoutMode } from '@/types/dicom';
 
 const LAYOUTS: { id: LayoutMode; labelKey?: string; label?: string }[] = [
   { id: '1x1', label: '1×1' },
   { id: '1+3', labelKey: 'layout.view3d' },
   { id: 'OPG2+1', labelKey: 'layout.panoramic' },
 ];
-
-const VIEW_MODES: ViewMode[] = ['AXIAL', 'SAGITTAL', 'CORONAL', '3D'];
 
 // ── Icons ──────────────────────────────────────────────────────
 
@@ -339,7 +337,7 @@ export function TopBar() {
   const current = LANGUAGES.find(l => l.id === lang)!;
 
   return (
-    <div className="flex items-center justify-between px-4 py-1.5 bg-white/95 border-b border-slate-200 dark:bg-slate-900/95 dark:border-slate-800 backdrop-blur-sm">
+    <div className="relative z-40 flex items-center justify-between px-4 py-1.5 bg-white/95 border-b border-slate-200 dark:bg-slate-900/95 dark:border-slate-800 backdrop-blur-sm">
       {guideBusy && (
         <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-3 bg-black/60 select-none">
           <div className="w-12 h-12 border-4 border-dental-400 border-t-transparent rounded-full animate-spin" />
@@ -376,26 +374,6 @@ export function TopBar() {
             </button>
           ))}
           {(state.layoutMode === '1+3' || state.layoutMode === 'OPG2+1') && <LayoutConfigButton />}
-          {state.layoutMode === '1x1' && (
-            <>
-              <div className="w-px h-5 mx-1 bg-gray-300 dark:bg-gray-600" />
-              {VIEW_MODES.map(v => (
-                <button
-                  key={v}
-                  onClick={() => dispatch({ type: 'SET_VIEW_MODE', payload: v })}
-                  className={`
-                    px-2 py-1 text-xs rounded transition-colors
-                    ${state.viewMode === v
-                      ? 'bg-dental-600 text-white'
-                      : 'bg-slate-100/70 text-slate-600 hover:bg-slate-200 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700'}
-                  `}
-                  title={t(VIEW_LABEL_KEYS[v])}
-                >
-                  {t(VIEW_LABEL_KEYS[v])}
-                </button>
-              ))}
-            </>
-          )}
         </div>
       )}
 

@@ -29,8 +29,8 @@ const sample: PlanData = {
   safety: { marginMm: 1.5, color: '#00ff00', nerveMm: 2, sinusMm: 1, neighborMm: 3 },
   guide: { wallMm: 1.5, baseWidthMm: 5, baseHeightMm: 4, channelTolMm: 0.1, segments: 48 },
   windowLevel: { wc: 749, ww: 3439 },
-  report: { patientName: 'Teszt', patientAge: '45', patientBirthDate: '1980-01-01', quoteNumber: 'Q-7', statusDescription: 'felső 6-os' },
-  display: { showName: true, showBirth: false, showDate: true, showClinic: true, labelColor: '#ff0000', labelSize: 14, labelAlign: 'left', sliceOpacity: 0.5 },
+  report: { patientName: 'Teszt', patientAge: '45', patientBirthDate: '1980-01-01', quoteNumber: 'Q-7', statusDescription: 'felső 6-os', clinic: 'Mackó', studyDate: '2026-02-02', seriesName: 'ct2' },
+  display: { showName: true, showBirth: false, showDate: true, showClinic: true, labelColor: '#ff0000', labelSize: 14, labelAlign: 'left', showSeries: true, showModality: false, showSlice: true, scope: 'main', sliceOpacity: 0.5, preset3d: 'CT-MIP' },
 };
 
 describe('serializePlan / planFromObject round-trip', () => {
@@ -61,7 +61,8 @@ describe('planFromObject validation', () => {
     expect(r.windowLevel).toEqual({ wc: 300, ww: 2500 });
     expect(r.report.patientName).toBe('');
     expect(r.display.showName).toBe(true);
-    expect(r.display.sliceOpacity).toBe(0.7);
+    expect(r.display.sliceOpacity).toBe(0.2);
+    expect(r.display.preset3d).toBe('X-Ray');
   });
 
   it('coerces bad numeric fields to defaults', () => {

@@ -72,7 +72,10 @@ function sliceCanvas(vi: VolumeInfo, axis: SliceAxis, index: number, voi: VOI): 
       g = g < 0 ? 0 : g > 255 ? 255 : g;
       const p = (v * w + u) * 4;
       d[p] = d[p + 1] = d[p + 2] = g;
-      d[p + 3] = 255;
+      // Per-pixel alpha = windowed intensity: air/soft tissue become transparent
+      // (so the plane never darkens the volume behind it) while bone stays visible —
+      // an X-ray-like overlay, matching the voxel-viewer look.
+      d[p + 3] = g;
     }
   }
   ctx.putImageData(img, 0, 0);

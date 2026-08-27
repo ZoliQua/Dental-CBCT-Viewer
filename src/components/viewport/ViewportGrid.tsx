@@ -1,6 +1,6 @@
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
-import { VIEW_KEYS, type ViewKey, type ViewMode } from '@/types/dicom';
+import { VIEW_KEYS, WL_PRESETS, type ViewKey, type ViewMode } from '@/types/dicom';
 import { Viewport2D } from './Viewport2D';
 import { ViewportMPR } from './ViewportMPR';
 import { Viewport3D } from './Viewport3D';
@@ -9,12 +9,13 @@ import { ViewportCrossSection } from './ViewportCrossSection';
 import { ArchCurveEditor } from '@/components/panoramic/ArchCurveEditor';
 import { ImplantAxialOverlay } from '@/components/implant/ImplantAxialOverlay';
 
-/** Translucent on-image view-mode switcher for the 1×1 layout. */
+/** Translucent on-image view-mode switcher + W/L preset and contrast for 1×1. */
 function ViewModeSwitcher() {
   const { state, dispatch } = useViewer();
   const { t } = useI18n();
+  const is3D = state.viewMode === '3D';
   return (
-    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 rounded-lg bg-slate-900/70 backdrop-blur-sm border border-slate-700/60 px-1.5 py-1 shadow-lg">
+    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 rounded-lg bg-slate-900/70 backdrop-blur-sm border border-slate-700/60 px-1.5 py-1 shadow-lg">
       {VIEW_KEYS.map((k) => (
         <button
           key={k}
@@ -26,6 +27,31 @@ function ViewModeSwitcher() {
           {t(`view.${k.toLowerCase()}`)}
         </button>
       ))}
+      {/* W/L preset + contrast (not for 3D, which has its own preset bar) */}
+      {!is3D && (
+        <>
+          <span className="w-px h-4 bg-slate-700/60" />
+          <select
+            value=""
+            onChange={(e) => {
+              const p = WL_PRESETS.find((x) => x.key === e.target.value);
+              if (p) dispatch({ type: 'SET_WINDOW_LEVEL', payload: { wc: p.windowCenter, ww: p.windowWidth } });
+            }}
+            title={t('settings.wlPresets')}
+            className="bg-slate-800/70 text-slate-200 text-[11px] rounded-md px-1.5 py-1 border border-slate-700/60 outline-none"
+          >
+            <option value="">W/L</option>
+            {WL_PRESETS.map((p) => (<option key={p.key} value={p.key}>{t(`preset.${p.key}`)}</option>))}
+          </select>
+          <input
+            type="range" min={100} max={4000} step={50}
+            value={state.windowLevel.ww}
+            onChange={(e) => dispatch({ type: 'SET_WINDOW_LEVEL', payload: { wc: state.windowLevel.wc, ww: Number(e.target.value) } })}
+            className="w-20 h-1 accent-dental-400"
+            title={`${t('settings.wlPresets')} — WW ${state.windowLevel.ww}`}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { LeftPanel } from './LeftPanel';
 import { SeriesList } from '@/components/dicom/SeriesList';
 import { ViewportGrid } from '@/components/viewport/ViewportGrid';
 import { RegistrationPanel } from '@/components/registration/RegistrationPanel';
+import { WindowLevelSync } from '@/components/viewport/WindowLevelSync';
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
 import { setupTools } from '@/core/toolManager';
@@ -150,6 +151,7 @@ export function ViewerShell() {
           </div>
         )}
         <RegistrationPanel />
+        {engineReady && <WindowLevelSync />}
       </div>
     </div>
   );

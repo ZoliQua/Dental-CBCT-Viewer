@@ -151,7 +151,7 @@ export function ViewportMPR({ orientation, volumeId }: ViewportMPRProps) {
         className="w-full h-full"
         onContextMenu={(e) => e.preventDefault()}
       />
-      <ViewportOverlay sliceIndex={sliceIndex} totalSlices={totalSlices} />
+      <ViewportOverlay sliceIndex={sliceIndex} totalSlices={totalSlices} viewKey={orientation} />
       {/* Orientation label */}
       <OrientationLabel text={t(VIEW_LABEL_KEYS[orientation])} />
       {totalSlices > 1 && (

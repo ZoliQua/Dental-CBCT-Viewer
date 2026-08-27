@@ -13,7 +13,18 @@ import { OrientationLabel } from './OrientationLabel';
 import { SLICE_AXES, type SliceAxis } from '@/core/slice3D';
 import { NO_CROP, type CropBox } from '@/core/cropBox';
 import type { Implant3DLayers } from '@/core/implant3D';
-import { VOLUME_3D_PRESETS, type Volume3DPreset } from '@/types/dicom';
+import { VOLUME_3D_PRESETS } from '@/types/dicom';
+import { applyXrayPreset, XRAY_PRESET_ID } from '@/core/volume3DPreset';
+
+/** Apply a named Cornerstone preset, or our custom translucent X-ray transfer function. */
+function applyPreset(viewport: any, preset: string, wl: { wc: number; ww: number }) {
+  if (preset === XRAY_PRESET_ID) {
+    applyXrayPreset(viewport.getDefaultActor?.()?.actor, wl);
+  } else {
+    viewport.setProperties({ preset });
+  }
+  viewport.render();
+}
 
 interface Viewport3DProps {
   volumeId: string;
@@ -25,15 +36,16 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
   const elementRef = useRef<HTMLDivElement>(null);
   const enabledRef = useRef(false);
   const destroyedRef = useRef(false);
-  const [activePreset, setActivePreset] = useState<Volume3DPreset>('CT-Bone');
+  const [activePreset, setActivePreset] = useState<string>(state.display.preset3d);
   const [slabThickness, setSlabThickness] = useState<number>(0); // 0 = no clipping
   const [ready, setReady] = useState(false); // volume loaded → safe to add actors
   const [layers3D, setLayers3D] = useState<Implant3DLayers>({ implant: true, sleeve: true, axis: true });
-  const [sliceAxes, setSliceAxes] = useState<Record<SliceAxis, boolean>>({ AXIAL: false, SAGITTAL: false, CORONAL: false });
+  const [sliceAxes, setSliceAxes] = useState<Record<SliceAxis, boolean>>({ AXIAL: true, SAGITTAL: true, CORONAL: true });
   const [cropEnabled, setCropEnabled] = useState(false);
   const [crop, setCrop] = useState<CropBox>(NO_CROP);
   const [presetOpen, setPresetOpen] = useState(false);
   const [cropOpen, setCropOpen] = useState(false);
+  const [sliceRebuild, setSliceRebuild] = useState(0);
 
   const setCropVal = (axis: number, which: 'min' | 'max', v: number) => {
     setCrop((c) => {
@@ -108,8 +120,19 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
         const viewport = engine!.getViewport(VP_3D) as Types.IVolumeViewport;
         if (!viewport) return;
 
-        (viewport as any).setProperties({ preset: activePreset });
+        applyPreset(viewport, activePreset, state.windowLevel);
         viewport.resetCamera({ resetPan: true, resetZoom: true, resetToCenter: true });
+        // Start slightly rotated (not dead-on frontal) so enabling two slice
+        // planes doesn't hide everything behind an edge-on plane.
+        try {
+          const cam = (viewport as any).getRenderer?.()?.getActiveCamera?.();
+          if (cam) {
+            cam.azimuth(30);
+            cam.elevation(20);
+            cam.orthogonalizeViewUp?.();
+            (viewport as any).getRenderer?.()?.resetCameraClippingRange?.();
+          }
+        } catch { /* camera not ready */ }
         viewport.render();
         // Volume is in the scene — implant actors can be safely added now
         setReady(true);
@@ -130,16 +153,18 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
 
   // Apply preset change
   const handlePresetChange = useCallback(
-    (preset: Volume3DPreset) => {
+    (preset: string) => {
       setActivePreset(preset);
       const engine = getRenderingEngine(RENDERING_ENGINE_ID);
       if (!engine) return;
       const viewport = engine.getViewport(VP_3D);
       if (!viewport) return;
-      (viewport as any).setProperties({ preset });
-      viewport.render();
+      applyPreset(viewport, preset, state.windowLevel);
+      // Re-add the slice planes on the next frame — some presets (e.g. MIP) drop
+      // the added actors when their blend mode changes.
+      requestAnimationFrame(() => setSliceRebuild((k) => k + 1));
     },
-    [],
+    [state.windowLevel],
   );
 
   // Apply slab thickness change
@@ -168,20 +193,20 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
         onContextMenu={(e) => e.preventDefault()}
       />
 
-      <ViewportOverlay sliceIndex={0} totalSlices={0} />
+      <ViewportOverlay sliceIndex={0} totalSlices={0} viewKey="3D" />
 
       {/* Implant / sleeve / axis 3D meshes (added once the volume is loaded) */}
       {ready && <Implant3DActors layers={layers3D} />}
       {ready && <ScanActors />}
-      {ready && <Slice3DActors axes={sliceAxes} />}
+      {ready && <Slice3DActors axes={sliceAxes} preset={activePreset} rebuildKey={sliceRebuild} />}
       {ready && <CropController crop={crop} enabled={cropEnabled} />}
 
       {/* 3D label */}
       <OrientationLabel text="3D" />
 
-      {/* 3D implant layer toggles (top-left, translucent) */}
+      {/* 3D implant layer toggles (bottom-right, translucent — clear of overlays) */}
       {state.implants.length > 0 && (
-        <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 rounded-lg bg-slate-900/70 backdrop-blur-sm border border-slate-700/60 p-1.5">
+        <div className="absolute bottom-2 right-2 z-10 flex flex-col gap-1 rounded-lg bg-slate-900/70 backdrop-blur-sm border border-slate-700/60 p-1.5">
           {([
             ['implant', t('view3d.implant')],
             ['sleeve', t('view3d.sleeve')],
@@ -213,7 +238,7 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
                 <path d="M12 2 21 7v10l-9 5-9-5V7l9-5z" /><path d="M3 7l9 5 9-5M12 12v10" />
               </svg>
-              <span>{t(VOLUME_3D_PRESETS.find((p) => p.id === activePreset)?.labelKey ?? 'preset3d.bone')}</span>
+              <span>{activePreset === XRAY_PRESET_ID ? t('preset3d.xray') : t(VOLUME_3D_PRESETS.find((p) => p.id === activePreset)?.labelKey ?? 'preset3d.bone')}</span>
             </button>
             {presetOpen && (
               <div className="absolute bottom-9 left-0 w-36 rounded-lg bg-slate-900/95 border border-slate-700 shadow-xl p-1 z-20">
@@ -228,6 +253,14 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
                     {t(p.labelKey)}
                   </button>
                 ))}
+                <button
+                  onClick={() => { handlePresetChange(XRAY_PRESET_ID); setPresetOpen(false); }}
+                  className={`w-full text-left px-2 py-1 text-[11px] rounded transition-colors ${
+                    activePreset === XRAY_PRESET_ID ? 'bg-dental-600 text-white' : 'text-slate-300 hover:bg-slate-700/60'
+                  }`}
+                >
+                  {t('preset3d.xray')}
+                </button>
               </div>
             )}
           </div>

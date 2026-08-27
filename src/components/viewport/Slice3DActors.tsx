@@ -25,7 +25,7 @@ const AXIS_VP: Record<SliceAxis, string> = {
   CORONAL: VP_CORONAL,
 };
 
-export function Slice3DActors({ axes }: { axes: Record<SliceAxis, boolean> }) {
+export function Slice3DActors({ axes, preset, rebuildKey }: { axes: Record<SliceAxis, boolean>; preset?: string; rebuildKey?: number }) {
   const { state } = useViewer();
   const addedRef = useRef<string[]>([]);
 
@@ -128,7 +128,7 @@ export function Slice3DActors({ axes }: { axes: Record<SliceAxis, boolean> }) {
         addedRef.current = [];
       }
     };
-  }, [axes, state.windowLevel, state.volumeId, state.layoutMode, state.panel, state.display.sliceOpacity]);
+  }, [axes, state.windowLevel, state.volumeId, state.layoutMode, state.panel, state.display.sliceOpacity, preset, rebuildKey]);
 
   return null;
 }

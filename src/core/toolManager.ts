@@ -97,9 +97,12 @@ export function setupTools(): void {
     toolGroup3D.setToolActive(PanTool.toolName, {
       bindings: [{ mouseButton: csToolsEnums.MouseBindings.Auxiliary }],
     });
-    // Right click = zoom
+    // Right click or mouse wheel = zoom (so the 3D view is scrollable/zoomable)
     toolGroup3D.setToolActive(ZoomTool.toolName, {
-      bindings: [{ mouseButton: csToolsEnums.MouseBindings.Secondary }],
+      bindings: [
+        { mouseButton: csToolsEnums.MouseBindings.Secondary },
+        { mouseButton: csToolsEnums.MouseBindings.Wheel },
+      ],
     });
   }
 

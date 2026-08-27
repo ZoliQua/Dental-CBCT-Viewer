@@ -108,6 +108,9 @@ export function planFromObject(obj: any): PlanData | null {
       patientBirthDate: str(r.patientBirthDate, ''),
       quoteNumber: str(r.quoteNumber, ''),
       statusDescription: str(r.statusDescription, ''),
+      clinic: str(r.clinic, ''),
+      studyDate: str(r.studyDate, ''),
+      seriesName: str(r.seriesName, ''),
     },
     display: {
       showName: bool(d2.showName, DISPLAY_DEFAULTS.showName),
@@ -117,7 +120,12 @@ export function planFromObject(obj: any): PlanData | null {
       labelColor: str(d2.labelColor, DISPLAY_DEFAULTS.labelColor),
       labelSize: num(d2.labelSize, DISPLAY_DEFAULTS.labelSize),
       labelAlign: d2.labelAlign === 'left' || d2.labelAlign === 'right' ? d2.labelAlign : 'center',
+      showSeries: bool(d2.showSeries, DISPLAY_DEFAULTS.showSeries),
+      showModality: bool(d2.showModality, DISPLAY_DEFAULTS.showModality),
+      showSlice: bool(d2.showSlice, DISPLAY_DEFAULTS.showSlice),
+      scope: d2.scope === 'main' ? 'main' : 'all',
       sliceOpacity: num(d2.sliceOpacity, DISPLAY_DEFAULTS.sliceOpacity),
+      preset3d: str(d2.preset3d, DISPLAY_DEFAULTS.preset3d),
     },
   };
 }
