@@ -3,12 +3,31 @@
  * the DICOM drop zone in the middle, and an about box at the bottom.
  */
 
+import { useState } from 'react';
 import { FileDropZone } from './FileDropZone';
 import { GithubStar } from './GithubStar';
 import { useI18n } from '@/i18n/I18nContext';
+import { useViewer } from '@/context/ViewerContext';
+import { loadSample } from '@/core/sampleLoader';
 
 export function LandingPage() {
   const { t } = useI18n();
+  const { dispatch } = useViewer();
+  const [sampleBusy, setSampleBusy] = useState(false);
+
+  const openSample = async () => {
+    setSampleBusy(true);
+    try {
+      const { study, volumeId, windowLevel } = await loadSample();
+      dispatch({ type: 'SET_STUDY', payload: study });
+      dispatch({ type: 'SET_WINDOW_LEVEL', payload: windowLevel });
+      dispatch({ type: 'SET_VOLUME_ID', payload: volumeId });
+    } catch (err) {
+      console.error('[sample] load failed', err);
+      window.alert(t('newload.sampleError'));
+      setSampleBusy(false);
+    }
+  };
 
   return (
     <div className="h-full overflow-y-auto">
@@ -41,6 +60,18 @@ export function LandingPage() {
 
         {/* Drop zone */}
         <FileDropZone />
+
+        {/* Load the bundled anonymized sample (loader under construction) */}
+        <div className="flex justify-center">
+          <button
+            onClick={openSample}
+            disabled={sampleBusy}
+            className="px-4 py-2 text-sm rounded-lg border border-dental-500 text-dental-700 hover:bg-dental-100 dark:text-dental-300 dark:hover:bg-dental-900/30 transition-colors disabled:opacity-60 flex items-center gap-2"
+          >
+            {sampleBusy && <span className="w-3.5 h-3.5 border-2 border-dental-400 border-t-transparent rounded-full animate-spin" />}
+            {t('newload.loadSample')} · ~16 MB
+          </button>
+        </div>
 
         {/* About */}
         <div className="bg-white border border-gray-300 dark:bg-gray-800 dark:border-gray-700 rounded-2xl p-6 shadow-sm">

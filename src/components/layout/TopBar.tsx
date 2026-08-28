@@ -13,6 +13,7 @@ import { useLayoutSwitch } from '@/hooks/useLayoutSwitch';
 import { LayoutConfigButton } from './LayoutConfigButton';
 import { exportViewPdf } from '@/core/pdfExport';
 import { serializePlan, planFromObject } from '@/core/planIO';
+import { loadSample } from '@/core/sampleLoader';
 import { implantWorldAxis } from '@/core/implantGeometry';
 import { getVolumeData } from '@/core/cprEngine';
 import { sampleImplantBoneHU } from '@/core/boneQuality';
@@ -399,9 +400,19 @@ export function TopBar() {
                   {t('scan.import')}
                 </button>
                 <button
-                  disabled
-                  title={t('newload.sampleSoon')}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left text-gray-400 dark:text-gray-600 cursor-not-allowed"
+                  onClick={async () => {
+                    setNewLoadOpen(false);
+                    try {
+                      const { study, volumeId, windowLevel } = await loadSample();
+                      dispatch({ type: 'SET_STUDY', payload: study });
+                      dispatch({ type: 'SET_WINDOW_LEVEL', payload: windowLevel });
+                      dispatch({ type: 'SET_VOLUME_ID', payload: volumeId });
+                    } catch (err) {
+                      console.error('[sample] load failed', err);
+                      window.alert(t('newload.sampleError'));
+                    }
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
                 >
                   {t('newload.loadSample')}
                 </button>

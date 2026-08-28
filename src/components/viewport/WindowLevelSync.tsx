@@ -1,10 +1,9 @@
 /**
  * Links window/level (contrast) across all views. The panoramic and
- * cross-section already read state.windowLevel; this component keeps the three
- * Cornerstone MPR viewports in sync with it in both directions:
- *   - state.windowLevel → applied to the MPR viewports (presets, sliders)
- *   - dragging W/L on an MPR viewport → written back to state.windowLevel
- * A guard flag + change threshold prevent feedback loops.
+ * cross-section already read state.windowLevel; this keeps the three Cornerstone
+ * MPR viewports in sync with it both ways. Loop-safe: an `applying` flag blocks
+ * the echo from our own updates, listeners attach once per volume/layout (not on
+ * every W/L change), and a threshold ignores sub-2 HU jitter.
  */
 
 import { useEffect, useRef } from 'react';
@@ -16,24 +15,26 @@ const MPR_IDS = [VP_AXIAL, VP_SAGITTAL, VP_CORONAL];
 
 export function WindowLevelSync() {
   const { state, dispatch } = useViewer();
-  const { wc, ww } = state.windowLevel;
+  const wlRef = useRef(state.windowLevel);
+  wlRef.current = state.windowLevel;
   const applyingRef = useRef(false);
 
   // state.windowLevel → MPR viewports
   useEffect(() => {
     const engine = getRenderingEngine(RENDERING_ENGINE_ID);
     if (!engine) return;
+    const { wc, ww } = state.windowLevel;
     applyingRef.current = true;
     const range = { lower: wc - ww / 2, upper: wc + ww / 2 };
     for (const id of MPR_IDS) {
       const vp = engine.getViewport(id) as any;
       try { vp?.setProperties?.({ voiRange: range }); vp?.render?.(); } catch { /* not ready */ }
     }
-    const raf = requestAnimationFrame(() => { applyingRef.current = false; });
-    return () => cancelAnimationFrame(raf);
-  }, [wc, ww]);
+    const t = window.setTimeout(() => { applyingRef.current = false; }, 60);
+    return () => window.clearTimeout(t);
+  }, [state.windowLevel.wc, state.windowLevel.ww]);
 
-  // MPR viewport W/L drag → state.windowLevel
+  // MPR viewport W/L drag → state.windowLevel (listeners attach once per volume)
   useEffect(() => {
     const engine = getRenderingEngine(RENDERING_ENGINE_ID);
     if (!engine) return;
@@ -48,15 +49,18 @@ export function WindowLevelSync() {
         if (!voi) return;
         const nWw = voi.upper - voi.lower;
         const nWc = (voi.upper + voi.lower) / 2;
-        if (Math.abs(nWw - ww) > 1 || Math.abs(nWc - wc) > 1) {
+        const cur = wlRef.current;
+        if (Math.abs(nWw - cur.ww) > 2 || Math.abs(nWc - cur.wc) > 2) {
+          applyingRef.current = true; // block the echo from the resulting apply
           dispatch({ type: 'SET_WINDOW_LEVEL', payload: { wc: nWc, ww: nWw } });
+          window.setTimeout(() => { applyingRef.current = false; }, 60);
         }
       };
       el.addEventListener(Enums.Events.VOI_MODIFIED, handler);
       cleanups.push(() => el.removeEventListener(Enums.Events.VOI_MODIFIED, handler));
     }
     return () => cleanups.forEach((f) => f());
-  }, [dispatch, wc, ww, state.layoutMode, state.volumeId]);
+  }, [dispatch, state.volumeId, state.layoutMode]);
 
   return null;
 }
