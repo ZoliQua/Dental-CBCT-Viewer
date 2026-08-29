@@ -328,7 +328,7 @@ export function ViewportCrossSection({ volumeId }: ViewportCrossSectionProps) {
       )}
 
       {/* Label */}
-      <OrientationLabel text={t('viewport.crossSection')} />
+      <OrientationLabel text={t('viewport.crossSection')} viewKey="CROSS" />
 
       {/* Tilt info */}
       {state.crossSectionTiltDeg !== 0 && (

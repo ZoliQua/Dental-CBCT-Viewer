@@ -32,6 +32,10 @@ export function applyXrayPreset(actor: any, wl: { wc: number; ww: number }, maxO
   otf.addPoint(lo, 0);
   otf.addPoint(lo + (hi - lo) * 0.5, maxOpacity * 0.3);
   otf.addPoint(hi, maxOpacity);
+  // Emphasize the densest structures (metal fillings, root-canal fillings,
+  // implants) beyond the bone window so they stand out instead of clamping to
+  // the same opacity as dense bone.
+  otf.addPoint(hi + (hi - lo) * 0.8, Math.min(0.9, maxOpacity * 2.4));
 
   prop.setRGBTransferFunction(0, ctf);
   prop.setScalarOpacity(0, otf);

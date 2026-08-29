@@ -151,8 +151,12 @@ export function SettingsPanel() {
                     <input type="color" value={d.labelColor} onChange={(e) => setDisplay({ labelColor: e.target.value })} className="h-6 w-8 rounded border border-slate-300 dark:border-slate-600 bg-transparent cursor-pointer" />
                   </label>
                   <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
-                    {t('settings.size')}
-                    <input type="number" min={8} max={28} value={d.labelSize} onChange={(e) => setDisplay({ labelSize: Number(e.target.value) })} className="w-14 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-1.5 py-1 text-xs" />
+                    {t('settings.labelMain')}
+                    <input type="number" min={8} max={40} value={d.labelSizeMain} onChange={(e) => setDisplay({ labelSizeMain: Number(e.target.value) })} className="w-14 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-1.5 py-1 text-xs" />
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                    {t('settings.labelSide')}
+                    <input type="number" min={8} max={40} value={d.labelSizeSide} onChange={(e) => setDisplay({ labelSizeSide: Number(e.target.value) })} className="w-14 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-1.5 py-1 text-xs" />
                   </label>
                 </div>
                 <div className="flex gap-1">

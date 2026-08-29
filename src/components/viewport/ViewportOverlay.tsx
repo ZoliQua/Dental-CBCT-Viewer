@@ -1,5 +1,4 @@
 import { useViewer } from '@/context/ViewerContext';
-import { useI18n } from '@/i18n/I18nContext';
 import { formatDicomDate } from '@/utils/dicomUtils';
 
 interface ViewportOverlayProps {
@@ -10,7 +9,6 @@ interface ViewportOverlayProps {
 }
 
 export function ViewportOverlay({ sliceIndex, totalSlices, viewKey }: ViewportOverlayProps = {}) {
-  const { t } = useI18n();
   const { state } = useViewer();
   const { study, activeSeriesUID } = state;
   const disp = state.display;
@@ -25,10 +23,15 @@ export function ViewportOverlay({ sliceIndex, totalSlices, viewKey }: ViewportOv
   if (state.layoutMode === '1x1') isMain = viewKey === state.viewMode;
   else if (state.layoutMode === '1+3') isMain = state.panel.grid === '2x2' ? true : viewKey === state.panel.big;
   else if (state.layoutMode === 'OPG2+1') isMain = false; // the panoramic (no overlay here) is the main view
-  if (disp.scope === 'main' && !isMain) return null;
+
+  // Patient / study info respects the scope; the slice number always shows.
+  const infoAllowed = disp.scope !== 'main' || isMain;
 
   const activeSeries = study.series.find((s) => s.seriesInstanceUID === activeSeriesUID);
-  const showSeriesBlock = (disp.showSeries || disp.showModality || disp.showSlice) && activeSeries;
+
+  // Slice number as "X / max" (no unit word). Only real slice views have a
+  // total (the 3D view passes 0) — so it never shows on 3D.
+  const sliceText = disp.showSlice && displayTotal > 0 ? `${displayIndex + 1} / ${displayTotal}` : null;
 
   // On-image text: editable override (Settings) wins over the DICOM value
   const r = state.report;
@@ -38,10 +41,12 @@ export function ViewportOverlay({ sliceIndex, totalSlices, viewKey }: ViewportOv
   const vClinic = r.clinic.trim() || study.institution || '';
   const vSeries = r.seriesName.trim() || activeSeries?.seriesDescription || '';
 
+  const showSeriesBlock = infoAllowed && (disp.showSeries || disp.showModality) && activeSeries;
+
   return (
     <>
       {/* Top-left: patient info */}
-      {(disp.showName || disp.showBirth) && (
+      {infoAllowed && (disp.showName || disp.showBirth) && (
         <div className="absolute top-2 left-2 text-white text-xs font-mono pointer-events-none select-none [text-shadow:_0_1px_2px_rgb(0_0_0_/_80%)]">
           {disp.showName && <div className="font-semibold">{vName}</div>}
           {disp.showBirth && vBirth && <div>{vBirth}</div>}
@@ -49,24 +54,31 @@ export function ViewportOverlay({ sliceIndex, totalSlices, viewKey }: ViewportOv
       )}
 
       {/* Top-right: study info */}
-      {(disp.showDate || disp.showClinic) && (
+      {infoAllowed && (disp.showDate || disp.showClinic) && (
         <div className="absolute top-2 right-2 text-white text-xs font-mono text-right pointer-events-none select-none [text-shadow:_0_1px_2px_rgb(0_0_0_/_80%)]">
           {disp.showDate && vDate && <div>{vDate}</div>}
           {disp.showClinic && vClinic && <div>{vClinic}</div>}
         </div>
       )}
 
-      {/* Bottom-left: series info */}
-      {showSeriesBlock && (
+      {/* Bottom-left: series / modality (+ slice number on the main view) */}
+      {(showSeriesBlock || (sliceText && isMain)) && (
         <div className="absolute bottom-2 left-2 text-white text-xs font-mono pointer-events-none select-none [text-shadow:_0_1px_2px_rgb(0_0_0_/_80%)]">
-          {disp.showSeries && vSeries && <div>{vSeries}</div>}
-          {(disp.showModality || disp.showSlice) && (
+          {showSeriesBlock && disp.showSeries && vSeries && <div>{vSeries}</div>}
+          {(showSeriesBlock && disp.showModality) || (sliceText && isMain) ? (
             <div>
-              {disp.showModality && activeSeries!.modality}
-              {disp.showModality && disp.showSlice && ' · '}
-              {disp.showSlice && `${displayTotal > 0 ? `${displayIndex + 1} / ${displayTotal}` : activeSeries!.imageCount} ${t('viewport.slices')}`}
+              {showSeriesBlock && disp.showModality && activeSeries!.modality}
+              {showSeriesBlock && disp.showModality && sliceText && isMain && ' · '}
+              {sliceText && isMain && sliceText}
             </div>
-          )}
+          ) : null}
+        </div>
+      )}
+
+      {/* Slice number on the smaller views: bottom-left, independent of scope */}
+      {sliceText && !isMain && (
+        <div className="absolute bottom-2 left-2 text-white text-xs font-mono pointer-events-none select-none [text-shadow:_0_1px_2px_rgb(0_0_0_/_80%)]">
+          {sliceText}
         </div>
       )}
     </>

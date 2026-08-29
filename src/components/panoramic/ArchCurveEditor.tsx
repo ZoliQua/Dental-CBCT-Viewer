@@ -13,8 +13,27 @@ import {
   offsetCurve,
   generateDefaultArchCurve,
 } from '@/core/archCurve';
+import { crossSectionFrame, buildUniformCurve } from '@/core/cprMath';
 
 type Point2 = [number, number];
+
+/** Half-width (mm) of the cross-section indicator drawn on the axial. */
+const CROSS_SECTION_HALF_MM = 25;
+
+/** Nearest arch position (0-1, arc-length uniform) to a world XY point. */
+function nearestArchPosition(controlPoints: Point2[], wx: number, wy: number): number {
+  const { curve } = buildUniformCurve(controlPoints, 500);
+  if (curve.length < 2) return 0.5;
+  let best = 0;
+  let bestD = Infinity;
+  for (let i = 0; i < curve.length; i++) {
+    const dx = curve[i][0] - wx;
+    const dy = curve[i][1] - wy;
+    const d = dx * dx + dy * dy;
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  return best / (curve.length - 1);
+}
 
 function pointsToPath(pts: Point2[]): string {
   if (pts.length === 0) return '';
@@ -26,11 +45,16 @@ export function ArchCurveEditor() {
   const containerRef = useRef<HTMLDivElement>(null);
   const dragIdxRef = useRef<number | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const csDraggingRef = useRef(false);
+  const [csDragging, setCsDragging] = useState(false);
   const [screenData, setScreenData] = useState<{
     controlPts: Point2[];
     curvePath: string;
     innerPath: string;
     outerPath: string;
+    csA: Point2 | null;
+    csB: Point2 | null;
+    csMid: Point2 | null;
   } | null>(null);
 
   // Auto-generate default arch curve if none exists
@@ -104,13 +128,33 @@ export function ArchCurveEditor() {
       return [c[0], c[1]] as Point2;
     });
 
+    // Cross-section indicator: line through the arch point at the current
+    // cross-section position, running along the buccolingual normal (i.e.
+    // perpendicular to the arch). Tilt is a Z-lean, so it does not change the
+    // in-plane (axial) projection.
+    let csA: Point2 | null = null;
+    let csB: Point2 | null = null;
+    let csMid: Point2 | null = null;
+    const frame = crossSectionFrame(state.archCurveControlPoints, state.crossSectionPosition, 0, 0, 1);
+    if (frame) {
+      const [px, py] = frame.point;
+      const [nx, ny] = frame.normal;
+      const ca = vp.worldToCanvas([px - nx * CROSS_SECTION_HALF_MM, py - ny * CROSS_SECTION_HALF_MM, wz] as any);
+      const cb = vp.worldToCanvas([px + nx * CROSS_SECTION_HALF_MM, py + ny * CROSS_SECTION_HALF_MM, wz] as any);
+      const cm = vp.worldToCanvas([px, py, wz] as any);
+      csA = [ca[0], ca[1]];
+      csB = [cb[0], cb[1]];
+      csMid = [cm[0], cm[1]];
+    }
+
     setScreenData({
       controlPts: screenCPs,
       curvePath: pointsToPath(curveScreen),
       innerPath: pointsToPath(innerScreen),
       outerPath: pointsToPath(outerScreen),
+      csA, csB, csMid,
     });
-  }, [state.archCurveControlPoints, state.panoramicSlabWidth, getViewport, getFocalZ]);
+  }, [state.archCurveControlPoints, state.panoramicSlabWidth, state.crossSectionPosition, getViewport, getFocalZ]);
 
   // Re-render on camera changes (pan/zoom/scroll)
   useEffect(() => {
@@ -169,6 +213,39 @@ export function ArchCurveEditor() {
     };
   }, [dragIdx, state.archCurveControlPoints, dispatch, getViewport]);
 
+  // ── Cross-section indicator drag (moves position along the arch) ──
+
+  const handleCsPointerDown = useCallback((e: React.PointerEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setCsDragging(true);
+    csDraggingRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!csDragging) return;
+
+    const handleMove = (e: PointerEvent) => {
+      if (!csDraggingRef.current || !containerRef.current || !state.archCurveControlPoints) return;
+      const vp = getViewport();
+      if (!vp) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const world = vp.canvasToWorld([e.clientX - rect.left, e.clientY - rect.top]) as [number, number, number];
+      const pos = nearestArchPosition(state.archCurveControlPoints, world[0], world[1]);
+      dispatch({ type: 'SET_CROSS_SECTION_POSITION', payload: pos });
+    };
+    const handleUp = () => {
+      setCsDragging(false);
+      csDraggingRef.current = false;
+    };
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+    return () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+    };
+  }, [csDragging, state.archCurveControlPoints, dispatch, getViewport]);
+
   if (!screenData || !state.archCurveControlPoints) return null;
 
   return (
@@ -180,6 +257,37 @@ export function ArchCurveEditor() {
 
         {/* Main curve */}
         <path d={screenData.curvePath} fill="none" stroke="rgba(255,80,80,0.85)" strokeWidth={2} />
+
+        {/* Cross-section position indicator — perpendicular to the arch,
+            matching the vertical line on the panoramic. Draggable to slide the
+            cross-section along the arch. */}
+        {screenData.csA && screenData.csB && screenData.csMid && (
+          <g>
+            {/* Wide invisible hit area */}
+            <line
+              x1={screenData.csA[0]} y1={screenData.csA[1]}
+              x2={screenData.csB[0]} y2={screenData.csB[1]}
+              stroke="transparent" strokeWidth={16}
+              style={{ pointerEvents: 'auto', cursor: 'move' }}
+              onPointerDown={handleCsPointerDown}
+            />
+            {/* Visible line */}
+            <line
+              x1={screenData.csA[0]} y1={screenData.csA[1]}
+              x2={screenData.csB[0]} y2={screenData.csB[1]}
+              stroke="rgb(100,200,255)" strokeWidth={2}
+              style={{ pointerEvents: 'none', filter: 'drop-shadow(0 0 3px rgba(100,200,255,0.7))' }}
+            />
+            {/* Centre handle */}
+            <circle
+              cx={screenData.csMid[0]} cy={screenData.csMid[1]} r={6}
+              fill={csDragging ? 'rgb(80,200,255)' : 'rgb(100,200,255)'}
+              stroke="white" strokeWidth={1.5}
+              style={{ pointerEvents: 'auto', cursor: 'move' }}
+              onPointerDown={handleCsPointerDown}
+            />
+          </g>
+        )}
 
         {/* Control points */}
         {screenData.controlPts.map((p, i) => (

@@ -153,7 +153,7 @@ export function ViewportMPR({ orientation, volumeId }: ViewportMPRProps) {
       />
       <ViewportOverlay sliceIndex={sliceIndex} totalSlices={totalSlices} viewKey={orientation} />
       {/* Orientation label */}
-      <OrientationLabel text={t(VIEW_LABEL_KEYS[orientation])} />
+      <OrientationLabel text={t(VIEW_LABEL_KEYS[orientation])} viewKey={orientation} />
       {totalSlices > 1 && (
         <SliceIndicator
           onJumpToSlice={handleJumpToSlice}

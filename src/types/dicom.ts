@@ -77,6 +77,31 @@ export const DEFAULT_PANEL: PanelConfig = {
   panoArrangement: 'top',
 };
 
+/**
+ * Force the four 1+3 panels (big + 3 small) to show four DISTINCT views. Each
+ * MPR/3D view maps to a single Cornerstone viewport id, so two panels showing
+ * the same view would collide (one goes black). Duplicates are replaced with
+ * whichever views are missing, keeping a stable bijection.
+ */
+export function normalizePanelViews(
+  big: ViewKey,
+  small: [ViewKey, ViewKey, ViewKey],
+): { big: ViewKey; small: [ViewKey, ViewKey, ViewKey] } {
+  const slots: (ViewKey | null)[] = [big, ...small];
+  const seen = new Set<ViewKey>();
+  for (let i = 0; i < 4; i++) {
+    const v = slots[i];
+    if (v && seen.has(v)) slots[i] = null;
+    else if (v) seen.add(v);
+  }
+  const unused = VIEW_KEYS.filter((v) => !seen.has(v));
+  let u = 0;
+  for (let i = 0; i < 4; i++) {
+    if (slots[i] == null) slots[i] = unused[u++] ?? VIEW_KEYS[0];
+  }
+  return { big: slots[0] as ViewKey, small: [slots[1], slots[2], slots[3]] as [ViewKey, ViewKey, ViewKey] };
+}
+
 export type ProjectionMode = 'AVG' | 'MIP';
 
 export type MPROrientation = 'AXIAL' | 'SAGITTAL' | 'CORONAL';

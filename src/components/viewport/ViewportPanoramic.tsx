@@ -225,19 +225,41 @@ export function ViewportPanoramic({ volumeId, showCrossSectionLine = false }: Vi
     setHLineTop(zToContainerY(z));
   }, [zToContainerY]);
 
+  // Attach to the axial viewport's camera. The axial viewport may not exist
+  // yet when the panoramic mounts (or may be recreated on a layout change), so
+  // poll until it is ready — otherwise the horizontal line would only appear
+  // "sometimes", depending on mount order.
   useEffect(() => {
-    const engine = getRenderingEngine(RENDERING_ENGINE_ID);
-    const vp = engine?.getViewport(VP_AXIAL);
-    if (!vp) return;
-    const handler = () => {
-      const z = vp.getCamera().focalPoint?.[2] ?? 0;
-      updateHLineFromZ(z);
+    let cancelled = false;
+    let el: HTMLElement | null = null;
+    let handler: (() => void) | null = null;
+    let tries = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const attach = () => {
+      if (cancelled) return;
+      const engine = getRenderingEngine(RENDERING_ENGINE_ID);
+      const vp = engine?.getViewport(VP_AXIAL);
+      if (!vp) {
+        if (tries++ < 40) timer = setTimeout(attach, 150);
+        return;
+      }
+      handler = () => {
+        const z = vp.getCamera().focalPoint?.[2] ?? 0;
+        updateHLineFromZ(z);
+      };
+      handler();
+      el = vp.element;
+      el.addEventListener(Enums.Events.CAMERA_MODIFIED, handler);
     };
-    handler();
-    const el = vp.element;
-    el.addEventListener(Enums.Events.CAMERA_MODIFIED, handler);
-    return () => el.removeEventListener(Enums.Events.CAMERA_MODIFIED, handler);
-  }, [updateHLineFromZ]);
+    attach();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      if (el && handler) el.removeEventListener(Enums.Events.CAMERA_MODIFIED, handler);
+    };
+  }, [updateHLineFromZ, volumeId, state.layoutMode, state.panel.panoArrangement]);
 
   // Update line positions after CPR recompute
   useEffect(() => {
@@ -512,6 +534,13 @@ export function ViewportPanoramic({ volumeId, showCrossSectionLine = false }: Vi
 
   const vLinePts = showCrossSectionLine ? getVLineSVGPoints() : null;
 
+  // Labels: arch-length position (mm) for the vertical line, depth-from-top
+  // (mm) for the horizontal line. Read live from the last CPR result.
+  const csResult = resultRef.current;
+  const arcLenMm = csResult ? csResult.horizontalSpacing * Math.max(1, csResult.width - 1) : 0;
+  const vLabelMm = arcLenMm * state.crossSectionPosition;
+  const hLabelMm = csResult && axialZ !== null ? csResult.zMax - axialZ : null;
+
   // Implant sections on the panoramic: X from the implant's nearest arch
   // position, Y from its world z, mesiodistal lean shown in-plane, and a
   // depth fade by how far the implant sits from the arch surface relative to
@@ -736,14 +765,20 @@ export function ViewportPanoramic({ volumeId, showCrossSectionLine = false }: Vi
       />
 
 
-      {/* Horizontal Z indicator line */}
+      {/* Horizontal indicator line — the axial plane (current axial slice Z) */}
       {hLineTop !== null && (
         <div
           className="absolute left-0 right-0"
-          style={{ top: `${hLineTop}px`, height: '11px', marginTop: '-5.5px', cursor: 'ns-resize', pointerEvents: 'auto', zIndex: 20 }}
+          style={{ top: `${hLineTop}px`, height: '13px', marginTop: '-6.5px', cursor: 'ns-resize', pointerEvents: 'auto', zIndex: 20 }}
           onPointerDown={handleHLinePointerDown}
         >
-          <div className="w-full" style={{ height: '1px', marginTop: '5px', background: 'rgba(255, 255, 50, 0.6)', boxShadow: '0 0 4px rgba(255, 255, 50, 0.4)' }} />
+          <div className="w-full" style={{ height: '2px', marginTop: '5.5px', background: 'rgba(255, 235, 60, 0.9)', boxShadow: '0 0 5px rgba(255, 235, 60, 0.6)' }} />
+          <span
+            className="absolute right-1 -top-4 px-1 rounded text-[10px] font-medium select-none"
+            style={{ color: 'rgb(255,235,60)', background: 'rgba(0,0,0,0.45)' }}
+          >
+            {t('view.axial')}{hLabelMm !== null ? ` · ${hLabelMm.toFixed(0)} mm` : ''}
+          </span>
         </div>
       )}
 
@@ -761,13 +796,22 @@ export function ViewportPanoramic({ volumeId, showCrossSectionLine = false }: Vi
             style={{ pointerEvents: 'auto', cursor: 'ew-resize' }}
             onPointerDown={handleVLinePointerDown}
           />
-          {/* Visible line */}
+          {/* Visible line — the cut that produces the cross-section */}
           <line
             x1={vLinePts.x1} y1={vLinePts.y1}
             x2={vLinePts.x2} y2={vLinePts.y2}
-            stroke="rgba(100, 200, 255, 0.6)" strokeWidth={1}
-            style={{ pointerEvents: 'none' }}
+            stroke="rgba(100, 200, 255, 0.95)" strokeWidth={2}
+            style={{ pointerEvents: 'none', filter: 'drop-shadow(0 0 3px rgba(100,200,255,0.6))' }}
           />
+          {/* Position label (arch-length mm) just below the top handle */}
+          <text
+            x={vLinePts.x1 + 8} y={vLinePts.y1 + 30}
+            fontSize={10} fontWeight={500}
+            fill="rgb(150,215,255)" stroke="black" strokeWidth={0.5} paintOrder="stroke"
+            style={{ pointerEvents: 'none', userSelect: 'none' }}
+          >
+            {vLabelMm.toFixed(0)} mm
+          </text>
           {/* Tilt handle — top */}
           <circle
             cx={vLinePts.x1} cy={vLinePts.y1} r={6}
@@ -794,7 +838,7 @@ export function ViewportPanoramic({ volumeId, showCrossSectionLine = false }: Vi
       {renderImplants()}
 
       {/* Label */}
-      <OrientationLabel text={t('viewport.panorama')} />
+      <OrientationLabel text={t('viewport.panorama')} viewKey="PANORAMA" />
 
       {/* W/L info */}
       <div className="absolute bottom-1 left-2 text-gray-400 text-[10px] font-mono pointer-events-none select-none [text-shadow:_0_1px_2px_rgb(0_0_0_/_80%)]">

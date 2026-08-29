@@ -8,7 +8,7 @@ import { RegistrationPanel } from '@/components/registration/RegistrationPanel';
 import { WindowLevelSync } from '@/components/viewport/WindowLevelSync';
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
-import { setupTools } from '@/core/toolManager';
+import { setupTools, setActiveTool } from '@/core/toolManager';
 import { createVolume } from '@/core/volumeBuilder';
 import { serializePlan, planFromObject } from '@/core/planIO';
 import { CS_TOOL_KEYS } from '@/core/annotationLayer';
@@ -95,6 +95,21 @@ export function ViewerShell() {
         console.error('[DQ-DICOM] Volume creation failed:', err);
       });
   }, [needsVolume, state.activeSeriesUID, state.study, state.volumeId, dispatch]);
+
+  // Crosshairs is the default tool once a study is loaded in a multi-view
+  // layout (needs the MPR viewports to exist first, hence the small delay).
+  const crosshairInitRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!engineReady || !state.volumeId) return;
+    const multi = state.layoutMode === '1+3' || state.layoutMode === '2x2';
+    if (!multi || crosshairInitRef.current === state.volumeId) return;
+    crosshairInitRef.current = state.volumeId;
+    const id = setTimeout(() => {
+      setActiveTool('crosshairs');
+      dispatch({ type: 'SET_ACTIVE_TOOL', payload: 'crosshairs' });
+    }, 300);
+    return () => clearTimeout(id);
+  }, [engineReady, state.volumeId, state.layoutMode, dispatch]);
 
   // ── Plan autosave / restore (per study, localStorage) ───────
   const studyUID = state.study?.studyInstanceUID ?? null;

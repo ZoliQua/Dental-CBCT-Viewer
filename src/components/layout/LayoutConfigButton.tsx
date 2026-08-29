@@ -45,10 +45,17 @@ export function LayoutConfigButton() {
   const { big, small, arrangement, grid, panoArrangement } = state.panel;
   const isPano = state.layoutMode === 'OPG2+1';
 
-  const setSmall = (i: number, key: ViewKey) => {
-    const next = [...small] as [ViewKey, ViewKey, ViewKey];
-    next[i] = key;
-    dispatch({ type: 'SET_PANEL', payload: { small: next } });
+  // Assign a view to a panel slot (0 = big, 1-3 = smalls). To keep the four
+  // panels showing distinct views, if another slot already had that view, it
+  // takes over the edited slot's previous view (a swap).
+  const setSlot = (slot: number, view: ViewKey) => {
+    const panels: ViewKey[] = [big, ...small];
+    const old = panels[slot];
+    if (old === view) return;
+    panels[slot] = view;
+    const dup = panels.findIndex((v, i) => i !== slot && v === view);
+    if (dup >= 0) panels[dup] = old;
+    dispatch({ type: 'SET_PANEL', payload: { big: panels[0], small: [panels[1], panels[2], panels[3]] as [ViewKey, ViewKey, ViewKey] } });
   };
 
   const SelectRow = ({ label, value, onChange }: { label: string; value: ViewKey; onChange: (k: ViewKey) => void }) => (
@@ -143,10 +150,10 @@ export function LayoutConfigButton() {
               )}
 
               <div className="space-y-1.5">
-                <SelectRow label={t('layout.big')} value={big} onChange={(k) => dispatch({ type: 'SET_PANEL', payload: { big: k } })} />
-                <SelectRow label={`${t('layout.small')} 1`} value={small[0]} onChange={(k) => setSmall(0, k)} />
-                <SelectRow label={`${t('layout.small')} 2`} value={small[1]} onChange={(k) => setSmall(1, k)} />
-                <SelectRow label={`${t('layout.small')} 3`} value={small[2]} onChange={(k) => setSmall(2, k)} />
+                <SelectRow label={t('layout.big')} value={big} onChange={(k) => setSlot(0, k)} />
+                <SelectRow label={`${t('layout.small')} 1`} value={small[0]} onChange={(k) => setSlot(1, k)} />
+                <SelectRow label={`${t('layout.small')} 2`} value={small[1]} onChange={(k) => setSlot(2, k)} />
+                <SelectRow label={`${t('layout.small')} 3`} value={small[2]} onChange={(k) => setSlot(3, k)} />
               </div>
             </>
           )}

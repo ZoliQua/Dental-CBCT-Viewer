@@ -202,7 +202,7 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
       {ready && <CropController crop={crop} enabled={cropEnabled} />}
 
       {/* 3D label */}
-      <OrientationLabel text="3D" />
+      <OrientationLabel text="3D" viewKey="3D" />
 
       {/* 3D implant layer toggles (bottom-right, translucent — clear of overlays) */}
       {state.implants.length > 0 && (
@@ -298,14 +298,27 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
               {t('view3d.crop')}
             </button>
             {cropOpen && (
-              <div className="absolute bottom-9 left-0 w-44 rounded-lg bg-slate-900/95 border border-slate-700 shadow-xl p-2 space-y-1.5 z-20">
-                <label className="flex items-center gap-1.5 text-[11px] text-slate-200 cursor-pointer select-none">
-                  <input type="checkbox" checked={cropEnabled} onChange={(e) => setCropEnabled(e.target.checked)} className="accent-dental-400 w-3 h-3" />
-                  {t('view3d.crop')}
-                </label>
+              <div className="absolute bottom-9 left-0 w-52 rounded-lg bg-slate-900/95 border border-slate-700 shadow-xl p-2.5 space-y-2 z-20">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-1.5 text-[11px] text-slate-200 cursor-pointer select-none">
+                    <input type="checkbox" checked={cropEnabled} onChange={(e) => setCropEnabled(e.target.checked)} className="accent-dental-400 w-3 h-3" />
+                    {t('view3d.crop')}
+                  </label>
+                  <button
+                    onClick={() => setCrop(NO_CROP)}
+                    disabled={!cropEnabled}
+                    className="text-[10px] text-slate-400 hover:text-slate-200 disabled:opacity-40"
+                  >
+                    {t('common.reset')}
+                  </button>
+                </div>
+                <p className="text-[9px] text-slate-500 leading-tight">{t('view3d.cropHint')}</p>
                 {['X', 'Y', 'Z'].map((label, a) => (
-                  <div key={label} className="flex items-center gap-1">
-                    <span className="text-[10px] text-slate-400 w-2 select-none">{label}</span>
+                  <div key={label} className="space-y-0.5">
+                    <div className="flex justify-between text-[9px] text-slate-400 select-none">
+                      <span className="font-semibold text-slate-300">{label}</span>
+                      <span>{Math.round(crop.min[a] * 100)}–{Math.round(crop.max[a] * 100)}%</span>
+                    </div>
                     <input type="range" min={0} max={100} step={1} disabled={!cropEnabled}
                       value={Math.round(crop.min[a] * 100)}
                       onChange={(e) => setCropVal(a, 'min', Number(e.target.value) / 100)}

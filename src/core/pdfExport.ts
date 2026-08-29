@@ -6,6 +6,9 @@
  */
 
 import { jsPDF } from 'jspdf';
+import { getRenderingEngine } from '@cornerstonejs/core';
+import { RENDERING_ENGINE_ID, VP_3D } from './constants';
+import { ROBOTO_FONT_NAME, ROBOTO_REGULAR_BASE64 } from './robotoFont';
 import type { DicomStudyInfo, ImplantData, MeasurementLayer, AnatomyMarker } from '@/types/dicom';
 import { getImplantSystem } from '@/types/dicom';
 import { implantWorldAxis } from '@/core/implantGeometry';
@@ -70,6 +73,35 @@ async function captureView(view: HTMLElement): Promise<HTMLCanvasElement | null>
   return out;
 }
 
+/** Hide the 3D cutting (slice) planes so the 3D export shows only the model.
+ *  Returns the actors that were hidden, to restore afterwards. */
+async function hide3DSlicePlanes(): Promise<any[]> {
+  const vp = getRenderingEngine(RENDERING_ENGINE_ID)?.getViewport(VP_3D) as any;
+  if (!vp?.getActors) return [];
+  const hidden: any[] = [];
+  try {
+    for (const entry of vp.getActors()) {
+      if (typeof entry.uid === 'string' && entry.uid.startsWith('slice3d:') && entry.actor?.getVisibility?.()) {
+        entry.actor.setVisibility(false);
+        hidden.push(entry.actor);
+      }
+    }
+    if (hidden.length) {
+      vp.render();
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
+    }
+  } catch { /* viewport gone */ }
+  return hidden;
+}
+
+function restore3DSlicePlanes(hidden: any[]): void {
+  if (!hidden.length) return;
+  try {
+    for (const a of hidden) a.setVisibility?.(true);
+    getRenderingEngine(RENDERING_ENGINE_ID)?.getViewport(VP_3D)?.render();
+  } catch { /* viewport gone */ }
+}
+
 interface PdfExportOptions {
   t: (key: string, params?: Record<string, string | number>) => string;
   study: DicomStudyInfo | null;
@@ -92,6 +124,11 @@ const APP_URL = 'github.com/ZoliQua/React-Dental-CBCT-Viewer';
 
 export async function exportViewPdf({ t, study, implants, measurements, report, anatomy, archCurve, thresholds, boneQuality, lang }: PdfExportOptions): Promise<void> {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  // Embed a Unicode font so Hungarian ő / ű (and other accents) render correctly
+  // — jsPDF's built-in Helvetica is limited to WinAnsi/cp1252.
+  doc.addFileToVFS('Roboto-Regular.ttf', ROBOTO_REGULAR_BASE64);
+  doc.addFont('Roboto-Regular.ttf', ROBOTO_FONT_NAME, 'normal');
+  doc.setFont(ROBOTO_FONT_NAME);
   let y = MARGIN;
 
   const pageBreak = (needed: number) => {
@@ -142,6 +179,10 @@ export async function exportViewPdf({ t, study, implants, measurements, report, 
   }
   y += 3;
 
+  // The 3D export should show only the model: temporarily hide the cutting
+  // (slice) planes in the 3D viewport so they don't appear in the capture.
+  const hidden3DSlices = await hide3DSlicePlanes();
+
   // Capture every viewport currently on screen (layout-agnostic) into a grid,
   // so the 3D view exports all four panes, the panoramic view its four, etc.
   const viewEls = Array.from(document.querySelectorAll('[data-vp]')) as HTMLElement[];
@@ -153,6 +194,8 @@ export async function exportViewPdf({ t, study, implants, measurements, report, 
       shots.push({ title: v.getAttribute('data-vp-title') || v.getAttribute('data-vp') || '', canvas: shot });
     }
   }
+
+  restore3DSlicePlanes(hidden3DSlices);
   if (shots.length > 0) {
     pageBreak(8);
     doc.setFontSize(12);

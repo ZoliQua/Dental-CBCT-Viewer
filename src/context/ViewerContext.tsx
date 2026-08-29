@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, type ReactNode, type Dispatch } from 'react';
 import type { DicomStudyInfo, ViewportTool, LayoutMode, ViewMode, ProjectionMode, ImplantData, MeasurementLayer, AnatomyMarker, AnatomyType, ScanMesh, GuideParams, PanelConfig } from '@/types/dicom';
-import { GUIDE_DEFAULTS, DEFAULT_PANEL, DEFAULT_IMPLANT_SYSTEM_ID } from '@/types/dicom';
+import { GUIDE_DEFAULTS, DEFAULT_PANEL, DEFAULT_IMPLANT_SYSTEM_ID, normalizePanelViews } from '@/types/dicom';
 import type { PlanData } from '@/core/planIO';
 
 export interface ViewerState {
@@ -80,8 +80,9 @@ export interface DisplayConfig {
   showClinic: boolean;
   /** Orientation label color (Axial/Sagittal/Coronal) */
   labelColor: string;
-  /** Orientation label font size, px */
-  labelSize: number;
+  /** Orientation label font size, px — separate for the main and the side views */
+  labelSizeMain: number;
+  labelSizeSide: number;
   labelAlign: 'left' | 'center' | 'right';
   /** On-image series/modality/slice-number toggles */
   showSeries: boolean;
@@ -101,12 +102,13 @@ export const DISPLAY_DEFAULTS: DisplayConfig = {
   showDate: true,
   showClinic: true,
   labelColor: '#fbbf24',
-  labelSize: 12,
+  labelSizeMain: 18,
+  labelSizeSide: 14,
   labelAlign: 'center',
   showSeries: false,
   showModality: false,
   showSlice: true,
-  scope: 'all',
+  scope: 'main',
   sliceOpacity: 0.2,
   preset3d: 'X-Ray',
 };
@@ -239,8 +241,11 @@ function viewerReducer(state: ViewerState, action: ViewerAction): ViewerState {
       return { ...state, activeTool: action.payload };
     case 'SET_LAYOUT_MODE':
       return { ...state, layoutMode: action.payload, viewMode: 'AXIAL' };
-    case 'SET_PANEL':
-      return { ...state, panel: { ...state.panel, ...action.payload } };
+    case 'SET_PANEL': {
+      const merged = { ...state.panel, ...action.payload };
+      const norm = normalizePanelViews(merged.big, merged.small);
+      return { ...state, panel: { ...merged, big: norm.big, small: norm.small } };
+    }
     case 'SET_VOLUME_ID':
       return { ...state, volumeId: action.payload };
     case 'SET_VIEW_MODE':

@@ -25,8 +25,10 @@ function lerp(a: Vec3, b: Vec3, t: number): Vec3 {
   return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 }
 
-/** A capped tube through `points` with per-point radius (mm), as a vtk actor. */
-function tubeActor(points: Vec3[], radii: number[], color: RGB, opacity: number, sides = 24): any {
+/** A capped tube through `points` with per-point radius (mm), as a vtk actor.
+ *  Pass `edgeColor` to draw a thin defining outline (used for the drill sleeve
+ *  so it reads as a distinct object against the translucent volume). */
+function tubeActor(points: Vec3[], radii: number[], color: RGB, opacity: number, sides = 24, edgeColor?: RGB, capping = true): any {
   const n = points.length;
   const pd = vtkPolyData.newInstance();
 
@@ -47,7 +49,7 @@ function tubeActor(points: Vec3[], radii: number[], color: RGB, opacity: number,
     vtkDataArray.newInstance({ name: 'radius', values: Float32Array.from(radii) }),
   );
 
-  const tube = vtkTubeFilter.newInstance({ capping: true, numberOfSides: sides, radius: 1 });
+  const tube = vtkTubeFilter.newInstance({ capping, numberOfSides: sides, radius: 1 });
   tube.setVaryRadius(VARY_RADIUS_BY_ABSOLUTE_SCALAR);
   tube.setInputData(pd);
 
@@ -60,6 +62,11 @@ function tubeActor(points: Vec3[], radii: number[], color: RGB, opacity: number,
   const prop = actor.getProperty();
   prop.setColor(color[0], color[1], color[2]);
   prop.setOpacity(opacity);
+  if (edgeColor) {
+    prop.setEdgeVisibility(true);
+    prop.setEdgeColor(edgeColor[0], edgeColor[1], edgeColor[2]);
+    prop.setLineWidth(1);
+  }
   return actor;
 }
 
@@ -143,7 +150,9 @@ export function buildImplantActors(
       imp.entry[2] - a[2] * imp.sleeve.offset,
     ];
     const r = imp.sleeve.diameter / 2;
-    out.push({ key: 'sleeve', actor: tubeActor([top, bot], [r, r], [0.47, 0.9, 0.55], 0.45) });
+    // Open-ended (uncapped), smooth translucent tube → a clean hollow drill
+    // sleeve you can see through (no facet edges, which read as ribbing).
+    out.push({ key: 'sleeve', actor: tubeActor([top, bot], [r, r], [0.5, 0.92, 0.6], 0.45, 40, undefined, false) });
   }
 
   return out;

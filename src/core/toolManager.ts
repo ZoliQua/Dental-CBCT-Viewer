@@ -18,15 +18,17 @@ import {
   CrosshairsTool,
   Enums as csToolsEnums,
 } from '@cornerstonejs/tools';
-import { TOOL_GROUP_ID, TOOL_GROUP_3D_ID, VP_AXIAL, VP_SAGITTAL, VP_CORONAL } from './constants';
+import { TOOL_GROUP_ID, TOOL_GROUP_3D_ID } from './constants';
 import type { ViewportTool } from '@/types/dicom';
 
-// Reference line colors per orientation (the line representing that plane)
-const CROSSHAIR_COLORS: Record<string, string> = {
-  [VP_AXIAL]: 'rgb(255, 255, 50)',    // Yellow — axial plane
-  [VP_SAGITTAL]: 'rgb(255, 100, 100)', // Red — sagittal plane
-  [VP_CORONAL]: 'rgb(100, 220, 100)',  // Green — coronal plane
-};
+// Reference-line colors: a clean two-colour scheme (yellow for the axial plane,
+// blue for the sagittal/coronal planes) instead of the near-white default.
+// Matched by substring so it is robust to any id prefix/suffix.
+const CROSSHAIR_YELLOW = 'rgb(255, 214, 60)';
+const CROSSHAIR_BLUE = 'rgb(74, 163, 255)';
+function referenceLineColor(refVpId: string): string {
+  return refVpId.includes('AXIAL') ? CROSSHAIR_YELLOW : CROSSHAIR_BLUE;
+}
 
 let toolGroupCreated = false;
 
@@ -68,8 +70,9 @@ export function setupTools(): void {
   toolGroup.addTool(ArrowAnnotateTool.toolName);
   toolGroup.addTool(ProbeTool.toolName);
   toolGroup.addTool(CrosshairsTool.toolName, {
-    getReferenceLineColor: (_vpId: string, refVpId: string) =>
-      CROSSHAIR_COLORS[refVpId] || 'rgb(200, 200, 200)',
+    // CrosshairsTool calls this with a SINGLE arg — the id of the viewport whose
+    // plane the line represents (not two args, as it may look).
+    getReferenceLineColor: (vpId: string) => referenceLineColor(vpId),
     getReferenceLineControllable: () => true,
     getReferenceLineDraggableRotatable: () => true,
     getReferenceLineSlabThicknessControlsOn: () => false,
