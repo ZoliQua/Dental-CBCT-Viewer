@@ -84,7 +84,7 @@ export function LandingPage() {
           <p className="text-xs text-gray-500 mt-2">
             {t('landing.aboutBuilt')}{' '}
             <a
-              href="https://github.com/ZoliQua/React-Dental-CBCT-Viewer"
+              href="https://github.com/ZoliQua/Dental-CBCT-Viewer"
               target="_blank"
               rel="noreferrer"
               className="text-dental-600 dark:text-dental-400 hover:underline"

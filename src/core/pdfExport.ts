@@ -120,7 +120,7 @@ const PAGE_W = 210;
 const PAGE_H = 297;
 const MARGIN = 14;
 const APP_VERSION = '0.1.0';
-const APP_URL = 'github.com/ZoliQua/React-Dental-CBCT-Viewer';
+const APP_URL = 'github.com/ZoliQua/Dental-CBCT-Viewer';
 
 export async function exportViewPdf({ t, study, implants, measurements, report, anatomy, archCurve, thresholds, boneQuality, lang }: PdfExportOptions): Promise<void> {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });

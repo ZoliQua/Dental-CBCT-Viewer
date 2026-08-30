@@ -11,14 +11,12 @@ import { useTheme } from '@/context/ThemeContext';
 import { LANGUAGES } from '@/i18n/translations';
 import { useLayoutSwitch } from '@/hooks/useLayoutSwitch';
 import { LayoutConfigButton } from './LayoutConfigButton';
-import { exportViewPdf } from '@/core/pdfExport';
+import { exportPlanPdf, exportDrillGuideStl } from '@/core/viewerExports';
 import { serializePlan, planFromObject } from '@/core/planIO';
 import { loadSample } from '@/core/sampleLoader';
-import { implantWorldAxis } from '@/core/implantGeometry';
 import { getVolumeData } from '@/core/cprEngine';
-import { sampleImplantBoneHU } from '@/core/boneQuality';
-import { loadScanPolyData, setScanPolyData, polyDataCenter, translation16, IDENTITY16, scanTriangleSoupWorld } from '@/core/scanMesh';
-import { SCAN_DEFAULTS, getImplantSystem, type LayoutMode } from '@/types/dicom';
+import { loadScanPolyData, setScanPolyData, polyDataCenter, translation16, IDENTITY16 } from '@/core/scanMesh';
+import { SCAN_DEFAULTS, type LayoutMode } from '@/types/dicom';
 
 const LAYOUTS: { id: LayoutMode; labelKey?: string; label?: string }[] = [
   { id: '1x1', label: '1×1' },
@@ -189,45 +187,11 @@ export function TopBar() {
   /** Build and download the printable drill guide (STL) via CSG (manifold-3d). */
   const exportGuide = async () => {
     setExportOpen(false);
-    const cps = state.archCurveControlPoints;
-    const guided = state.implants.filter(i => i.guided?.enabled);
-    if (!cps || guided.length === 0) { window.alert(t('guide.noImplants')); return; }
-
     setGuideBusy(true);
     try {
-      const { buildDrillGuide } = await import('@/core/guideBuilder');
-      const { triMeshToBinarySTL } = await import('@/core/guideExport');
-
-      const implants = guided.flatMap(imp => {
-        const wa = implantWorldAxis(cps, imp);
-        if (!wa) return [];
-        const sys = getImplantSystem(imp.systemId);
-        return [{
-          entry: wa.entry,
-          axis: wa.axis,
-          length: imp.length,
-          sleeveDiameter: sys.sleeveDiameter,
-          sleeveOffset: imp.guided!.sleeveOffset,
-          sleeveHeight: imp.guided!.sleeveHeight,
-        }];
-      });
-      if (implants.length === 0) { window.alert(t('guide.noImplants')); return; }
-
-      const scanSoups = state.scans
-        .filter(s => s.visible)
-        .map(s => scanTriangleSoupWorld(s.id, s.transform))
-        .filter((x): x is Float32Array => !!x);
-
-      const result = await buildDrillGuide({ controlPoints: cps, implants, scanSoups, params: state.guide });
-      const stl = triMeshToBinarySTL(result.mesh);
-      const blob = new Blob([stl], { type: 'model/stl' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = `guide_${new Date().toISOString().slice(0, 10)}.stl`;
-      link.href = url;
-      link.click();
-      URL.revokeObjectURL(url);
-      if (result.warnings.includes('scan-not-watertight')) window.alert(t('guide.warnScan'));
+      const { ok, warnings } = await exportDrillGuideStl(state);
+      if (!ok) { window.alert(t('guide.noImplants')); return; }
+      if (warnings.includes('scan-not-watertight')) window.alert(t('guide.warnScan'));
     } catch (err) {
       console.error('[guide] export failed', err);
       window.alert(t('guide.error'));
@@ -462,30 +426,7 @@ export function TopBar() {
                 <button
                   onClick={() => {
                     setExportOpen(false);
-                    // Bone quality per implant (sampled from the volume)
-                    const boneQuality: Record<string, string> = {};
-                    const cps = state.archCurveControlPoints;
-                    const vol = state.volumeId ? getVolumeData(state.volumeId) : null;
-                    if (cps && vol) {
-                      for (const imp of state.implants) {
-                        const wa = implantWorldAxis(cps, imp);
-                        if (!wa) continue;
-                        const b = sampleImplantBoneHU(vol, wa.entry, wa.apex, imp.diameter / 2);
-                        if (b) boneQuality[imp.id] = `${b.bone} · ${Math.round(b.meanHU)} HU`;
-                      }
-                    }
-                    void exportViewPdf({
-                      t,
-                      study: state.study,
-                      implants: state.implants,
-                      measurements: state.measurements,
-                      report: state.report,
-                      anatomy: state.anatomy,
-                      archCurve: state.archCurveControlPoints,
-                      thresholds: { nerve: state.safety.nerveMm, sinus: state.safety.sinusMm, neighbor: state.safety.neighborMm },
-                      boneQuality,
-                      lang,
-                    });
+                    void exportPlanPdf(state, t, lang);
                   }}
                   className="w-full px-3 py-1.5 text-xs text-left text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
                 >

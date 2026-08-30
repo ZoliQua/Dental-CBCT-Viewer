@@ -1,325 +1,118 @@
-<h1 align="center">🦷 React Dental CBCT Viewer</h1>
+# 🦷 Dental CBCT Viewer
+
+[![npm](https://img.shields.io/npm/v/dental-cbct-viewer?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/dental-cbct-viewer)
+[![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Dental-CBCT-Viewer/blob/main/LICENSE)
+[![React](https://img.shields.io/badge/React-18%20%7C%2019-61DAFB?style=for-the-badge&logo=react)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+
+**📖 Full documentation is available per language:**
+
+🇬🇧 [English](lang/README-en.md) · 🇩🇪 [Deutsch](lang/README-de.md) · 🇪🇸 [Español](lang/README-es.md) · 🇭🇺 [Magyar](lang/README-hu.md)
 
 <p align="center">
-  <b>Dental CBCT/CT DICOM viewer with panoramic (OPG) reconstruction, cross-sections and 3D implant planning</b>
+  <img src="https://raw.githubusercontent.com/ZoliQua/Dental-CBCT-Viewer/main/public/cbct-icon.png" width="120" alt="Dental CBCT Viewer" />
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square&logo=react" />
-  <img src="https://img.shields.io/badge/TypeScript-5.5-3178C6?style=flat-square&logo=typescript" />
-  <img src="https://img.shields.io/badge/Vite-5.4-646CFF?style=flat-square&logo=vite" />
-  <img src="https://img.shields.io/badge/Cornerstone3D-2.0-FF6B35?style=flat-square" />
-  <img src="https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4?style=flat-square&logo=tailwindcss" />
-  <img src="https://img.shields.io/badge/Vitest-tested-6E9F18?style=flat-square&logo=vitest" />
-</p>
+An embeddable **dental CBCT / CT DICOM viewer** for **React + TypeScript** — MPR and true-**3D** views, **panoramic (OPG)** reconstruction along the dental arch, perpendicular **cross-sections**, **guided implant planning** with nerve/sinus/neighbour **safety clearances** and **bone quality** (Misch D1–D5), a **printable drill-guide (STL)** export, a multilingual **PDF report**, and a 4-language UI (EN/DE/ES/HU). Built on [Cornerstone3D](https://www.cornerstonejs.org/) and [vtk.js](https://kitware.github.io/vtk.js/).
 
-<p align="center">
-  <b>🌐 <a href="#-english">English</a> · <a href="#-deutsch">Deutsch</a> · <a href="#-español">Español</a> · <a href="#-magyar">Magyar</a></b>
-</p>
+🔗 **Repository:** https://github.com/ZoliQua/Dental-CBCT-Viewer
 
 ---
 
-# 🇬🇧 English
-
-## 🦷 React Dental CBCT Viewer
-
-Dental CBCT/CT DICOM viewer and implant planning application. Runs standalone and can be integrated as a git submodule into the **DentalQuoteCreator** system.
-
-### ✨ Features
-
-| | Feature | Description |
-|---|---------|-------------|
-| 📂 | **DICOM Loading** | Drag & drop file import, series recognition, progress tracking |
-| 🖥️ | **2D MPR Views** | Axial, coronal, sagittal planes with real-time navigation |
-| 🎛️ | **Window/Level** | 6 presets (Bone, Soft Tissue, Lung, Brain, Dental, Implant) + mouse drag |
-| 📐 | **Measurement Tools** | Length, angle, elliptical/circle/rectangle ROI, freehand, HU probe, arrow |
-| 🦴 | **Panoramic OPG** | Curved planar reformation with 9-point CatmullRom spline |
-| 🔪 | **Cross-Section** | Perpendicular slice to arch curve, tiltable along the arch (±30°) |
-| 🔩 | **3D Implant Planning** | True 3D body: every view renders its own plane intersection; full ±180° rotation (lower/upper jaw), diameter 3–6 mm, length 6–16 mm, draggable on cross-section and panoramic |
-| 🗂️ | **Layers Panel** | Right slide-in panel: implants and measurements as layers — show/hide, edit (pop-up), delete, rename |
-| 🌐 | **4-language UI** | English, German, Spanish and Hungarian with a top-bar language selector |
-| 🌓 | **Dark/light mode** | Theme toggle in the top bar; settings and help slide-in panels |
-| 🖼️ | **PNG Export** | Save panoramic and cross-section images |
-| ⌨️ | **Keyboard Shortcuts** | W/L, Pan, Zoom, Scroll, measurement tools at a keystroke |
-| 📏 | **Layouts** | 1×1, 2×2, 1+3, Panoramic 1×2, Panoramic 2+1 |
-
-### 🛠️ Installation & Running
+## 📦 Installation
 
 ```bash
-# Install dependencies
-npm install
-
-# Start dev server (port 3340)
-npm run dev
-
-# Run tests (Vitest)
-npm test
-
-# Production build
-npm run build
+npm install dental-cbct-viewer react react-dom
 ```
 
-### 📁 Project Structure
+**Requirements:** React **18 or 19** (peer dependency); a bundler that supports the `exports` field, ESM, Web Workers and WASM (Vite, webpack 5, Next.js, Rollup). The heavy imaging libraries (Cornerstone3D, vtk.js, jsPDF, dicom-parser) are regular dependencies and are installed for you.
 
-```
-src/
-├── components/          # React UI components
-│   ├── layout/          #   Toolbar, ViewerShell
-│   ├── viewport/        #   2D, 3D, MPR, Panoramic, Cross-Section
-│   ├── implant/         #   Implant overlays, shape, pop-up editor
-│   ├── layers/          #   Layers panel
-│   ├── panoramic/       #   Arch curve editor
-│   └── tools/           #   Window/Level controls
-├── context/             # Global state management (React Context + useReducer)
-├── core/                # DICOM loading, CPR + implant geometry, tool manager
-├── types/               # TypeScript type definitions
-├── workers/             # Web Worker for DICOM decoding
-└── hooks/               # Custom React hooks
-tests/                   # Vitest suite (CPR & implant geometry)
-```
+> **⚠️ Cross-origin isolation.** The DICOM decode workers use `SharedArrayBuffer`, so the **host page must be served** with:
+> ```
+> Cross-Origin-Opener-Policy: same-origin
+> Cross-Origin-Embedder-Policy: require-corp
+> ```
+> Without these headers, image decoding will not run.
 
-### 🏗️ Tech Stack
+## 🚀 Quick start
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | React 18 + TypeScript 5.5 |
-| Build | Vite 5.4 |
-| Styling | Tailwind CSS 3.4 |
-| DICOM | Cornerstone3D v2 + dicom-parser |
-| State | React Context + useReducer |
+Render `DicomViewer` and import the stylesheet **once**:
 
-### 🔧 Key Architecture Decisions
+```tsx
+import { DicomViewer } from "dental-cbct-viewer";
+import "dental-cbct-viewer/style.css";
 
-- **Canvas-based OPG/Cross-Section** — Direct canvas rendering instead of Cornerstone StackViewport for custom CPR views
-- **Arc-length reparameterization** — Eliminates panoramic distortion from uneven control point spacing
-- **3D implant model** — World position + apex axis; each view (cross-section, panoramic, axial) renders the true plane∩body intersection
-- **Pure, testable geometry core** — `cprMath.ts` / `implantGeometry.ts` have no Cornerstone dependency and are covered by the Vitest suite
-- **ES Module Web Worker** — Custom decoder worker with static JS imports and lazy WASM codec loading
-- **SharedArrayBuffer** — COOP/COEP headers enabled for multi-threaded DICOM decoding
-
-### 🧪 Tests
-
-Geometry is verified with a linear-field trick: trilinear interpolation of a linear voxel field is exact, so each output pixel decodes the world position it was sampled at — the engine's sampling can be compared against the promised plane to sub-micron precision.
-
-```bash
-npm test         # run the Vitest suite once
-npm run test:watch
+export function Planner() {
+  return (
+    <div style={{ height: "100vh" }}>
+      <DicomViewer lang="en" />
+    </div>
+  );
+}
 ```
 
-### ⌨️ Keyboard Shortcuts
+The viewer fills its parent, so give it a sized container. Dark mode is the default and is scoped to the viewer's own root — it never touches the host page's theme.
 
-| Key | Tool | | Key | Tool |
-|-----|------|---|-----|------|
-| `W` | Window/Level | | `L` | Length |
-| `P` | Pan | | `A` | Angle |
-| `Z` | Zoom | | `E` | Elliptical ROI |
-| `S` | Scroll | | `C` | Circle ROI |
-| `X` | Crosshairs | | `R` | Rectangle ROI |
-| `F` | Freehand | | `B` | Bidirectional |
-| `H` | HU Probe | | `N` | Arrow |
+## 🎛️ Imperative API (ref)
 
----
+```tsx
+import { useRef } from "react";
+import { DicomViewer, type DicomViewerHandle } from "dental-cbct-viewer";
+import "dental-cbct-viewer/style.css";
 
-# 🇩🇪 Deutsch
+function App() {
+  const ref = useRef<DicomViewerHandle>(null);
 
-## 🦷 React Dental CBCT Viewer
-
-Dentaler CBCT/CT-DICOM-Viewer und Implantatplanungs-Anwendung. Läuft eigenständig und kann als Git-Submodul in das **DentalQuoteCreator**-System integriert werden.
-
-### ✨ Funktionen
-
-| | Funktion | Beschreibung |
-|---|----------|-------------|
-| 📂 | **DICOM-Import** | Drag & Drop, Serienerkennung, Fortschrittsanzeige |
-| 🖥️ | **2D-MPR-Ansichten** | Axiale, koronale, sagittale Ebenen mit Echtzeit-Navigation |
-| 🎛️ | **Fenster/Ebene** | 6 Voreinstellungen (Knochen, Weichgewebe, Lunge, Gehirn, Dental, Implantat) + Maus |
-| 📐 | **Messwerkzeuge** | Strecke, Winkel, Ellipse/Kreis/Rechteck-ROI, Freihand, HU-Sonde, Pfeil |
-| 🦴 | **Panorama-OPG** | Gebogene Ebenenrekonstruktion mit 9-Punkt-CatmullRom-Kurve |
-| 🔪 | **Querschnitt** | Senkrechter Schnitt zur Bogenkurve, entlang des Bogens kippbar (±30°) |
-| 🔩 | **3D-Implantatplanung** | Echter 3D-Körper: jede Ansicht zeigt ihren eigenen Ebenenschnitt; volle ±180°-Rotation (Unter-/Oberkiefer), Durchmesser 3–6 mm, Länge 6–16 mm, verschiebbar im Querschnitt und Panorama |
-| 🗂️ | **Ebenen-Panel** | Rechts einfahrendes Panel: Implantate und Messungen als Ebenen — ein-/ausblenden, bearbeiten (Pop-up), löschen, umbenennen |
-| 🌐 | **4-sprachige UI** | Englisch, Deutsch, Spanisch und Ungarisch mit Sprachauswahl in der oberen Leiste |
-| 🌓 | **Dunkel-/Hellmodus** | Theme-Umschalter in der oberen Leiste; Einstellungs- und Hilfe-Panels |
-| 🖼️ | **PNG-Export** | Panorama- und Querschnittbilder speichern |
-| ⌨️ | **Tastenkürzel** | W/L, Pan, Zoom, Scroll, Messwerkzeuge per Tastendruck |
-| 📏 | **Layouts** | 1×1, 2×2, 1+3, Panorama 1×2, Panorama 2+1 |
-
-### 🛠️ Installation und Ausführung
-
-```bash
-# Abhängigkeiten installieren
-npm install
-
-# Entwicklungsserver starten (Port 3340)
-npm run dev
-
-# Tests ausführen (Vitest)
-npm test
-
-# Produktions-Build
-npm run build
+  return (
+    <>
+      <button onClick={() => ref.current?.loadSample()}>Load sample</button>
+      <button onClick={() => ref.current?.exportPdf()}>Export PDF</button>
+      <DicomViewer
+        ref={ref}
+        initialLayout="1+3"
+        onImplantsChange={(implants) => console.log(implants.length, "implants")}
+        onPlanChange={(plan) => localStorage.setItem("plan", JSON.stringify(plan))}
+      />
+    </>
+  );
+}
 ```
 
-### 📁 Projektstruktur
+**Handle methods:** `getImplants`, `addImplant`, `updateImplant`, `removeImplant`, `getPlan`, `loadPlan`, `loadStudy(files)`, `loadSample`, `setLayout`, `setActiveView`, `exportPdf`, `exportGuideStl`.
 
-```
-src/
-├── components/          # React-UI-Komponenten
-│   ├── layout/          #   Toolbar, ViewerShell
-│   ├── viewport/        #   2D, 3D, MPR, Panorama, Querschnitt
-│   ├── implant/         #   Implantat-Overlays, Form, Pop-up-Editor
-│   ├── layers/          #   Ebenen-Panel
-│   ├── panoramic/       #   Bogenkurven-Editor
-│   └── tools/           #   Fenster/Ebene-Steuerung
-├── context/             # Globale Zustandsverwaltung (React Context + useReducer)
-├── core/                # DICOM-Laden, CPR- + Implantat-Geometrie, Werkzeugmanager
-├── types/               # TypeScript-Typdefinitionen
-├── workers/             # Web Worker für DICOM-Dekodierung
-└── hooks/               # Eigene React-Hooks
-tests/                   # Vitest-Tests (CPR- & Implantat-Geometrie)
+**Props:** `patientId`, `patientName`, `initialPlan`, `initialLayout`, `lang`, `onPlanChange`, `onImplantsChange`, `className`, `embedded`.
+
+## 🧩 Framework-free core (`/core`)
+
+Pure, React-free building blocks run in Node, tests or your own logic — the implant data model + system catalog and all the geometry/analysis math:
+
+```ts
+import {
+  IMPLANT_SYSTEMS, getImplantSystem,   // implant catalog
+  implantWorldAxis, evaluateImplant,   // geometry + nerve/sinus/neighbour safety
+  classifyBone, sampleImplantBoneHU,   // Misch D1–D5 bone quality
+} from "dental-cbct-viewer/core";
 ```
 
-### ⌨️ Tastenkürzel
+The heavy CSG kernel (drill-guide Boolean via `manifold-3d`) is loaded lazily, so importing `/core` for the geometry/safety helpers stays light.
 
-| Taste | Werkzeug | | Taste | Werkzeug |
-|-------|----------|---|-------|----------|
-| `W` | Fenster/Ebene | | `L` | Strecke |
-| `P` | Verschieben | | `A` | Winkel |
-| `Z` | Zoom | | `E` | Ellipse |
-| `S` | Scrollen | | `C` | Kreis |
-| `X` | Fadenkreuz | | `R` | Rechteck |
-| `F` | Freihand | | `B` | Bidirektional |
-| `H` | HU-Sonde | | `N` | Pfeil |
+## ✨ Highlights
 
----
+- 🧊 **True-3D** volume rendering (translucent X-ray preset) with intersecting MPR slice planes and a crop box
+- 🩻 **MPR** (axial / sagittal / coronal) with linked crosshairs, plus **panoramic (OPG)** reconstruction and tiltable **cross-sections** along a draggable dental arch curve
+- 🦷 **Guided implant planning** — 3D implant + drill sleeve, nerve / sinus / neighbour **safety clearances**, **bone quality** (Misch D1–D5, HU at the implant site)
+- 🖨️ **Printable drill guide (STL)** via constructive solid geometry (`manifold-3d`)
+- 📄 **Multilingual PDF report** (jsPDF, bundled Unicode font — Hungarian accents render correctly)
+- 🔗 Plan save/load (JSON), imperative ref API, controlled props/callbacks
+- 🌐 4 UI languages (EN / DE / ES / HU) · 🌓 self-scoped dark mode · 🧱 embeddable
 
-# 🇪🇸 Español
+## ⚙️ Notes for host bundlers
 
-## 🦷 React Dental CBCT Viewer
+- **Vite:** works out of the box.
+- **Next.js / webpack 5:** render the viewer in a **client component** (`"use client"`) — it reads the DOM on mount. Ensure the COOP/COEP headers above are set (e.g. via `next.config.js` headers). Worker/WASM assets are pre-bundled into the package.
 
-Visor DICOM de CBCT/CT dental y aplicación de planificación de implantes. Funciona de forma independiente y puede integrarse como submódulo git en el sistema **DentalQuoteCreator**.
+## 📄 License & disclaimer
 
-### ✨ Funciones
+MIT © Zoltán Dul. Bundled Roboto font under Apache-2.0 (see [`LICENSE`](LICENSE)).
 
-| | Función | Descripción |
-|---|---------|-------------|
-| 📂 | **Carga DICOM** | Importación por arrastrar y soltar, reconocimiento de series, indicador de progreso |
-| 🖥️ | **Vistas MPR 2D** | Planos axial, coronal y sagital con navegación en tiempo real |
-| 🎛️ | **Ventana/Nivel** | 6 preajustes (hueso, tejido blando, pulmón, cerebro, dental, implante) + arrastre |
-| 📐 | **Herramientas de medición** | Distancia, ángulo, ROI de elipse/círculo/rectángulo, mano alzada, sonda HU, flecha |
-| 🦴 | **Panorámica OPG** | Reconstrucción planar curva con spline CatmullRom de 9 puntos |
-| 🔪 | **Corte transversal** | Corte perpendicular al arco, inclinable a lo largo del arco (±30°) |
-| 🔩 | **Planificación 3D de implantes** | Cuerpo 3D real: cada vista muestra su propia intersección; rotación completa ±180° (mandíbula/maxilar), diámetro 3–6 mm, longitud 6–16 mm, arrastrable en el corte y la panorámica |
-| 🗂️ | **Panel de capas** | Panel deslizante derecho: implantes y mediciones como capas — mostrar/ocultar, editar (pop-up), eliminar, renombrar |
-| 🌐 | **Interfaz en 4 idiomas** | Inglés, alemán, español y húngaro con selector de idioma en la barra superior |
-| 🌓 | **Modo oscuro/claro** | Conmutador de tema en la barra superior; paneles de ajustes y ayuda |
-| 🖼️ | **Exportación PNG** | Guardar imágenes panorámicas y de corte |
-| ⌨️ | **Atajos de teclado** | W/L, mover, zoom, desplazar y herramientas de medición con una tecla |
-| 📏 | **Diseños** | 1×1, 2×2, 1+3, Panorámica 1×2, Panorámica 2+1 |
-
-### 🛠️ Instalación y ejecución
-
-```bash
-# Instalar dependencias
-npm install
-
-# Iniciar servidor de desarrollo (puerto 3340)
-npm run dev
-
-# Ejecutar pruebas (Vitest)
-npm test
-
-# Build de producción
-npm run build
-```
-
-### ⌨️ Atajos de teclado
-
-| Tecla | Herramienta | | Tecla | Herramienta |
-|-------|-------------|---|-------|-------------|
-| `W` | Ventana/Nivel | | `L` | Distancia |
-| `P` | Mover | | `A` | Ángulo |
-| `Z` | Zoom | | `E` | Elipse |
-| `S` | Desplazar | | `C` | Círculo |
-| `X` | Cruz | | `R` | Rectángulo |
-| `F` | Mano alzada | | `B` | Bidireccional |
-| `H` | Sonda HU | | `N` | Flecha |
-
----
-
-# 🇭🇺 Magyar
-
-## 🦷 React Dental CBCT Viewer
-
-Fogászati CBCT/CT DICOM megjelenítő és implantátum-tervező alkalmazás. Önállóan futtatható, később git submodule-ként integrálható a **DentalQuoteCreator** rendszerbe.
-
-### ✨ Funkciók
-
-| | Funkció | Leírás |
-|---|---------|--------|
-| 📂 | **DICOM betöltés** | Drag & drop fájlimport, sorozat-felismerés, betöltési folyamatjelző |
-| 🖥️ | **2D MPR nézetek** | Axiális, koronális, szagittális síkok valós idejű navigációval |
-| 🎛️ | **Ablak/Szint** | 6 preset (Csont, Lágyrész, Tüdő, Agy, Fogászat, Implantátum) + egérhúzás |
-| 📐 | **Mérőeszközök** | Távolság, szög, ellipszis/kör/téglalap ROI, szabadkézi rajz, HU szonda, nyíl |
-| 🦴 | **Panoráma OPG** | Ívelt síkú rekonstrukció 9 vezérlőpontos CatmullRom görbével |
-| 🔪 | **Keresztmetszet** | Az ívgörbére merőleges szelet, az ív mentén dönthető (±30°) |
-| 🔩 | **3D implantátum tervezés** | Valódi 3D test: minden nézet a saját sík-metszetét mutatja; ±180° forgatás (alsó/felső állcsont), átmérő 3–6 mm, hossz 6–16 mm, húzható a keresztmetszeten és a panorámán |
-| 🗂️ | **Rétegek panel** | Jobbról bekúszó panel: implantátumok és mérések rétegenként — megjelenítés/rejtés, módosítás (pop-up), törlés, átnevezés |
-| 🌐 | **4 nyelvű felület** | Angol, német, spanyol és magyar, nyelvválasztóval a felső sorban |
-| 🌓 | **Sötét/világos mód** | Témaváltó a felső sorban; beállítások és súgó bekúszó panelek |
-| 🖼️ | **PNG export** | Panoráma és keresztmetszet mentése képként |
-| ⌨️ | **Billentyűparancsok** | W/L, Pan, Zoom, Scroll, mérőeszközök egy gombnyomásra |
-| 📏 | **Elrendezések** | 1×1, 2×2, 1+3, Panoráma 1×2, Panoráma 2+1 |
-
-### 🛠️ Telepítés és futtatás
-
-```bash
-# Függőségek telepítése
-npm install
-
-# Fejlesztői szerver indítása (port 3340)
-npm run dev
-
-# Tesztek futtatása (Vitest)
-npm test
-
-# Produkciós build
-npm run build
-```
-
-### 📁 Projektstruktúra
-
-```
-src/
-├── components/          # React UI komponensek
-│   ├── layout/          #   Toolbar, ViewerShell
-│   ├── viewport/        #   2D, 3D, MPR, Panoráma, Keresztmetszet
-│   ├── implant/         #   Implantátum overlay-k, alakzat, pop-up szerkesztő
-│   ├── layers/          #   Rétegek panel
-│   ├── panoramic/       #   Ívgörbe szerkesztő
-│   └── tools/           #   Ablak/Szint kezelő
-├── context/             # Globális állapotkezelés (React Context + useReducer)
-├── core/                # DICOM betöltés, CPR + implantátum geometria, eszközkezelő
-├── types/               # TypeScript típusdefiníciók
-├── workers/             # Web Worker DICOM dekódoláshoz
-└── hooks/               # Egyedi React hook-ok
-tests/                   # Vitest tesztek (CPR és implantátum geometria)
-```
-
-### ⌨️ Billentyűparancsok
-
-| Billentyű | Eszköz | | Billentyű | Eszköz |
-|-----------|--------|---|-----------|--------|
-| `W` | Ablak/Szint | | `L` | Távolság |
-| `P` | Mozgatás | | `A` | Szög |
-| `Z` | Nagyítás | | `E` | Ellipszis |
-| `S` | Görgetés | | `C` | Kör |
-| `X` | Szálkereszt | | `R` | Téglalap |
-| `F` | Szabadkézi | | `B` | Kétirányú |
-| `H` | HU szonda | | `N` | Nyíl |
-
----
-
-<p align="center">
-  <sub>Built with 🦷 for dental professionals</sub>
-</p>
+> **Medical disclaimer:** research/demonstration software only — **not** a certified medical device and **not** for clinical diagnosis, treatment planning, precise measurement or implant workflows.

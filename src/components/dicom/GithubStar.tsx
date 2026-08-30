@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react';
 import { useI18n } from '@/i18n/I18nContext';
 
-const REPO = 'ZoliQua/React-Dental-CBCT-Viewer';
+const REPO = 'ZoliQua/Dental-CBCT-Viewer';
 const CACHE_KEY = 'gh-stars';
 
 export function GithubStar() {

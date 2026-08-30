@@ -1,14 +1,81 @@
 {
-  "name": "react-dental-cbct-viewer",
-  "private": true,
+  "name": "dental-cbct-viewer",
   "version": "0.1.0",
+  "description": "Embeddable dental CBCT/CT DICOM viewer for React — MPR + true-3D views, panoramic (OPG) reconstruction along the dental arch, perpendicular cross-sections, guided implant planning with safety clearances and bone quality, and a printable drill-guide (STL) export.",
   "type": "module",
+  "license": "MIT",
+  "author": "Zoltán Dul",
+  "homepage": "https://github.com/ZoliQua/Dental-CBCT-Viewer#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZoliQua/Dental-CBCT-Viewer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ZoliQua/Dental-CBCT-Viewer/issues"
+  },
+  "keywords": [
+    "dental",
+    "cbct",
+    "dicom",
+    "implant",
+    "implant-planning",
+    "guided-surgery",
+    "drill-guide",
+    "viewer",
+    "react",
+    "cornerstone3d",
+    "mpr",
+    "panoramic",
+    "opg",
+    "cross-section",
+    "3d",
+    "volume-rendering",
+    "medical-imaging",
+    "dentistry",
+    "oral-surgery"
+  ],
+  "sideEffects": [
+    "**/*.css",
+    "./src/index.ts"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "files": [
+    "dist",
+    "lang",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:lib": "vite build --config vite.lib.config.ts",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build:lib"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1 || ^19.0.0",
+    "react-dom": "^18.3.1 || ^19.0.0"
   },
   "dependencies": {
     "@cornerstonejs/core": "^2.0.0",
@@ -17,9 +84,7 @@
     "@kitware/vtk.js": "^32.9.0",
     "dicom-parser": "^1.8.21",
     "jspdf": "^4.2.1",
-    "manifold-3d": "^3.5.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "manifold-3d": "^3.5.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
@@ -27,9 +92,12 @@
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.41",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "tailwindcss": "^3.4.10",
     "typescript": "^5.5.3",
     "vite": "^5.4.0",
+    "vite-plugin-dts": "^5.0.3",
     "vitest": "^4.1.8"
   }
 }

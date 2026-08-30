@@ -9,8 +9,6 @@
  * skipped with a warning so the sleeve frame still exports.
  */
 
-import Module from 'manifold-3d';
-import wasmUrl from 'manifold-3d/manifold.wasm?url';
 import type { ManifoldToplevel } from 'manifold-3d';
 import type { Vec3 } from './implantGeometry';
 import type { Point2 } from './cprMath';
@@ -87,10 +85,18 @@ let wasmPromise: Promise<ManifoldToplevel> | null = null;
 /** Lazily initialize the manifold WASM kernel (cached across exports). */
 export async function initManifold(): Promise<ManifoldToplevel> {
   if (!wasmPromise) {
-    wasmPromise = Module({ locateFile: () => wasmUrl }).then((m) => {
+    // Dynamic import so the heavy WASM kernel is only pulled in when a guide is
+    // actually built — keeps `dental-cbct-viewer/core` light for callers that
+    // only use the geometry/safety helpers.
+    wasmPromise = (async () => {
+      const [{ default: Module }, { default: wasmUrl }] = await Promise.all([
+        import('manifold-3d'),
+        import('manifold-3d/manifold.wasm?url'),
+      ]);
+      const m = await Module({ locateFile: () => wasmUrl });
       m.setup();
       return m;
-    });
+    })();
   }
   return wasmPromise;
 }

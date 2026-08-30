@@ -15,7 +15,7 @@ export const LANGUAGES: { id: Language; label: string; flag: string }[] = [
 type Dict = Record<string, string>;
 
 const en: Dict = {
-  'app.title': 'React Dental CBCT Viewer',
+  'app.title': 'Dental CBCT Viewer',
   'app.initializing': 'Initializing DICOM viewer...',
   'app.initError': 'Cornerstone initialization error: {msg}',
   'app.retry': 'Retry',
@@ -315,7 +315,7 @@ const en: Dict = {
   'pdf.implantsTitle': 'Planned implants',
   'pdf.viewsTitle': 'Views',
   'pdf.measurementsTitle': 'Measurements',
-  'pdf.description': 'Implant planning report generated with React Dental CBCT Viewer.',
+  'pdf.description': 'Implant planning report generated with Dental CBCT Viewer.',
   'pdf.guidedLine': 'Guided: sleeve Ø{sleeve} mm, offset {offset} mm, drill {drill} mm',
   'pdf.age': 'Age',
   'pdf.quote': 'Quote no.',
@@ -323,7 +323,7 @@ const en: Dict = {
 };
 
 const de: Dict = {
-  'app.title': 'React Dental CBCT Viewer',
+  'app.title': 'Dental CBCT Viewer',
   'app.initializing': 'DICOM-Viewer wird initialisiert...',
   'app.initError': 'Cornerstone-Initialisierungsfehler: {msg}',
   'app.retry': 'Erneut versuchen',
@@ -609,7 +609,7 @@ const de: Dict = {
   'pdf.implantsTitle': 'Geplante Implantate',
   'pdf.viewsTitle': 'Ansichten',
   'pdf.measurementsTitle': 'Messungen',
-  'pdf.description': 'Bericht zur Implantatplanung, erstellt mit React Dental CBCT Viewer.',
+  'pdf.description': 'Bericht zur Implantatplanung, erstellt mit Dental CBCT Viewer.',
   'pdf.guidedLine': 'Geführt: Hülse Ø{sleeve} mm, Offset {offset} mm, Bohrung {drill} mm',
   'pdf.age': 'Alter',
   'pdf.quote': 'Angebotsnr.',
@@ -617,7 +617,7 @@ const de: Dict = {
 };
 
 const es: Dict = {
-  'app.title': 'React Dental CBCT Viewer',
+  'app.title': 'Dental CBCT Viewer',
   'app.initializing': 'Inicializando el visor DICOM...',
   'app.initError': 'Error de inicialización de Cornerstone: {msg}',
   'app.retry': 'Reintentar',
@@ -903,7 +903,7 @@ const es: Dict = {
   'pdf.implantsTitle': 'Implantes planificados',
   'pdf.viewsTitle': 'Vistas',
   'pdf.measurementsTitle': 'Mediciones',
-  'pdf.description': 'Informe de planificación de implantes generado con React Dental CBCT Viewer.',
+  'pdf.description': 'Informe de planificación de implantes generado con Dental CBCT Viewer.',
   'pdf.guidedLine': 'Guiada: casquillo Ø{sleeve} mm, offset {offset} mm, fresado {drill} mm',
   'pdf.age': 'Edad',
   'pdf.quote': 'N.º de presupuesto',
@@ -911,7 +911,7 @@ const es: Dict = {
 };
 
 const hu: Dict = {
-  'app.title': 'React Dental CBCT Viewer',
+  'app.title': 'Dental CBCT Viewer',
   'app.initializing': 'DICOM megjelenítő inicializálása...',
   'app.initError': 'Cornerstone inicializálási hiba: {msg}',
   'app.retry': 'Újrapróbálás',
@@ -1197,7 +1197,7 @@ const hu: Dict = {
   'pdf.implantsTitle': 'Tervezett implantátumok',
   'pdf.viewsTitle': 'Nézetek',
   'pdf.measurementsTitle': 'Mérések',
-  'pdf.description': 'Implantátum-tervezési riport — React Dental CBCT Viewer.',
+  'pdf.description': 'Implantátum-tervezési riport — Dental CBCT Viewer.',
   'pdf.guidedLine': 'Vezetett: persely Ø{sleeve} mm, offset {offset} mm, fúró {drill} mm',
   'pdf.age': 'Kor',
   'pdf.quote': 'Árajánlat száma',

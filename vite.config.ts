@@ -31,6 +31,10 @@ export default defineConfig({
     },
   },
   build: {
+    // The demo/dev app builds here; the npm library build (vite.lib.config.ts)
+    // owns dist/ exclusively so the published package never includes the demo
+    // sample or index.html.
+    outDir: 'demo-dist',
     rollupOptions: {
       external: ['@icr/polyseg-wasm'],
     },

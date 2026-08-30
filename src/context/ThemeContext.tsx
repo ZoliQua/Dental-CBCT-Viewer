@@ -1,6 +1,8 @@
 /**
- * Dark/light theme. Dark is the default (medical viewer). The theme toggles
- * the `dark` class on <html> for Tailwind's class-based dark mode.
+ * Dark/light theme. Dark is the default (medical viewer). The `dark` class is
+ * applied to the viewer's own root element (not <html>) so an embedded viewer
+ * never flips the host page's theme; Tailwind's class-based dark mode still
+ * matches because the root is an ancestor of every viewer element.
  */
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
@@ -25,7 +27,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(initialTheme);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
     localStorage.setItem(STORAGE_KEY, theme);
   }, [theme]);
 
