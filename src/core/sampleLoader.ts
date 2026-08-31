@@ -123,9 +123,8 @@ async function fetchOk(url: string): Promise<Response> {
   return resp;
 }
 
-/** Read the volume buffer; gunzip only if the payload is really gzip (1f 8b). */
-async function readVolume(resp: Response): Promise<ArrayBuffer> {
-  const raw = await resp.arrayBuffer();
+/** Gunzip a buffer only if it is really gzip (1f 8b), else return it as-is. */
+async function maybeGunzip(raw: ArrayBuffer): Promise<ArrayBuffer> {
   const head = new Uint8Array(raw.slice(0, 2));
   const isGzip = head[0] === 0x1f && head[1] === 0x8b;
   if (!isGzip) return raw; // server already decompressed it (Content-Encoding: gzip)
@@ -134,11 +133,36 @@ async function readVolume(resp: Response): Promise<ArrayBuffer> {
   return new Response(stream).arrayBuffer();
 }
 
-export async function loadSample(base = '/sample'): Promise<LoadedSample> {
+/** Read the volume body, reporting download fraction (0–1) as bytes arrive. */
+async function readVolumeWithProgress(resp: Response, onFrac?: (f: number) => void): Promise<ArrayBuffer> {
+  const total = Number(resp.headers.get('Content-Length')) || 0;
+  const reader = resp.body?.getReader();
+  if (!reader) return maybeGunzip(await resp.arrayBuffer());
+
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.length;
+    if (total) onFrac?.(Math.min(1, received / total));
+  }
+  const raw = new Uint8Array(received);
+  let off = 0;
+  for (const c of chunks) { raw.set(c, off); off += c.length; }
+  onFrac?.(1);
+  return maybeGunzip(raw.buffer);
+}
+
+export async function loadSample(base = '/sample', onProgress?: (pct: number) => void): Promise<LoadedSample> {
   register();
+  onProgress?.(0);
   const meta = (await (await fetchOk(`${base}/meta.json`)).json()) as SampleMeta;
   const gzResp = await fetchOk(`${base}/volume.raw.bin`);
-  const buf = await readVolume(gzResp);
+  // Download is the slow part on a network → map it to 0–90%.
+  const buf = await readVolumeWithProgress(gzResp, (f) => onProgress?.(Math.round(f * 90)));
+  onProgress?.(92);
   store = { data: new Int16Array(buf), meta };
 
   const depth = meta.dimensions[2];
@@ -146,7 +170,9 @@ export async function loadSample(base = '/sample'): Promise<LoadedSample> {
   const volumeId = `${VOLUME_ID_PREFIX}sample${counter++}`;
 
   const volume = await volumeLoader.createAndCacheVolume(volumeId, { imageIds });
+  onProgress?.(96);
   await new Promise<void>((resolve) => { (volume as any).load(() => resolve()); });
+  onProgress?.(100);
 
   const study: DicomStudyInfo = {
     studyInstanceUID: 'sample-study',

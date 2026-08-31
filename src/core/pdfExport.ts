@@ -9,6 +9,7 @@ import { jsPDF } from 'jspdf';
 import { getRenderingEngine } from '@cornerstonejs/core';
 import { RENDERING_ENGINE_ID, VP_3D } from './constants';
 import { ROBOTO_FONT_NAME, ROBOTO_REGULAR_BASE64 } from './robotoFont';
+import { APP_VERSION } from '@/version';
 import type { DicomStudyInfo, ImplantData, MeasurementLayer, AnatomyMarker } from '@/types/dicom';
 import { getImplantSystem } from '@/types/dicom';
 import { implantWorldAxis } from '@/core/implantGeometry';
@@ -119,7 +120,6 @@ interface PdfExportOptions {
 const PAGE_W = 210;
 const PAGE_H = 297;
 const MARGIN = 14;
-const APP_VERSION = '0.1.0';
 const APP_URL = 'github.com/ZoliQua/Dental-CBCT-Viewer';
 
 export async function exportViewPdf({ t, study, implants, measurements, report, anatomy, archCurve, thresholds, boneQuality, lang }: PdfExportOptions): Promise<void> {

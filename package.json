@@ -1,11 +1,11 @@
 {
   "name": "dental-cbct-viewer",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "description": "Embeddable dental CBCT/CT DICOM viewer for React — MPR + true-3D views, panoramic (OPG) reconstruction along the dental arch, perpendicular cross-sections, guided implant planning with safety clearances and bone quality, and a printable drill-guide (STL) export.",
   "type": "module",
   "license": "MIT",
   "author": "Zoltán Dul",
-  "homepage": "https://github.com/ZoliQua/Dental-CBCT-Viewer#readme",
+  "homepage": "https://dental-cbct-viewer.vercel.app",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ZoliQua/Dental-CBCT-Viewer.git"

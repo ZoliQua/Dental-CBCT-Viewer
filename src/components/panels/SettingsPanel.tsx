@@ -11,11 +11,24 @@ import { useTheme } from '@/context/ThemeContext';
 import { WindowLevelPresets } from '@/components/tools/WindowLevel';
 import { IMPLANT_SYSTEMS, VOLUME_3D_PRESETS, type ProjectionMode } from '@/types/dicom';
 import { XRAY_PRESET_ID } from '@/core/volume3DPreset';
+import { APP_VERSION } from '@/version';
 
 const FIELD =
   'w-full bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600 text-xs rounded-md px-2 py-1.5 border outline-none focus:border-dental-500';
 
-type Tab = 'general' | 'patient' | 'threed' | 'panoramic' | 'implant' | 'guide';
+/** Open-source libraries the viewer is built on (shown in the About tab). */
+const CREDITS: { name: string; url: string; desc: string }[] = [
+  { name: 'Cornerstone3D', url: 'https://www.cornerstonejs.org/', desc: 'DICOM rendering, MPR & 3D volume' },
+  { name: 'vtk.js', url: 'https://kitware.github.io/vtk.js/', desc: 'WebGL 3D mesh actors' },
+  { name: 'dicom-parser', url: 'https://github.com/cornerstonejs/dicomParser', desc: 'DICOM P10 parsing' },
+  { name: 'jsPDF', url: 'https://github.com/parallax/jsPDF', desc: 'PDF report generation' },
+  { name: 'manifold-3d', url: 'https://github.com/elalish/manifold', desc: 'CSG for the drill guide' },
+  { name: 'React', url: 'https://react.dev/', desc: 'UI framework' },
+  { name: 'Tailwind CSS', url: 'https://tailwindcss.com/', desc: 'Styling' },
+  { name: 'Roboto (Apache-2.0)', url: 'https://fonts.google.com/specimen/Roboto', desc: 'Embedded PDF font' },
+];
+
+type Tab = 'general' | 'patient' | 'threed' | 'panoramic' | 'implant' | 'guide' | 'about';
 
 function Help({ children }: { children: React.ReactNode }) {
   return <p className="text-[11px] leading-snug text-slate-500 dark:text-slate-400">{children}</p>;
@@ -60,6 +73,7 @@ export function SettingsPanel() {
     { id: 'panoramic', label: t('settings.tab.panoramic') },
     { id: 'implant', label: t('settings.tab.implant') },
     { id: 'guide', label: t('settings.guide') },
+    { id: 'about', label: t('settings.tab.about') },
   ];
 
   return (
@@ -302,6 +316,34 @@ export function SettingsPanel() {
                 ))}
               </div>
             </Section>
+          )}
+
+          {tab === 'about' && (
+            <>
+              <Section title={t('settings.about.contributor')}>
+                <p className="text-sm text-slate-700 dark:text-slate-300">
+                  <span className="font-semibold">Zoltán Dul</span> (ZoliQua) —{' '}
+                  <a href="https://github.com/ZoliQua" target="_blank" rel="noreferrer" className="text-dental-600 dark:text-dental-400 hover:underline">github.com/ZoliQua ↗</a>
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Dental CBCT Viewer v{APP_VERSION} · MIT ·{' '}
+                  <a href="https://github.com/ZoliQua/Dental-CBCT-Viewer" target="_blank" rel="noreferrer" className="text-dental-600 dark:text-dental-400 hover:underline">Repository ↗</a>
+                </p>
+              </Section>
+
+              <Section title={t('settings.about.builtWith')}>
+                <ul className="space-y-1.5 text-xs">
+                  {CREDITS.map((c) => (
+                    <li key={c.name}>
+                      <a href={c.url} target="_blank" rel="noreferrer" className="text-dental-600 dark:text-dental-400 hover:underline font-medium">{c.name}</a>
+                      <span className="text-slate-500 dark:text-slate-400"> — {c.desc}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Section>
+
+              <p className="text-[11px] text-amber-700 dark:text-amber-300">⚠️ {t('landing.disclaimerShort')}</p>
+            </>
           )}
         </div>
       </div>
