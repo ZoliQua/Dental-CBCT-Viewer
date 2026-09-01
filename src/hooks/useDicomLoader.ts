@@ -45,7 +45,9 @@ export function useDicomLoader() {
         });
         if (stale()) return;
         if (study) {
-          dispatch({ type: 'SET_STUDY', payload: study });
+          // Append to the study tree (accumulate multiple loaded CTs); the new
+          // load becomes the active study.
+          dispatch({ type: 'ADD_STUDIES', payload: [study] });
         } else {
           // Every file failed to parse — say so plainly instead of the generic failure.
           dispatch({

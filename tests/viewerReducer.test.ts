@@ -130,6 +130,51 @@ describe('M2: SET_ACTIVE_SERIES', () => {
   });
 });
 
+describe('multi-study: ADD_STUDIES', () => {
+  it('appends a new study, makes it active and clears plan data', () => {
+    const prev = { ...plannedState('A'), studies: [study('A', ['se1', 'se2'])] };
+    const s = viewerReducer(prev, { type: 'ADD_STUDIES', payload: [study('B', ['seB'])] });
+    expect(s.studies.map((x) => x.studyInstanceUID)).toEqual(['A', 'B']);
+    expect(s.study?.studyInstanceUID).toBe('B');
+    expect(s.activeSeriesUID).toBe('seB');
+    expect(s.volumeId).toBeNull();
+    expect(s.implants).toEqual([]);
+  });
+
+  it('replaces a re-loaded study (same UID) instead of duplicating it', () => {
+    const prev = { ...initialState, studies: [study('A')], study: study('A'), activeSeriesUID: 'se1' };
+    const s = viewerReducer(prev, { type: 'ADD_STUDIES', payload: [study('A', ['seX'])] });
+    expect(s.studies).toHaveLength(1);
+    expect(s.studies[0].series[0].seriesInstanceUID).toBe('seX');
+  });
+
+  it('is a no-op for an empty payload', () => {
+    const prev = { ...plannedState('A'), studies: [study('A')] };
+    expect(viewerReducer(prev, { type: 'ADD_STUDIES', payload: [] })).toBe(prev);
+  });
+});
+
+describe('multi-study: SET_ACTIVE_STUDY', () => {
+  it('switches active study, rebuilds volume and clears plan', () => {
+    const prev = { ...plannedState('A'), studies: [study('A', ['se1', 'se2']), study('B', ['seB'])] };
+    const s = viewerReducer(prev, { type: 'SET_ACTIVE_STUDY', payload: 'B' });
+    expect(s.study?.studyInstanceUID).toBe('B');
+    expect(s.activeSeriesUID).toBe('seB');
+    expect(s.volumeId).toBeNull();
+    expect(s.implants).toEqual([]);
+  });
+
+  it('is a no-op for the already-active study', () => {
+    const prev = { ...plannedState('A'), studies: [study('A')] };
+    expect(viewerReducer(prev, { type: 'SET_ACTIVE_STUDY', payload: 'A' })).toBe(prev);
+  });
+
+  it('ignores an unknown study UID', () => {
+    const prev = { ...plannedState('A'), studies: [study('A')] };
+    expect(viewerReducer(prev, { type: 'SET_ACTIVE_STUDY', payload: 'ZZ' })).toBe(prev);
+  });
+});
+
 describe('RESET', () => {
   it('clears the planMismatch flag', () => {
     const s = viewerReducer({ ...plannedState('A'), planMismatch: true }, { type: 'RESET' });

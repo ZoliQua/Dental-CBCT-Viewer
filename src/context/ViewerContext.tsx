@@ -9,6 +9,8 @@ export interface ViewerState {
   isLoading: boolean;
   loadProgress: { loaded: number; total: number } | null;
   study: DicomStudyInfo | null;
+  /** All loaded studies (the left-panel folder/series tree). `study` is the active one. */
+  studies: DicomStudyInfo[];
   activeSeriesUID: string | null;
   activeTool: ViewportTool;
   layoutMode: LayoutMode;
@@ -141,6 +143,8 @@ export type ViewerAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_LOAD_PROGRESS'; payload: { loaded: number; total: number } }
   | { type: 'SET_STUDY'; payload: DicomStudyInfo }
+  | { type: 'ADD_STUDIES'; payload: DicomStudyInfo[] }
+  | { type: 'SET_ACTIVE_STUDY'; payload: string }
   | { type: 'SET_ACTIVE_SERIES'; payload: string }
   | { type: 'SET_ACTIVE_TOOL'; payload: ViewportTool }
   | { type: 'SET_LAYOUT_MODE'; payload: LayoutMode }
@@ -194,6 +198,7 @@ export const initialState: ViewerState = {
   isLoading: false,
   loadProgress: null,
   study: null,
+  studies: [],
   activeSeriesUID: null,
   activeTool: 'windowLevel',
   layoutMode: '1+3',
@@ -233,6 +238,33 @@ export const initialState: ViewerState = {
   planMismatch: false,
 };
 
+// World-space plan data is bound to one study/frame of reference — cleared
+// whenever the active study or series changes (never carried across).
+const PLAN_RESET = {
+  volumeId: null,
+  implants: [] as ImplantData[],
+  anatomy: [] as AnatomyMarker[],
+  measurements: [] as MeasurementLayer[],
+  archCurveControlPoints: null,
+  scans: [] as ScanMesh[],
+  registration: null,
+  activeImplantId: null,
+  editingImplantId: null,
+  activeAnatomyId: null,
+  anatomyDrawMode: null,
+} as const;
+
+/** Append/replace studies by studyInstanceUID, preserving order (existing first). */
+function upsertStudies(list: DicomStudyInfo[], incoming: DicomStudyInfo[]): DicomStudyInfo[] {
+  const byUid = new Map(list.map((s) => [s.studyInstanceUID, s]));
+  const order = list.map((s) => s.studyInstanceUID);
+  for (const s of incoming) {
+    if (!byUid.has(s.studyInstanceUID)) order.push(s.studyInstanceUID);
+    byUid.set(s.studyInstanceUID, s);
+  }
+  return order.map((uid) => byUid.get(uid)!);
+}
+
 // Exported for unit tests (reducer behavior is exercised directly).
 export function viewerReducer(state: ViewerState, action: ViewerAction): ViewerState {
   switch (action.type) {
@@ -247,25 +279,44 @@ export function viewerReducer(state: ViewerState, action: ViewerAction): ViewerS
       return {
         ...state,
         study: action.payload,
+        studies: upsertStudies(state.studies, [action.payload]),
         activeSeriesUID: action.payload.series[0]?.seriesInstanceUID ?? null,
         isLoading: false,
         loadProgress: null,
         planMismatch: false,
         // C2: plan data is world-space and bound to a specific study — never
         // carry it across a patient/study change (same-study re-dispatch keeps it).
-        ...(isNewStudy ? {
-          volumeId: null,
-          implants: [] as ImplantData[],
-          anatomy: [] as AnatomyMarker[],
-          measurements: [] as MeasurementLayer[],
-          archCurveControlPoints: null,
-          scans: [] as ScanMesh[],
-          registration: null,
-          activeImplantId: null,
-          editingImplantId: null,
-          activeAnatomyId: null,
-          anatomyDrawMode: null,
-        } : {}),
+        ...(isNewStudy ? PLAN_RESET : {}),
+      };
+    }
+    case 'ADD_STUDIES': {
+      if (action.payload.length === 0) return state;
+      const studies = upsertStudies(state.studies, action.payload);
+      const active = action.payload[0]; // newest load becomes active
+      const isNewStudy = state.study?.studyInstanceUID !== active.studyInstanceUID;
+      return {
+        ...state,
+        studies,
+        study: active,
+        activeSeriesUID: active.series[0]?.seriesInstanceUID ?? null,
+        isLoading: false,
+        loadProgress: null,
+        planMismatch: false,
+        ...(isNewStudy ? PLAN_RESET : {}),
+      };
+    }
+    case 'SET_ACTIVE_STUDY': {
+      if (action.payload === state.study?.studyInstanceUID) return state;
+      const study = state.studies.find((s) => s.studyInstanceUID === action.payload);
+      if (!study) return state;
+      // Switching study is like loading a new one: rebuild the volume (volumeId
+      // null) and drop the previous study's world-space plan data.
+      return {
+        ...state,
+        study,
+        activeSeriesUID: study.series[0]?.seriesInstanceUID ?? null,
+        planMismatch: false,
+        ...PLAN_RESET,
       };
     }
     case 'SET_ACTIVE_SERIES': {

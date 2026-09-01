@@ -122,6 +122,9 @@ const en: Dict = {
   // Series list
   'series.title': 'Series ({n})',
   'series.images': '{n} images',
+  'series.panel': 'Series',
+  'series.load': 'Load',
+  'series.study': 'DICOM study',
 
   // Errors
   'error.noDicom': 'No DICOM files found. Files must have a .dcm extension or no extension.',
@@ -519,6 +522,9 @@ const de: Dict = {
 
   'series.title': 'Serien ({n})',
   'series.images': '{n} Bilder',
+  'series.panel': 'Serien',
+  'series.load': 'Laden',
+  'series.study': 'DICOM-Studie',
 
   'error.noDicom': 'Keine DICOM-Dateien gefunden. Dateien müssen die Endung .dcm oder keine Endung haben.',
   'error.processFailed': 'DICOM-Dateien konnten nicht verarbeitet werden.',
@@ -905,6 +911,9 @@ const es: Dict = {
 
   'series.title': 'Series ({n})',
   'series.images': '{n} imágenes',
+  'series.panel': 'Series',
+  'series.load': 'Cargar',
+  'series.study': 'Estudio DICOM',
 
   'error.noDicom': 'No se encontraron archivos DICOM. Los archivos deben tener extensión .dcm o ninguna.',
   'error.processFailed': 'No se pudieron procesar los archivos DICOM.',
@@ -1291,6 +1300,9 @@ const hu: Dict = {
 
   'series.title': 'Sorozatok ({n})',
   'series.images': '{n} kép',
+  'series.panel': 'Sorozatok',
+  'series.load': 'Betöltés',
+  'series.study': 'DICOM vizsgálat',
 
   'error.noDicom': 'Nem található DICOM fájl. A fájloknak .dcm kiterjesztéssel vagy kiterjesztés nélkülinek kell lenniük.',
   'error.processFailed': 'Nem sikerült a DICOM fájlok feldolgozása.',
