@@ -180,6 +180,10 @@ export function planFromObject(obj: any): ParsedPlan | null {
       scope: d2.scope === 'main' ? 'main' : 'all',
       sliceOpacity: num(d2.sliceOpacity, DISPLAY_DEFAULTS.sliceOpacity),
       preset3d: str(d2.preset3d, DISPLAY_DEFAULTS.preset3d),
+      quality3d: d2.quality3d === 'low' || d2.quality3d === 'high' ? d2.quality3d : DISPLAY_DEFAULTS.quality3d,
+      colormap3d: (['grayscale', 'cool', 'warm', 'spectral', 'inverted'] as string[]).includes(d2.colormap3d)
+        ? (d2.colormap3d as DisplayConfig['colormap3d'])
+        : DISPLAY_DEFAULTS.colormap3d,
     },
   };
 }

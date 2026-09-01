@@ -14,15 +14,32 @@ import { SLICE_AXES, type SliceAxis } from '@/core/slice3D';
 import { NO_CROP, type CropBox } from '@/core/cropBox';
 import type { Implant3DLayers } from '@/core/implant3D';
 import { VOLUME_3D_PRESETS } from '@/types/dicom';
-import { applyXrayPreset, XRAY_PRESET_ID } from '@/core/volume3DPreset';
+import {
+  applyXrayPreset,
+  applyColormap3D,
+  applyQuality3D,
+  XRAY_PRESET_ID,
+  VOLUME_3D_COLORMAPS,
+  type Volume3DQuality,
+  type Volume3DColormap,
+} from '@/core/volume3DPreset';
 
-/** Apply a named Cornerstone preset, or our custom translucent X-ray transfer function. */
-function applyPreset(viewport: any, preset: string, wl: { wc: number; ww: number }) {
+const QUALITIES: Volume3DQuality[] = ['low', 'medium', 'high'];
+
+/** Apply preset (opacity/shape) + colormap (hue) + quality (sampling) as one style pass. */
+function applyVolumeStyle(
+  viewport: any,
+  opts: { preset: string; colormap: Volume3DColormap; quality: Volume3DQuality; wl: { wc: number; ww: number } },
+) {
+  const { preset, colormap, quality, wl } = opts;
   if (preset === XRAY_PRESET_ID) {
     applyXrayPreset(viewport.getDefaultActor?.()?.actor, wl);
   } else {
     viewport.setProperties({ preset });
   }
+  const actor = viewport.getDefaultActor?.()?.actor;
+  applyColormap3D(actor, colormap, wl);
+  applyQuality3D(actor, quality);
   viewport.render();
 }
 
@@ -32,11 +49,14 @@ interface Viewport3DProps {
 
 export function Viewport3D({ volumeId }: Viewport3DProps) {
   const { t } = useI18n();
-  const { state } = useViewer();
+  const { state, dispatch } = useViewer();
   const elementRef = useRef<HTMLDivElement>(null);
   const enabledRef = useRef(false);
   const destroyedRef = useRef(false);
   const [activePreset, setActivePreset] = useState<string>(state.display.preset3d);
+  const [activeQuality, setActiveQuality] = useState<Volume3DQuality>(state.display.quality3d);
+  const [activeColormap, setActiveColormap] = useState<Volume3DColormap>(state.display.colormap3d);
+  const [colorOpen, setColorOpen] = useState(false);
   const [slabThickness, setSlabThickness] = useState<number>(0); // 0 = no clipping
   const [ready, setReady] = useState(false); // volume loaded → safe to add actors
   const [layers3D, setLayers3D] = useState<Implant3DLayers>({ implant: true, sleeve: true, axis: true });
@@ -120,7 +140,7 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
         const viewport = engine!.getViewport(VP_3D) as Types.IVolumeViewport;
         if (!viewport) return;
 
-        applyPreset(viewport, activePreset, state.windowLevel);
+        applyVolumeStyle(viewport, { preset: activePreset, colormap: activeColormap, quality: activeQuality, wl: state.windowLevel });
         viewport.resetCamera({ resetPan: true, resetZoom: true, resetToCenter: true });
         // Start slightly rotated (not dead-on frontal) so enabling two slice
         // planes doesn't hide everything behind an edge-on plane.
@@ -151,18 +171,21 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
     };
   }, [volumeId, activePreset]);
 
-  // L4: the custom X-Ray preset builds its transfer function from the shared
-  // window/level — re-apply it on W/L changes. (The load effect above
-  // intentionally does NOT depend on state.windowLevel; re-running it on
-  // every W/L drag would reload the volume.)
+  // Re-apply the window/level-dependent style (X-Ray transfer function + the
+  // colormap, both built from the shared W/L window) and the mapper quality,
+  // without reloading the volume. The load effect above intentionally does NOT
+  // depend on these, so W/L drags and colormap/quality changes stay cheap.
   useEffect(() => {
-    if (activePreset !== XRAY_PRESET_ID || !ready) return;
+    if (!ready) return;
     const engine = getRenderingEngine(RENDERING_ENGINE_ID);
     const viewport = engine?.getViewport(VP_3D) as Types.IVolumeViewport | undefined;
     if (!viewport) return;
-    applyXrayPreset((viewport as any).getDefaultActor?.()?.actor, state.windowLevel);
+    const actor = (viewport as any).getDefaultActor?.()?.actor;
+    if (activePreset === XRAY_PRESET_ID) applyXrayPreset(actor, state.windowLevel);
+    applyColormap3D(actor, activeColormap, state.windowLevel);
+    applyQuality3D(actor, activeQuality);
     viewport.render();
-  }, [state.windowLevel, activePreset, ready]);
+  }, [state.windowLevel, activePreset, activeColormap, activeQuality, ready]);
 
   // Apply preset change
   const handlePresetChange = useCallback(
@@ -172,13 +195,23 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
       if (!engine) return;
       const viewport = engine.getViewport(VP_3D);
       if (!viewport) return;
-      applyPreset(viewport, preset, state.windowLevel);
+      applyVolumeStyle(viewport, { preset, colormap: activeColormap, quality: activeQuality, wl: state.windowLevel });
       // Re-add the slice planes on the next frame — some presets (e.g. MIP) drop
       // the added actors when their blend mode changes.
       requestAnimationFrame(() => setSliceRebuild((k) => k + 1));
     },
-    [state.windowLevel],
+    [state.windowLevel, activeColormap, activeQuality],
   );
+
+  const handleQualityChange = useCallback((q: Volume3DQuality) => {
+    setActiveQuality(q);
+    dispatch({ type: 'SET_DISPLAY', payload: { quality3d: q } });
+  }, [dispatch]);
+
+  const handleColormapChange = useCallback((c: Volume3DColormap) => {
+    setActiveColormap(c);
+    dispatch({ type: 'SET_DISPLAY', payload: { colormap3d: c } });
+  }, [dispatch]);
 
   // Apply slab thickness change
   const handleSlabChange = useCallback(
@@ -274,6 +307,55 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
                 >
                   {t('preset3d.xray')}
                 </button>
+              </div>
+            )}
+          </div>
+
+          <span className="w-px h-4 bg-slate-700/60" />
+
+          {/* Quality: low / medium / high */}
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-slate-400 select-none">{t('view3d.quality')}</span>
+            {QUALITIES.map((q) => (
+              <button
+                key={q}
+                onClick={() => handleQualityChange(q)}
+                className={`px-1.5 py-1 rounded text-[10px] font-semibold transition-colors ${
+                  activeQuality === q ? 'bg-dental-600 text-white' : 'bg-slate-800/60 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                {t(`quality.${q}`)}
+              </button>
+            ))}
+          </div>
+
+          <span className="w-px h-4 bg-slate-700/60" />
+
+          {/* Colormap popup */}
+          <div className="relative">
+            <button
+              onClick={() => { setColorOpen((o) => !o); setPresetOpen(false); setCropOpen(false); }}
+              title={t('view3d.color')}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] text-slate-200 hover:bg-slate-700/60 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <circle cx="12" cy="12" r="9" /><circle cx="8.5" cy="10" r="1.2" fill="currentColor" stroke="none" /><circle cx="15.5" cy="10" r="1.2" fill="currentColor" stroke="none" /><circle cx="12" cy="15" r="1.2" fill="currentColor" stroke="none" />
+              </svg>
+              <span>{t(`colormap.${activeColormap}`)}</span>
+            </button>
+            {colorOpen && (
+              <div className="absolute bottom-9 left-0 w-36 rounded-lg bg-slate-900/95 border border-slate-700 shadow-xl p-1 z-20">
+                {VOLUME_3D_COLORMAPS.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => { handleColormapChange(c); setColorOpen(false); }}
+                    className={`w-full text-left px-2 py-1 text-[11px] rounded transition-colors ${
+                      activeColormap === c ? 'bg-dental-600 text-white' : 'text-slate-300 hover:bg-slate-700/60'
+                    }`}
+                  >
+                    {t(`colormap.${c}`)}
+                  </button>
+                ))}
               </div>
             )}
           </div>

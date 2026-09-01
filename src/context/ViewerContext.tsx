@@ -2,6 +2,7 @@ import { createContext, useContext, useReducer, type ReactNode, type Dispatch } 
 import type { DicomStudyInfo, ViewportTool, LayoutMode, ViewMode, ProjectionMode, ImplantData, MeasurementLayer, AnatomyMarker, AnatomyType, ScanMesh, GuideParams, PanelConfig } from '@/types/dicom';
 import { GUIDE_DEFAULTS, DEFAULT_PANEL, DEFAULT_IMPLANT_SYSTEM_ID, normalizePanelViews } from '@/types/dicom';
 import type { ParsedPlan } from '@/core/planIO';
+import type { Volume3DQuality, Volume3DColormap } from '@/core/volume3DPreset';
 
 export interface ViewerState {
   isInitialized: boolean;
@@ -96,6 +97,10 @@ export interface DisplayConfig {
   sliceOpacity: number;
   /** Default 3D volume preset (CT-Bone, …, or the custom "X-Ray") */
   preset3d: string;
+  /** 3D render quality (volume-mapper sampling density) */
+  quality3d: Volume3DQuality;
+  /** 3D colormap (RGB transfer function tint) */
+  colormap3d: Volume3DColormap;
 }
 
 export const DISPLAY_DEFAULTS: DisplayConfig = {
@@ -113,6 +118,8 @@ export const DISPLAY_DEFAULTS: DisplayConfig = {
   scope: 'main',
   sliceOpacity: 0.2,
   preset3d: 'X-Ray',
+  quality3d: 'medium',
+  colormap3d: 'grayscale',
 };
 
 /** One landmark pair (scan point + corresponding CBCT point), world mm. */

@@ -525,32 +525,34 @@ export function TopBar() {
           </TopBarButton>
         )}
 
-        {/* Settings */}
-        <TopBarButton
-          title={t('topbar.settings')}
-          active={state.activePanel === 'settings'}
-          onClick={() => dispatch({ type: 'TOGGLE_PANEL', payload: 'settings' })}
-        >
-          <GearIcon />
-        </TopBarButton>
+        {/* Settings / intro / help — only once a study is open */}
+        {state.study && (
+          <>
+            <TopBarButton
+              title={t('topbar.settings')}
+              active={state.activePanel === 'settings'}
+              onClick={() => dispatch({ type: 'TOGGLE_PANEL', payload: 'settings' })}
+            >
+              <GearIcon />
+            </TopBarButton>
 
-        {/* Intro tour */}
-        <TopBarButton
-          title={t('topbar.intro')}
-          active={state.activePanel === 'intro'}
-          onClick={() => dispatch({ type: 'TOGGLE_PANEL', payload: 'intro' })}
-        >
-          <SparkleIcon />
-        </TopBarButton>
+            <TopBarButton
+              title={t('topbar.intro')}
+              active={state.activePanel === 'intro'}
+              onClick={() => dispatch({ type: 'TOGGLE_PANEL', payload: 'intro' })}
+            >
+              <SparkleIcon />
+            </TopBarButton>
 
-        {/* Help */}
-        <TopBarButton
-          title={t('topbar.help')}
-          active={state.activePanel === 'help'}
-          onClick={() => dispatch({ type: 'TOGGLE_PANEL', payload: 'help' })}
-        >
-          <HelpIcon />
-        </TopBarButton>
+            <TopBarButton
+              title={t('topbar.help')}
+              active={state.activePanel === 'help'}
+              onClick={() => dispatch({ type: 'TOGGLE_PANEL', payload: 'help' })}
+            >
+              <HelpIcon />
+            </TopBarButton>
+          </>
+        )}
       </div>
     </div>
   );

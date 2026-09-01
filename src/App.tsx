@@ -8,6 +8,7 @@ import { LandingPage } from '@/components/dicom/LandingPage';
 import { DisclaimerBanner } from '@/components/dicom/DisclaimerBanner';
 import { ViewerShell } from '@/components/layout/ViewerShell';
 import { TopBar } from '@/components/layout/TopBar';
+import { StatusBar } from '@/components/layout/StatusBar';
 import { SettingsPanel } from '@/components/panels/SettingsPanel';
 import { PatientsPanel } from '@/components/panels/PatientsPanel';
 import { IntroTour } from '@/components/panels/IntroTour';
@@ -217,6 +218,7 @@ function ViewerApp({
       <div className="flex flex-col h-full w-full overflow-hidden bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
         <TopBar />
         <div className="flex-1 overflow-hidden">{content}</div>
+        <StatusBar />
         <SettingsPanel />
         <PatientsPanel />
         <IntroTour />

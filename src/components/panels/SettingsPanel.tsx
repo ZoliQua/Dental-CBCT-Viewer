@@ -10,7 +10,9 @@ import { useI18n } from '@/i18n/I18nContext';
 import { useTheme } from '@/context/ThemeContext';
 import { WindowLevelPresets } from '@/components/tools/WindowLevel';
 import { IMPLANT_SYSTEMS, VOLUME_3D_PRESETS, type ProjectionMode } from '@/types/dicom';
-import { XRAY_PRESET_ID } from '@/core/volume3DPreset';
+import { XRAY_PRESET_ID, VOLUME_3D_COLORMAPS } from '@/core/volume3DPreset';
+
+const QUALITY_IDS = ['low', 'medium', 'high'] as const;
 import { APP_VERSION } from '@/version';
 import { OtherProjects } from '@/components/common/OtherProjects';
 
@@ -198,6 +200,16 @@ export function SettingsPanel() {
                 <select value={d.preset3d} onChange={(e) => setDisplay({ preset3d: e.target.value })} className={FIELD}>
                   {VOLUME_3D_PRESETS.map((p) => (<option key={p.id} value={p.id}>{t(p.labelKey)}</option>))}
                   <option value={XRAY_PRESET_ID}>{t('preset3d.xray')}</option>
+                </select>
+              </Section>
+              <Section title={t('view3d.quality')}>
+                <select value={d.quality3d} onChange={(e) => setDisplay({ quality3d: e.target.value as DisplayConfig['quality3d'] })} className={FIELD}>
+                  {QUALITY_IDS.map((q) => (<option key={q} value={q}>{t(`quality.${q}`)}</option>))}
+                </select>
+              </Section>
+              <Section title={t('view3d.color')}>
+                <select value={d.colormap3d} onChange={(e) => setDisplay({ colormap3d: e.target.value as DisplayConfig['colormap3d'] })} className={FIELD}>
+                  {VOLUME_3D_COLORMAPS.map((c) => (<option key={c} value={c}>{t(`colormap.${c}`)}</option>))}
                 </select>
               </Section>
               <Section title={t('settings.slice3dOpacity')}>
