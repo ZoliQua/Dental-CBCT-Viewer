@@ -76,7 +76,10 @@ export function ViewerShell() {
   const [buildRetry, setBuildRetry] = useState(0);
   useEffect(() => {
     const uid = state.activeSeriesUID;
-    if (!needsVolume || state.volumeId || !uid || !state.study) return;
+    if (!needsVolume || !uid || !state.study) return;
+    // A restored study may already have a live volume in the cache → nothing to
+    // build. If its volumeId was evicted, fall through and rebuild it.
+    if (state.volumeId && cache.getVolume(state.volumeId)) return;
     // UID-keyed guard: only skip if THIS series is already being built.
     if (buildingVolumeRef.current === uid) return;
 
@@ -124,14 +127,10 @@ export function ViewerShell() {
     return () => clearTimeout(id);
   }, [engineReady, state.volumeId, state.layoutMode, dispatch]);
 
-  // H1: release per-study resources when the study is replaced or cleared
-  // (RESET sets study to null, which also triggers this). Kept out of the
-  // reducer, which must stay pure.
-  //
-  // Note: loaders create the NEW study's volume/blob URLs before dispatching
-  // SET_STUDY, so on a study-to-study replacement a global purge/revoke would
-  // destroy the fresh data — only the previous volume is removed there. The
-  // full purge happens on RESET/unmount, when nothing new can be harmed.
+  // H1: release ALL per-study resources only when the viewer is cleared
+  // (RESET sets study to null) or unmounts. Switching between loaded studies
+  // deliberately keeps every study's volume + scans resident so switching is
+  // instant and lossless (the reducer restores each study's saved plan).
   const releaseAll = () => {
     try { cache.purgeCache(); } catch { /* engine already gone */ }
     revokeAllBlobUrls();
@@ -143,13 +142,7 @@ export function ViewerShell() {
     const prev = prevStudyRef.current;
     prevStudyRef.current = { uid, volumeId: state.volumeId };
     if (!prev.uid || prev.uid === uid) return;
-    // Scans are never created before SET_STUDY, so this is always safe.
-    clearScanRegistry();
-    if (!uid) {
-      releaseAll(); // RESET: no new study resources exist yet
-    } else if (prev.volumeId) {
-      try { cache.removeVolumeLoadObject(prev.volumeId); } catch { /* already gone */ }
-    }
+    if (!uid) releaseAll(); // RESET: no studies remain, free everything
   }, [state.study?.studyInstanceUID, state.volumeId]);
   // Also release everything on a real unmount. The release is deferred by a
   // macrotask and cancelled if the component mounts again, so React StrictMode's

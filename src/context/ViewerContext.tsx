@@ -11,6 +11,8 @@ export interface ViewerState {
   study: DicomStudyInfo | null;
   /** All loaded studies (the left-panel folder/series tree). `study` is the active one. */
   studies: DicomStudyInfo[];
+  /** Per-study saved working set (volume + plan), so switching studies is instant and lossless. */
+  studyPlans: Record<string, StudyPlan>;
   activeSeriesUID: string | null;
   activeTool: ViewportTool;
   layoutMode: LayoutMode;
@@ -64,6 +66,24 @@ export interface ViewerState {
   /** Set when a plan file recorded for a different study was ignored (UI may warn) */
   planMismatch: boolean;
 }
+
+/** The per-study working set that is snapshotted/restored when switching studies. */
+export type StudyPlan = Pick<
+  ViewerState,
+  | 'volumeId'
+  | 'activeSeriesUID'
+  | 'windowLevel'
+  | 'implants'
+  | 'anatomy'
+  | 'measurements'
+  | 'archCurveControlPoints'
+  | 'scans'
+  | 'registration'
+  | 'activeImplantId'
+  | 'editingImplantId'
+  | 'activeAnatomyId'
+  | 'anatomyDrawMode'
+>;
 
 export interface ReportFields {
   patientName: string;
@@ -199,6 +219,7 @@ export const initialState: ViewerState = {
   loadProgress: null,
   study: null,
   studies: [],
+  studyPlans: {},
   activeSeriesUID: null,
   activeTool: 'windowLevel',
   layoutMode: '1+3',
@@ -265,6 +286,52 @@ function upsertStudies(list: DicomStudyInfo[], incoming: DicomStudyInfo[]): Dico
   return order.map((uid) => byUid.get(uid)!);
 }
 
+/** Extract the active study's working set (volume + plan) for later restore. */
+function snapshotStudyPlan(state: ViewerState): StudyPlan {
+  return {
+    volumeId: state.volumeId,
+    activeSeriesUID: state.activeSeriesUID,
+    windowLevel: state.windowLevel,
+    implants: state.implants,
+    anatomy: state.anatomy,
+    measurements: state.measurements,
+    archCurveControlPoints: state.archCurveControlPoints,
+    scans: state.scans,
+    registration: state.registration,
+    activeImplantId: state.activeImplantId,
+    editingImplantId: state.editingImplantId,
+    activeAnatomyId: state.activeAnatomyId,
+    anatomyDrawMode: state.anatomyDrawMode,
+  };
+}
+
+/**
+ * Make `target` the active study: snapshot the outgoing study's working set into
+ * studyPlans, then restore the target's saved plan (instant, lossless switch) or
+ * start it fresh. A same-study re-dispatch keeps the current working set.
+ */
+function activateStudy(state: ViewerState, target: DicomStudyInfo, studiesNext: DicomStudyInfo[]): ViewerState {
+  const currentUID = state.study?.studyInstanceUID ?? null;
+  const targetUID = target.studyInstanceUID;
+  const base = {
+    ...state,
+    studies: studiesNext,
+    study: target,
+    isLoading: false,
+    loadProgress: null,
+    planMismatch: false,
+  };
+  if (currentUID === targetUID) return base; // same-study re-dispatch: keep plan
+
+  const studyPlans = currentUID
+    ? { ...state.studyPlans, [currentUID]: snapshotStudyPlan(state) }
+    : state.studyPlans;
+  const saved = studyPlans[targetUID];
+  return saved
+    ? { ...base, studyPlans, ...saved }
+    : { ...base, studyPlans, ...PLAN_RESET, activeSeriesUID: target.series[0]?.seriesInstanceUID ?? null };
+}
+
 // Exported for unit tests (reducer behavior is exercised directly).
 export function viewerReducer(state: ViewerState, action: ViewerAction): ViewerState {
   switch (action.type) {
@@ -274,50 +341,20 @@ export function viewerReducer(state: ViewerState, action: ViewerAction): ViewerS
       return { ...state, isLoading: action.payload, error: null, loadProgress: null };
     case 'SET_LOAD_PROGRESS':
       return { ...state, loadProgress: action.payload };
-    case 'SET_STUDY': {
-      const isNewStudy = state.study?.studyInstanceUID !== action.payload.studyInstanceUID;
-      return {
-        ...state,
-        study: action.payload,
-        studies: upsertStudies(state.studies, [action.payload]),
-        activeSeriesUID: action.payload.series[0]?.seriesInstanceUID ?? null,
-        isLoading: false,
-        loadProgress: null,
-        planMismatch: false,
-        // C2: plan data is world-space and bound to a specific study — never
-        // carry it across a patient/study change (same-study re-dispatch keeps it).
-        ...(isNewStudy ? PLAN_RESET : {}),
-      };
-    }
+    case 'SET_STUDY':
+      // Single load (sample / native CT): upsert into the tree and activate,
+      // preserving any previously-saved per-study plan.
+      return activateStudy(state, action.payload, upsertStudies(state.studies, [action.payload]));
     case 'ADD_STUDIES': {
       if (action.payload.length === 0) return state;
-      const studies = upsertStudies(state.studies, action.payload);
-      const active = action.payload[0]; // newest load becomes active
-      const isNewStudy = state.study?.studyInstanceUID !== active.studyInstanceUID;
-      return {
-        ...state,
-        studies,
-        study: active,
-        activeSeriesUID: active.series[0]?.seriesInstanceUID ?? null,
-        isLoading: false,
-        loadProgress: null,
-        planMismatch: false,
-        ...(isNewStudy ? PLAN_RESET : {}),
-      };
+      // The newest load becomes the active study; the tree keeps the rest.
+      return activateStudy(state, action.payload[0], upsertStudies(state.studies, action.payload));
     }
     case 'SET_ACTIVE_STUDY': {
       if (action.payload === state.study?.studyInstanceUID) return state;
       const study = state.studies.find((s) => s.studyInstanceUID === action.payload);
       if (!study) return state;
-      // Switching study is like loading a new one: rebuild the volume (volumeId
-      // null) and drop the previous study's world-space plan data.
-      return {
-        ...state,
-        study,
-        activeSeriesUID: study.series[0]?.seriesInstanceUID ?? null,
-        planMismatch: false,
-        ...PLAN_RESET,
-      };
+      return activateStudy(state, study, state.studies);
     }
     case 'SET_ACTIVE_SERIES': {
       if (action.payload === state.activeSeriesUID) return state;

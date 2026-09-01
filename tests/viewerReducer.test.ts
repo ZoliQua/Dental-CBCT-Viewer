@@ -154,6 +154,27 @@ describe('multi-study: ADD_STUDIES', () => {
   });
 });
 
+describe('multi-study: per-study plan retention (lossless switching)', () => {
+  it('restores each study’s volume + plan when switching back and forth', () => {
+    const onA = { ...plannedState('A'), studies: [study('A', ['se1', 'se2']), study('B', ['seB'])], volumeId: 'vol-A' };
+    // A → B: B starts fresh, A's plan is snapshotted.
+    const onB = viewerReducer(onA, { type: 'SET_ACTIVE_STUDY', payload: 'B' });
+    expect(onB.study?.studyInstanceUID).toBe('B');
+    expect(onB.implants).toEqual([]);
+    expect(onB.volumeId).toBeNull();
+    // Plan a little on B.
+    const onB2: ViewerState = { ...onB, volumeId: 'vol-B', implants: [{ ...implant, id: 'iB' }] };
+    // B → A: A's volume + plan come back intact (no rebuild).
+    const backA = viewerReducer(onB2, { type: 'SET_ACTIVE_STUDY', payload: 'A' });
+    expect(backA.volumeId).toBe('vol-A');
+    expect(backA.implants).toEqual(onA.implants);
+    // A → B again: B's plan was retained too.
+    const backB = viewerReducer(backA, { type: 'SET_ACTIVE_STUDY', payload: 'B' });
+    expect(backB.volumeId).toBe('vol-B');
+    expect(backB.implants.map((i) => i.id)).toEqual(['iB']);
+  });
+});
+
 describe('multi-study: SET_ACTIVE_STUDY', () => {
   it('switches active study, rebuilds volume and clears plan', () => {
     const prev = { ...plannedState('A'), studies: [study('A', ['se1', 'se2']), study('B', ['seB'])] };
