@@ -100,8 +100,8 @@ The heavy CSG kernel (drill-guide Boolean via `manifold-3d`) is loaded lazily, s
 
 - 🧊 **True-3D** volume rendering (translucent X-ray preset) with intersecting MPR slice planes and a crop box
 - 🩻 **MPR** (axial / sagittal / coronal) with linked crosshairs, plus **panoramic (OPG)** reconstruction and tiltable **cross-sections** along a draggable dental arch curve
-- 🦷 **Guided implant planning** — 3D implant + drill sleeve, nerve / sinus / neighbour **safety clearances**, **bone quality** (Misch D1–D5, HU at the implant site)
-- 🖨️ **Printable drill guide (STL)** via constructive solid geometry (`manifold-3d`)
+- 🦷 **Guided implant planning** — 3D implant + drill sleeve, nerve / sinus / neighbour **safety clearances**, **bone quality** (Misch D1–D5, indicative class from uncalibrated CBCT gray values at the implant site)
+- 🖨️ **Printable drill guide (STL)** via constructive solid geometry (`manifold-3d`). The exported guide has **no integrated drill stop and no metal sleeve**, and tissue fit requires a **registered surface scan** — verify the fit on a printed model before any clinical use.
 - 📄 **Multilingual PDF report** (jsPDF, bundled Unicode font — Hungarian accents render correctly)
 - 🔗 Plan save/load (JSON), imperative ref API, controlled props/callbacks
 - 🌐 4 UI languages (EN / DE / ES / HU) · 🌓 self-scoped dark mode · 🧱 embeddable

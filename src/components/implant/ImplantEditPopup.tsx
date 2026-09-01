@@ -64,7 +64,7 @@ export function ImplantEditPopup({ implantId, onClose }: ImplantEditPopupProps) 
         { nerve: state.safety.nerveMm, sinus: state.safety.sinusMm, neighbor: state.safety.neighborMm })
     : null;
 
-  // Bone quality (Misch D1–D5) from the mean HU along the implant body
+  // Bone quality (Misch D1–D5, indicative) from the mean CBCT gray value along the implant body
   const vol = state.volumeId ? getVolumeData(state.volumeId) : null;
   const bone = vol && selfSeg ? sampleImplantBoneHU(vol, selfSeg.entry, selfSeg.apex, selfSeg.radius) : null;
 
@@ -260,6 +260,12 @@ export function ImplantEditPopup({ implantId, onClose }: ImplantEditPopupProps) 
                 </div>
               );
             })}
+            {/* The nerve is traced on the panoramic only — its buccolingual
+                position is unknown, so the 3D clearance is against a centerline
+                pinned to the arch curve. Disclose that next to the value. */}
+            {safetyEval.anatomy.some(r => r.type === 'nerve') && (
+              <p className="text-[10px] leading-snug text-amber-600 dark:text-amber-400">{t('safety.nerveCaveat')}</p>
+            )}
             {safetyEval.neighborMm !== null && (
               <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-600 dark:text-gray-400 truncate mr-2">{t('safety.neighbor')}</span>
@@ -268,18 +274,20 @@ export function ImplantEditPopup({ implantId, onClose }: ImplantEditPopupProps) 
                 </span>
               </div>
             )}
+            <p className="text-[10px] leading-snug text-gray-500 dark:text-gray-400">{t('safety.notChecked')}</p>
           </div>
         )}
 
-        {/* Bone quality */}
+        {/* Bone quality (CBCT gray values are uncalibrated — not HU) */}
         {bone && (
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-2 space-y-1">
             <div className="flex items-center justify-between text-xs">
               <span className="text-gray-700 dark:text-gray-300 font-semibold">{t('bone.title')}</span>
               <span className={`font-mono ${BONE_COLOR[bone.bone]}`}>
-                {bone.bone} · {Math.round(bone.meanHU)} HU
+                {bone.bone} · {Math.round(bone.meanHU)} GV
               </span>
             </div>
+            <p className="text-[10px] leading-snug text-gray-500 dark:text-gray-400">{t('bone.uncalibrated')}</p>
           </div>
         )}
       </div>

@@ -7,12 +7,12 @@
  * Best used in the 2×2 layout, where both the Axial and 3D panes are visible.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { getRenderingEngine } from '@cornerstonejs/core';
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
 import { RENDERING_ENGINE_ID, VP_AXIAL, VP_3D } from '@/core/constants';
-import { kabschTransform, mul4, pickTriangleSoup } from '@/core/registration';
+import { kabschTransformWithRms, mul4, pickTriangleSoup } from '@/core/registration';
 import { scanTriangleSoupWorld } from '@/core/scanMesh';
 import type { Vec3 } from '@/core/implantGeometry';
 
@@ -21,6 +21,11 @@ export function RegistrationPanel() {
   const { t } = useI18n();
   const reg = state.registration;
   const scan = reg ? state.scans.find(s => s.id === reg.scanId) : undefined;
+  // Fit error (RMS mm) of the last completed registration, shown once the
+  // panel closes. > 1 mm is highlighted as a likely mis-picked landmark pair.
+  const [lastRms, setLastRms] = useState<number | null>(null);
+  const regActive = !!reg;
+  useEffect(() => { if (regActive) setLastRms(null); }, [regActive]);
 
   // Attach a one-shot click listener to the relevant viewport while picking
   useEffect(() => {
@@ -66,16 +71,37 @@ export function RegistrationPanel() {
     };
   }, [reg?.picking, scan, dispatch]);
 
-  if (!reg || !scan) return null;
+  if (!reg || !scan) {
+    // Post-registration fit readout (registration just ended).
+    if (lastRms === null) return null;
+    const high = lastRms > 1;
+    return (
+      <div className="absolute top-2 left-12 z-40 w-64 bg-white border border-gray-300 dark:bg-gray-800 dark:border-gray-600 rounded-lg shadow-xl p-3 space-y-1">
+        <div className="flex items-center justify-between">
+          <span className={`text-xs font-semibold font-mono ${high ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+            {t('reg.rms', { rms: lastRms.toFixed(2) })}
+          </span>
+          <button
+            onClick={() => setLastRms(null)}
+            className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 rounded"
+          >
+            ✕
+          </button>
+        </div>
+        {high && <p className="text-[11px] text-red-600 dark:text-red-400">{t('reg.rmsHigh')}</p>}
+      </div>
+    );
+  }
 
   const complete = reg.pairs.every(p => p.scan && p.cbct);
 
   const align = () => {
     const src = reg.pairs.map(p => p.scan!) as Vec3[];
     const tgt = reg.pairs.map(p => p.cbct!) as Vec3[];
-    const delta = kabschTransform(src, tgt);
-    if (!delta) return;
-    dispatch({ type: 'UPDATE_SCAN', payload: { ...scan, transform: mul4(delta, scan.transform) } });
+    const res = kabschTransformWithRms(src, tgt);
+    if (!res) return;
+    dispatch({ type: 'UPDATE_SCAN', payload: { ...scan, transform: mul4(res.matrix, scan.transform) } });
+    setLastRms(res.rmsMm);
     dispatch({ type: 'END_REGISTRATION' });
   };
 

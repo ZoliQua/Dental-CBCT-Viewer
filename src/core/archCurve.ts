@@ -45,6 +45,10 @@ export function interpolateArchCurve(controlPoints: Point2[], samplesPerSegment 
  * The normal is rotated 90 ° CW from the tangent in the XY plane.
  */
 export function computeCurveNormals(curve: Point2[]): Point2[] {
+  // M3: degenerate (<2-point) curve — no tangent is defined, and the branches
+  // below would dereference a missing neighbor. Return a default normal per
+  // point so CPR / cross-section sampling never throws.
+  if (curve.length < 2) return curve.map((): Point2 => [0, 1]);
   return curve.map((_, i, arr) => {
     let tx: number, ty: number;
     if (i === 0) {
@@ -57,7 +61,9 @@ export function computeCurveNormals(curve: Point2[]): Point2[] {
       tx = arr[i + 1][0] - arr[i - 1][0];
       ty = arr[i + 1][1] - arr[i - 1][1];
     }
-    const len = Math.hypot(tx, ty) || 1;
+    const len = Math.hypot(tx, ty);
+    // Coincident neighbors (zero-length tangent) → default normal
+    if (len === 0) return [0, 1];
     return [-ty / len, tx / len];
   });
 }

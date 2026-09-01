@@ -59,6 +59,28 @@ describe('computeCurveNormals', () => {
       expect(n[0]).toBeCloseTo(0, 9); // tangent +X → normal ±Y
     }
   });
+
+  // M3: degenerate curves must not throw
+  it('returns a default normal for a single-point curve without throwing', () => {
+    const normals = computeCurveNormals([[5, 7]]);
+    expect(normals).toHaveLength(1);
+    expect(Math.hypot(normals[0][0], normals[0][1])).toBeCloseTo(1, 9);
+  });
+
+  it('returns a default normal for coincident points (zero-length tangent)', () => {
+    const normals = computeCurveNormals([[3, 3], [3, 3]]);
+    expect(normals).toHaveLength(2);
+    for (const n of normals) {
+      expect(Math.hypot(n[0], n[1])).toBeCloseTo(1, 9);
+    }
+  });
+
+  it('does not throw on a resampled fully-collapsed curve', () => {
+    // All control points coincide → resampleByArcLength collapses to 1 point
+    const collapsed = resampleByArcLength([[4, 4], [4, 4], [4, 4]], 50);
+    expect(collapsed).toHaveLength(1);
+    expect(() => computeCurveNormals(collapsed)).not.toThrow();
+  });
 });
 
 describe('totalArcLength', () => {

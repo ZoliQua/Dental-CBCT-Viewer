@@ -1,7 +1,7 @@
 import { createContext, useContext, useReducer, type ReactNode, type Dispatch } from 'react';
 import type { DicomStudyInfo, ViewportTool, LayoutMode, ViewMode, ProjectionMode, ImplantData, MeasurementLayer, AnatomyMarker, AnatomyType, ScanMesh, GuideParams, PanelConfig } from '@/types/dicom';
 import { GUIDE_DEFAULTS, DEFAULT_PANEL, DEFAULT_IMPLANT_SYSTEM_ID, normalizePanelViews } from '@/types/dicom';
-import type { PlanData } from '@/core/planIO';
+import type { ParsedPlan } from '@/core/planIO';
 
 export interface ViewerState {
   isInitialized: boolean;
@@ -58,6 +58,8 @@ export interface ViewerState {
   display: DisplayConfig;
   // Individual measurement layers (Cornerstone annotations + canvas drawings)
   measurements: MeasurementLayer[];
+  /** Set when a plan file recorded for a different study was ignored (UI may warn) */
+  planMismatch: boolean;
 }
 
 export interface ReportFields {
@@ -127,7 +129,7 @@ export interface RegistrationSession {
   picking: { slot: number; kind: 'scan' | 'cbct' } | null;
 }
 
-type ViewerAction =
+export type ViewerAction =
   | { type: 'SET_INITIALIZED' }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_LOAD_PROGRESS'; payload: { loaded: number; total: number } }
@@ -173,13 +175,14 @@ type ViewerAction =
   | { type: 'SET_REG_PICKING'; payload: { slot: number; kind: 'scan' | 'cbct' } | null }
   | { type: 'SET_REG_POINT'; payload: { slot: number; kind: 'scan' | 'cbct'; point: [number, number, number] } }
   | { type: 'END_REGISTRATION' }
-  | { type: 'LOAD_PLAN'; payload: PlanData }
+  | { type: 'LOAD_PLAN'; payload: ParsedPlan }
   | { type: 'ADD_MEASUREMENT'; payload: MeasurementLayer }
   | { type: 'UPDATE_MEASUREMENT'; payload: MeasurementLayer }
   | { type: 'REMOVE_MEASUREMENT'; payload: string }
   | { type: 'RESET' };
 
-const initialState: ViewerState = {
+/** Exported for unit tests. */
+export const initialState: ViewerState = {
   isInitialized: false,
   isLoading: false,
   loadProgress: null,
@@ -214,12 +217,17 @@ const initialState: ViewerState = {
   activeAnatomyId: null,
   scans: [],
   registration: null,
-  report: { patientName: 'John Doe', patientAge: '', patientBirthDate: '1980-01-01', quoteNumber: '0001', statusDescription: 'healthy', clinic: '', studyDate: '', seriesName: '' },
+  // Empty defaults: real DICOM metadata must flow through (consumers fall back
+  // to study values via `report?.field?.trim() || study?.field`); placeholders
+  // here would override genuine patient data in exports.
+  report: { patientName: '', patientAge: '', patientBirthDate: '', quoteNumber: '', statusDescription: '', clinic: '', studyDate: '', seriesName: '' },
   display: DISPLAY_DEFAULTS,
   measurements: [],
+  planMismatch: false,
 };
 
-function viewerReducer(state: ViewerState, action: ViewerAction): ViewerState {
+// Exported for unit tests (reducer behavior is exercised directly).
+export function viewerReducer(state: ViewerState, action: ViewerAction): ViewerState {
   switch (action.type) {
     case 'SET_INITIALIZED':
       return { ...state, isInitialized: true };
@@ -227,16 +235,53 @@ function viewerReducer(state: ViewerState, action: ViewerAction): ViewerState {
       return { ...state, isLoading: action.payload, error: null, loadProgress: null };
     case 'SET_LOAD_PROGRESS':
       return { ...state, loadProgress: action.payload };
-    case 'SET_STUDY':
+    case 'SET_STUDY': {
+      const isNewStudy = state.study?.studyInstanceUID !== action.payload.studyInstanceUID;
       return {
         ...state,
         study: action.payload,
         activeSeriesUID: action.payload.series[0]?.seriesInstanceUID ?? null,
         isLoading: false,
         loadProgress: null,
+        planMismatch: false,
+        // C2: plan data is world-space and bound to a specific study — never
+        // carry it across a patient/study change (same-study re-dispatch keeps it).
+        ...(isNewStudy ? {
+          volumeId: null,
+          implants: [] as ImplantData[],
+          anatomy: [] as AnatomyMarker[],
+          measurements: [] as MeasurementLayer[],
+          archCurveControlPoints: null,
+          scans: [] as ScanMesh[],
+          registration: null,
+          activeImplantId: null,
+          editingImplantId: null,
+          activeAnatomyId: null,
+          anatomyDrawMode: null,
+        } : {}),
       };
-    case 'SET_ACTIVE_SERIES':
-      return { ...state, activeSeriesUID: action.payload, volumeId: null };
+    }
+    case 'SET_ACTIVE_SERIES': {
+      if (action.payload === state.activeSeriesUID) return state;
+      // M2: plan geometry lives in world coordinates. DicomSeriesInfo does not
+      // carry FrameOfReferenceUID, so we cannot prove two series of one study
+      // share a frame of reference — conservatively clear world-space plan data
+      // on any series switch (scans stay: they are registered separately and
+      // are not part of the persisted plan).
+      return {
+        ...state,
+        activeSeriesUID: action.payload,
+        volumeId: null,
+        implants: [],
+        anatomy: [],
+        measurements: [],
+        archCurveControlPoints: null,
+        activeImplantId: null,
+        editingImplantId: null,
+        activeAnatomyId: null,
+        anatomyDrawMode: null,
+      };
+    }
     case 'SET_ACTIVE_TOOL':
       return { ...state, activeTool: action.payload };
     case 'SET_LAYOUT_MODE':
@@ -342,17 +387,28 @@ function viewerReducer(state: ViewerState, action: ViewerAction): ViewerState {
     }
     case 'END_REGISTRATION':
       return { ...state, registration: null };
-    case 'LOAD_PLAN':
+    case 'LOAD_PLAN': {
+      // C2: never silently apply a plan recorded for a different study — the
+      // world-space coordinates would land on the wrong patient. Surface the
+      // mismatch (planMismatch flag) so the UI can ask for confirmation later.
+      const planUID = action.payload.studyInstanceUID;
+      if (planUID && state.study && planUID !== state.study.studyInstanceUID) {
+        console.warn('[DQ-DICOM] Plan ignored: recorded for a different study', planUID);
+        return { ...state, planMismatch: true };
+      }
       // Replace the persistable slices in one shot; clear transient selection
+      const { studyInstanceUID: _ignored, ...plan } = action.payload;
       return {
         ...state,
-        ...action.payload,
+        ...plan,
+        planMismatch: false,
         activeImplantId: null,
         editingImplantId: null,
         activeAnatomyId: null,
         anatomyDrawMode: null,
         implantPlacementMode: false,
       };
+    }
     case 'SET_REPORT':
       return { ...state, report: { ...state.report, ...action.payload } };
     case 'SET_DISPLAY':

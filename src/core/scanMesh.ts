@@ -21,6 +21,11 @@ export const setScanPolyData = (id: string, pd: any): void => { registry.set(id,
 export const removeScanPolyData = (id: string): void => { registry.delete(id); };
 export const hasScanPolyData = (id: string): boolean => registry.has(id);
 
+/** Empty the whole scan-mesh registry (e.g. when the session is purged). */
+export function clearScanRegistry(): void {
+  registry.clear();
+}
+
 /** 4×4 column-major identity. */
 export const IDENTITY16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
@@ -29,31 +34,57 @@ export function translation16(tx: number, ty: number, tz: number): number[] {
   return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, tx, ty, tz, 1];
 }
 
+/**
+ * Sanity-check a mesh's extent against mm-scale jaw anatomy (STL/OBJ/PLY carry
+ * no unit metadata). Returns a human-readable warning when the bounding box is
+ * implausible (< 5 mm or > 2000 mm), else null. Never auto-scales — wrong-unit
+ * geometry must be flagged, not silently "fixed".
+ */
+export function meshScaleWarning(pd: any): string | null {
+  const b = pd?.getBounds?.();
+  if (!b || b.length < 6) return null;
+  const maxDim = Math.max(b[1] - b[0], b[3] - b[2], b[5] - b[4]);
+  if (!Number.isFinite(maxDim) || maxDim <= 0) return null;
+  if (maxDim < 5) {
+    return `mesh extent is only ${maxDim.toFixed(2)} units — far below mm-scale anatomy; the file may be in meters or wrongly scaled`;
+  }
+  if (maxDim > 2000) {
+    return `mesh extent is ${Math.round(maxDim)} units — far above mm-scale anatomy; the file may be in micrometers or wrongly scaled`;
+  }
+  return null;
+}
+
 /** Read a mesh file into vtkPolyData by extension. Returns null on failure. */
 export async function loadScanPolyData(file: File): Promise<any | null> {
   const ext = (file.name.split('.').pop() || '').toLowerCase();
   try {
+    let pd: any = null;
     if (ext === 'obj') {
       const reader = vtkOBJReader.newInstance();
       reader.parseAsText(await file.text());
-      return reader.getOutputData(0);
+      pd = reader.getOutputData(0);
+    } else {
+      const buf = await file.arrayBuffer();
+      if (ext === 'ply') {
+        const reader = vtkPLYReader.newInstance();
+        reader.parseAsArrayBuffer(buf);
+        pd = reader.getOutputData(0);
+      } else {
+        // Default: STL (binary via ArrayBuffer, fall back to ASCII text)
+        const reader = vtkSTLReader.newInstance();
+        reader.parseAsArrayBuffer(buf);
+        pd = reader.getOutputData(0);
+        if (!pd || pd.getNumberOfPoints() === 0) {
+          const alt = vtkSTLReader.newInstance();
+          alt.parseAsText(new TextDecoder().decode(buf));
+          pd = alt.getOutputData(0);
+        }
+      }
     }
-    const buf = await file.arrayBuffer();
-    if (ext === 'ply') {
-      const reader = vtkPLYReader.newInstance();
-      reader.parseAsArrayBuffer(buf);
-      return reader.getOutputData(0);
-    }
-    // Default: STL (binary via ArrayBuffer, fall back to ASCII text)
-    const reader = vtkSTLReader.newInstance();
-    reader.parseAsArrayBuffer(buf);
-    let pd = reader.getOutputData(0);
-    if (!pd || pd.getNumberOfPoints() === 0) {
-      const alt = vtkSTLReader.newInstance();
-      alt.parseAsText(new TextDecoder().decode(buf));
-      pd = alt.getOutputData(0);
-    }
-    return pd && pd.getNumberOfPoints() > 0 ? pd : null;
+    if (!pd || pd.getNumberOfPoints() === 0) return null;
+    const warning = meshScaleWarning(pd);
+    if (warning) console.warn(`[DQ-DICOM] Scan mesh "${file.name}": ${warning}`);
+    return pd;
   } catch {
     return null;
   }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { RenderingEngine, eventTarget } from '@cornerstonejs/core';
+import { RenderingEngine, eventTarget, cache } from '@cornerstonejs/core';
 import { Enums as csToolsEnums } from '@cornerstonejs/tools';
 import { LeftPanel } from './LeftPanel';
 import { SeriesList } from '@/components/dicom/SeriesList';
@@ -10,6 +10,8 @@ import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
 import { setupTools, setActiveTool } from '@/core/toolManager';
 import { createVolume } from '@/core/volumeBuilder';
+import { revokeAllBlobUrls } from '@/core/dicomLoader';
+import { clearScanRegistry } from '@/core/scanMesh';
 import { serializePlan, planFromObject } from '@/core/planIO';
 import { CS_TOOL_KEYS } from '@/core/annotationLayer';
 import { RENDERING_ENGINE_ID } from '@/core/constants';
@@ -21,7 +23,7 @@ export function ViewerShell() {
   measurementsRef.current = state.measurements;
   const hasSeries = state.study && state.study.series.length > 1;
   const renderingEngineRef = useRef<RenderingEngine | null>(null);
-  const buildingVolumeRef = useRef(false);
+  const buildingVolumeRef = useRef<string | null>(null); // series UID currently building
   const [engineReady, setEngineReady] = useState(false);
 
   // Create a shared rendering engine BEFORE children mount
@@ -66,35 +68,46 @@ export function ViewerShell() {
 
   // Build volume for MPR/3D views (always needed since default viewMode is AXIAL)
   const needsVolume = true;
+  // H2: mirror the active series in a ref so async build completions can tell
+  // whether the user switched series while the build was in flight.
+  const activeSeriesRef = useRef(state.activeSeriesUID);
+  activeSeriesRef.current = state.activeSeriesUID;
+  // Bumping this re-runs the effect, retrying a build that was skipped/aborted.
+  const [buildRetry, setBuildRetry] = useState(0);
   useEffect(() => {
-    if (
-      !needsVolume ||
-      state.volumeId ||
-      !state.activeSeriesUID ||
-      !state.study ||
-      buildingVolumeRef.current
-    ) {
-      return;
-    }
+    const uid = state.activeSeriesUID;
+    if (!needsVolume || state.volumeId || !uid || !state.study) return;
+    // UID-keyed guard: only skip if THIS series is already being built.
+    if (buildingVolumeRef.current === uid) return;
 
     const series = state.study.series.find(
-      (s) => s.seriesInstanceUID === state.activeSeriesUID,
+      (s) => s.seriesInstanceUID === uid,
     );
     if (!series || series.imageIds.length < 3) return;
 
-    buildingVolumeRef.current = true;
+    buildingVolumeRef.current = uid;
 
     createVolume(series.imageIds)
       .then((volumeId) => {
-        buildingVolumeRef.current = false;
+        if (activeSeriesRef.current !== uid) {
+          // Stale: the user switched series mid-build — discard the result and
+          // let the effect rebuild the volume for the now-active series.
+          buildingVolumeRef.current = null;
+          setBuildRetry(n => n + 1);
+          return;
+        }
+        buildingVolumeRef.current = null;
         dispatch({ type: 'SET_VOLUME_ID', payload: volumeId });
         console.log('[DQ-DICOM] Volume created:', volumeId);
       })
       .catch((err) => {
-        buildingVolumeRef.current = false;
+        buildingVolumeRef.current = null;
         console.error('[DQ-DICOM] Volume creation failed:', err);
+        // If the failure belonged to a series that is no longer active, retry
+        // so the current series still gets its volume.
+        if (activeSeriesRef.current !== uid) setBuildRetry(n => n + 1);
       });
-  }, [needsVolume, state.activeSeriesUID, state.study, state.volumeId, dispatch]);
+  }, [needsVolume, state.activeSeriesUID, state.study, state.volumeId, buildRetry, dispatch]);
 
   // Crosshairs is the default tool once a study is loaded in a multi-view
   // layout (needs the MPR viewports to exist first, hence the small delay).
@@ -111,7 +124,53 @@ export function ViewerShell() {
     return () => clearTimeout(id);
   }, [engineReady, state.volumeId, state.layoutMode, dispatch]);
 
-  // ── Plan autosave / restore (per study, localStorage) ───────
+  // H1: release per-study resources when the study is replaced or cleared
+  // (RESET sets study to null, which also triggers this). Kept out of the
+  // reducer, which must stay pure.
+  //
+  // Note: loaders create the NEW study's volume/blob URLs before dispatching
+  // SET_STUDY, so on a study-to-study replacement a global purge/revoke would
+  // destroy the fresh data — only the previous volume is removed there. The
+  // full purge happens on RESET/unmount, when nothing new can be harmed.
+  const releaseAll = () => {
+    try { cache.purgeCache(); } catch { /* engine already gone */ }
+    revokeAllBlobUrls();
+    clearScanRegistry();
+  };
+  const prevStudyRef = useRef<{ uid: string | null; volumeId: string | null }>({ uid: null, volumeId: null });
+  useEffect(() => {
+    const uid = state.study?.studyInstanceUID ?? null;
+    const prev = prevStudyRef.current;
+    prevStudyRef.current = { uid, volumeId: state.volumeId };
+    if (!prev.uid || prev.uid === uid) return;
+    // Scans are never created before SET_STUDY, so this is always safe.
+    clearScanRegistry();
+    if (!uid) {
+      releaseAll(); // RESET: no new study resources exist yet
+    } else if (prev.volumeId) {
+      try { cache.removeVolumeLoadObject(prev.volumeId); } catch { /* already gone */ }
+    }
+  }, [state.study?.studyInstanceUID, state.volumeId]);
+  // Also release everything on a real unmount. The release is deferred by a
+  // macrotask and cancelled if the component mounts again, so React StrictMode's
+  // dev-only mount→unmount→remount cycle does NOT purge the volume that the
+  // loader created just before this mounted (that purge caused blank viewports
+  // in dev). A genuine unmount has no remount to cancel it, so it still fires.
+  const releaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (releaseTimerRef.current) {
+      clearTimeout(releaseTimerRef.current);
+      releaseTimerRef.current = null;
+    }
+    return () => {
+      releaseTimerRef.current = setTimeout(() => releaseAll(), 0);
+    };
+  }, []);
+
+  // ── Plan autosave / restore (per study, sessionStorage) ─────
+  // M3: sessionStorage (not localStorage) so patient-identifying plan data
+  // does not persist on disk beyond the browser session; patient name and
+  // birth date are stripped from the persisted report (re-entered on demand).
   const studyUID = state.study?.studyInstanceUID ?? null;
   const restoredRef = useRef<string | null>(null);
 
@@ -121,7 +180,10 @@ export function ViewerShell() {
     restoredRef.current = studyUID;
     if (state.implants.length || state.anatomy.length || state.measurements.length) return;
     try {
-      const raw = localStorage.getItem(`rdcv-plan-${studyUID}`);
+      const key = `rdcv-plan-${studyUID}`;
+      // Legacy: pre-M3 autosaves lived in localStorage — drop them, don't migrate.
+      localStorage.removeItem(key);
+      const raw = sessionStorage.getItem(key);
       if (!raw) return;
       const data = planFromObject(JSON.parse(raw));
       if (data) dispatch({ type: 'LOAD_PLAN', payload: data });
@@ -133,12 +195,15 @@ export function ViewerShell() {
     if (!studyUID) return;
     const id = setTimeout(() => {
       try {
-        const plan = serializePlan(state, {
-          savedAt: new Date().toISOString(),
-          studyInstanceUID: studyUID,
-          patientId: state.study?.patientId ?? null,
-        });
-        localStorage.setItem(`rdcv-plan-${studyUID}`, JSON.stringify(plan));
+        const plan = serializePlan(
+          { ...state, report: { ...state.report, patientName: '', patientBirthDate: '' } },
+          {
+            savedAt: new Date().toISOString(),
+            studyInstanceUID: studyUID,
+            patientId: state.study?.patientId ?? null,
+          },
+        );
+        sessionStorage.setItem(`rdcv-plan-${studyUID}`, JSON.stringify(plan));
       } catch { /* storage full / unavailable */ }
     }, 800);
     return () => clearTimeout(id);

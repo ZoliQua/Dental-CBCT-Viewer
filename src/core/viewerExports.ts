@@ -25,7 +25,8 @@ function boneQualityLabels(state: ViewerState): Record<string, string> {
     const wa = implantWorldAxis(cps, imp);
     if (!wa) continue;
     const b = sampleImplantBoneHU(vol, wa.entry, wa.apex, imp.diameter / 2);
-    if (b) out[imp.id] = `${b.bone} · ${Math.round(b.meanHU)} HU`;
+    // CBCT gray values are uncalibrated — label as GV, not HU (see boneQuality.ts).
+    if (b) out[imp.id] = `${b.bone} · ${Math.round(b.meanHU)} GV`;
   }
   return out;
 }

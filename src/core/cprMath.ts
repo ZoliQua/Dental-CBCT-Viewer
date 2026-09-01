@@ -32,19 +32,35 @@ export interface VolumeSamplingData {
 
 // ── Trilinear interpolation ────────────────────────────────────
 
+/**
+ * -1024 HU ≈ CT air: the sentinel returned for out-of-volume samples.
+ * (Medical-L1: this is a CBCT/CT app, so -1024 is the air convention and
+ * genuinely out-of-volume voxels correctly read as air.)
+ */
+const AIR_HU = -1024;
+
 export function trilinear(
   getVoxel: (i: number, j: number, k: number) => number,
   dims: [number, number, number],
   ci: number, cj: number, ck: number,
 ): number {
-  const i0 = Math.floor(ci), j0 = Math.floor(cj), k0 = Math.floor(ck);
-  const i1 = i0 + 1, j1 = j0 + 1, k1 = k0 + 1;
-
-  if (i0 < 0 || i1 >= dims[0] || j0 < 0 || j1 >= dims[1] || k0 < 0 || k1 >= dims[2]) {
-    return -1024;
+  // Genuinely outside the volume → air sentinel
+  if (ci < 0 || ci > dims[0] - 1 || cj < 0 || cj > dims[1] - 1 || ck < 0 || ck > dims[2] - 1) {
+    return AIR_HU;
   }
 
-  const fi = ci - i0, fj = cj - j0, fk = ck - k0;
+  // L1 fix: a sample exactly ON the outermost voxel plane (coord == dims-1)
+  // must interpolate real data, not bail to the air sentinel (which painted a
+  // one-pixel dark rim on panoramic/cross-section edges). Clamp a hair inside
+  // so the upper neighbor index stays in range with negligible weight error.
+  const qi = Math.max(0, Math.min(ci, dims[0] - 1 - 1e-6));
+  const qj = Math.max(0, Math.min(cj, dims[1] - 1 - 1e-6));
+  const qk = Math.max(0, Math.min(ck, dims[2] - 1 - 1e-6));
+
+  const i0 = Math.floor(qi), j0 = Math.floor(qj), k0 = Math.floor(qk);
+  const i1 = i0 + 1, j1 = j0 + 1, k1 = k0 + 1;
+
+  const fi = qi - i0, fj = qj - j0, fk = qk - k0;
   const nfi = 1 - fi, nfj = 1 - fj, nfk = 1 - fk;
 
   return (
@@ -73,10 +89,15 @@ export function buildUniformCurve(controlPoints: Point2[], numSamples: number) {
 
   // Then: resample uniformly by arc length → no distortion from uneven CP spacing
   const curve = resampleByArcLength(rawCurve, numSamples);
-  const normals = computeCurveNormals(curve);
-  const arcLen = totalArcLength(curve);
+  if (curve.length === 0) return { curve, normals: [], arcLen: 0 };
+  // M3: coincident control points collapse resampling to a single point.
+  // Duplicate it so every consumer can assume ≥2 points (computeCurveNormals
+  // then yields the default normal for the zero-length tangent).
+  const safeCurve = curve.length < 2 ? [curve[0], curve[0]] : curve;
+  const normals = computeCurveNormals(safeCurve);
+  const arcLen = totalArcLength(safeCurve);
 
-  return { curve, normals, arcLen };
+  return { curve: safeCurve, normals, arcLen };
 }
 
 // ── Cross-section sampling ─────────────────────────────────────
@@ -117,7 +138,14 @@ export function crossSectionFrame(
   // increasing arch position) is recovered as [ny, -nx]
   const tangent: Point2 = [normal[1], -normal[0]];
 
-  const tiltRad = (tiltDeg * Math.PI) / 180;
+  // Medical-L2: clamp tilt to ±30° (the panoramic tilt-drag UI enforces the
+  // same range). The vertical sample range deliberately stays the volume's Z
+  // range — a taller sampling window would be needed to cover the full leaned
+  // extent of a steeper slice, so steeper tilts are disallowed here instead of
+  // silently cropping anatomy at the slice's top/bottom.
+  const MAX_TILT_DEG = 30;
+  const clampedTiltDeg = Math.max(-MAX_TILT_DEG, Math.min(MAX_TILT_DEG, tiltDeg));
+  const tiltRad = (clampedTiltDeg * Math.PI) / 180;
   const sinT = Math.sin(tiltRad);
   const cosT = Math.cos(tiltRad);
   const zMid = (zMin + zMax) / 2;

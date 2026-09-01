@@ -1,10 +1,15 @@
 /**
  * Bone quality at the implant site — Misch D1–D5 classification from the mean
- * Hounsfield value sampled along the implant body. Pure (uses the cprMath
+ * gray value sampled along the implant body. Pure (uses the cprMath
  * trilinear sampler over a VolumeSamplingData) → unit-testable.
  *
- * Misch HU ranges (CBCT values are not perfectly calibrated, but the relative
- * classification is the industry-standard guide):
+ * IMPORTANT: CBCT gray values are NOT calibrated Hounsfield units. They vary
+ * with the device, exposure settings and scatter, so the sampled values and
+ * the Misch mapping below are INDICATIVE ONLY (relative density class), not a
+ * measurement of true bone density. The UI displays them as "GV" (gray value),
+ * never as HU.
+ *
+ * Misch reference ranges (applied to the uncalibrated gray values):
  *   D1 > 1250 · D2 850–1250 · D3 350–850 · D4 150–350 · D5 < 150
  */
 

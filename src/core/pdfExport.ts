@@ -112,7 +112,7 @@ interface PdfExportOptions {
   anatomy?: AnatomyMarker[];
   archCurve?: [number, number][] | null;
   thresholds?: { nerve: number; sinus: number; neighbor: number };
-  /** implant id → bone quality label (e.g. "D2 · 712 HU") */
+  /** implant id → bone quality label (e.g. "D2 · 712 GV" — uncalibrated CBCT gray values) */
   boneQuality?: Record<string, string>;
   lang: string;
 }
@@ -152,12 +152,24 @@ export async function exportViewPdf({ t, study, implants, measurements, report, 
   doc.setFontSize(10);
   doc.text(`${t('pdf.date')}: ${new Date().toLocaleDateString(lang)}`, MARGIN, y);
   y += 5;
-  // Editable report header fields take precedence over the DICOM tags
-  const patientName = report?.patientName?.trim() || study?.patientName || '-';
-  doc.text(`${t('pdf.patient')}: ${patientName}${study?.patientId ? ` (${study.patientId})` : ''}`, MARGIN, y);
+  // Editable report header fields take precedence over the DICOM tags; when a
+  // typed override differs from the DICOM value, print both so the mismatch is
+  // visible on the document.
+  const dicomName = study?.patientName?.trim() || '';
+  const typedName = report?.patientName?.trim() || '';
+  const patientName = typedName || dicomName || '-';
+  const nameSuffix = typedName && dicomName && typedName !== dicomName
+    ? ` (${t('pdf.reportOverride', { value: typedName })})` : '';
+  const shownName = nameSuffix ? dicomName : patientName;
+  doc.text(`${t('pdf.patient')}: ${shownName}${nameSuffix}${study?.patientId ? ` (${study.patientId})` : ''}`, MARGIN, y);
   y += 5;
-  if (report?.patientBirthDate?.trim()) {
-    doc.text(`${t('report.birthDate')}: ${report.patientBirthDate.trim()}`, MARGIN, y);
+  const dicomBirth = study?.patientBirthDate?.trim() || '';
+  const typedBirth = report?.patientBirthDate?.trim() || '';
+  const birthSuffix = typedBirth && dicomBirth && typedBirth !== dicomBirth
+    ? ` (${t('pdf.reportOverride', { value: typedBirth })})` : '';
+  const birth = typedBirth || dicomBirth;
+  if (birth) {
+    doc.text(`${t('report.birthDate')}: ${birthSuffix ? dicomBirth : birth}${birthSuffix}`, MARGIN, y);
     y += 5;
   }
   if (report?.patientAge?.trim()) {
@@ -240,7 +252,8 @@ export async function exportViewPdf({ t, study, implants, measurements, report, 
       if (bq) {
         pageBreak(5);
         doc.setTextColor(110);
-        doc.text(`   ${t('bone.title')}: ${bq}`, MARGIN + 2, y);
+        // CBCT gray values are uncalibrated — relabel HU → GV on the document
+        doc.text(`   ${t('bone.title')}: ${bq.replace(/\bHU\b/g, 'GV')}`, MARGIN + 2, y);
         doc.setTextColor(0);
         y += 4.5;
       }
@@ -258,6 +271,26 @@ export async function exportViewPdf({ t, study, implants, measurements, report, 
         doc.setTextColor(0);
         y += 4.5;
       }
+    }
+    // Bone-quality caveat (once, when any bone label was printed)
+    if (Object.keys(boneQuality ?? {}).length > 0) {
+      pageBreak(5);
+      doc.setFontSize(7.5);
+      doc.setTextColor(120);
+      doc.text(doc.splitTextToSize(t('pdf.boneCaveat'), PAGE_W - 2 * MARGIN - 2), MARGIN + 2, y);
+      doc.setTextColor(0);
+      doc.setFontSize(9);
+      y += 4;
+    }
+    // Drill-guide disclaimer (once, when any guided implant is planned)
+    if (implants.some((i) => i.guided?.enabled)) {
+      pageBreak(5);
+      doc.setFontSize(7.5);
+      doc.setTextColor(120);
+      doc.text(doc.splitTextToSize(t('pdf.guideNote'), PAGE_W - 2 * MARGIN - 2), MARGIN + 2, y);
+      doc.setTextColor(0);
+      doc.setFontSize(9);
+      y += 4;
     }
     y += 3;
   }
@@ -306,6 +339,20 @@ export async function exportViewPdf({ t, study, implants, measurements, report, 
       doc.text(line, MARGIN + 2, y);
       y += 4.5 * line.length;
     }
+    // Honesty caveats: the nerve is traced on the panoramic only (buccolingual
+    // position unknown), and tooth/cortical checks are not performed.
+    doc.setFontSize(7.5);
+    doc.setTextColor(120);
+    if (vis.some((a) => a.type === 'nerve')) {
+      pageBreak(5);
+      doc.text(doc.splitTextToSize(t('safety.nerveCaveat'), PAGE_W - 2 * MARGIN - 2), MARGIN + 2, y);
+      y += 4;
+    }
+    pageBreak(5);
+    doc.text(doc.splitTextToSize(t('safety.notChecked'), PAGE_W - 2 * MARGIN - 2), MARGIN + 2, y);
+    y += 4;
+    doc.setTextColor(0);
+    doc.setFontSize(9);
   }
 
   // Disclaimer block (research-use-only) at the end of the content

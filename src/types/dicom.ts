@@ -50,7 +50,7 @@ export type ViewportTool =
   | 'probe'
   | 'crosshairs';
 
-export type LayoutMode = '1x1' | '2x2' | '1+3' | 'OPG' | 'OPG2+1';
+export type LayoutMode = '1x1' | '2x2' | '1+3' | 'OPG2+1';
 
 /** A view that can occupy a panel slot in the configurable 1+3 layout. */
 export type ViewKey = 'AXIAL' | 'SAGITTAL' | 'CORONAL' | '3D';

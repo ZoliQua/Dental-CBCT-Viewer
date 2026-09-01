@@ -13,6 +13,7 @@ import type { ManifoldToplevel } from 'manifold-3d';
 import type { Vec3 } from './implantGeometry';
 import type { Point2 } from './cprMath';
 import { archFrameAt, nearestArchFrame } from './implantGeometry';
+import { distSegmentToPolyline3 } from './safety';
 import { cylinderMesh, sweptBarMesh, type TriMesh } from './guideGeom';
 import type { GuideParams } from '@/types/dicom';
 
@@ -76,6 +77,33 @@ export function planBaseCenterline(
     if (af) pts.push([af.point[0], af.point[1], baseZ]);
   }
   return pts;
+}
+
+// ── housing ↔ base connectivity (pure, testable) ───────────────
+
+/**
+ * A sleeve housing counts as connected to the base bar when its axis passes
+ * within (housing radius + half the base cross-section) of the base
+ * centerline AND the housing's Z span overlaps the base slab. Conservative
+ * geometric stand-in for the exact Boolean-overlap check (the manifold WASM
+ * kernel cannot run under unit tests); it catches housings that clearly miss
+ * the bar — e.g. an implant placed far buccal of the arch.
+ */
+export function isHousingConnectedToBase(
+  axisA: Vec3,
+  axisB: Vec3,
+  housingRadius: number,
+  baseCenterline: Vec3[],
+  baseWidthMm: number,
+  baseHeightMm: number,
+): boolean {
+  if (baseCenterline.length < 2) return false;
+  const baseZ = baseCenterline[0][2];
+  const zMin = Math.min(axisA[2], axisB[2]);
+  const zMax = Math.max(axisA[2], axisB[2]);
+  if (zMax < baseZ - baseHeightMm / 2 || zMin > baseZ + baseHeightMm / 2) return false;
+  const reach = housingRadius + Math.max(baseWidthMm, baseHeightMm) / 2;
+  return distSegmentToPolyline3(axisA, axisB, baseCenterline) <= reach;
 }
 
 // ── WASM lifecycle ─────────────────────────────────────────────
@@ -164,12 +192,23 @@ export async function buildDrillGuide(input: BuildGuideInput): Promise<BuildGuid
       const at = (t: number): Vec3 => [entry[0] + axis[0] * t, entry[1] + axis[1] * t, entry[2] + axis[2] * t];
       const sleeveTop = -(imp.sleeveOffset + imp.sleeveHeight); // occlusal side (−axis)
       // Housing: from just past the platform (toward apex) up to the sleeve top.
+      const housingRadius = imp.sleeveDiameter / 2 + params.wallMm;
+      const housingBase = at(params.baseHeightMm);
+      const housingTop = at(sleeveTop);
       const housing = cylinderMesh(
-        at(params.baseHeightMm),
-        at(sleeveTop),
-        imp.sleeveDiameter / 2 + params.wallMm,
+        housingBase,
+        housingTop,
+        housingRadius,
         params.segments,
       );
+      // Clinical safeguard: a housing floating free of the base bar would
+      // break off the printed guide.
+      if (
+        centerline.length >= 2 &&
+        !isHousingConnectedToBase(housingBase, housingTop, housingRadius, centerline, params.baseWidthMm, params.baseHeightMm)
+      ) {
+        warnings.push('housing-disconnected');
+      }
       solids.push(track(triToManifold(wasm, housing)));
       // Channel: full through-bore for the sleeve / drill.
       const channel = cylinderMesh(

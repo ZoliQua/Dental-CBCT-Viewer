@@ -3,14 +3,19 @@
  * streaming volume — the same render path as real DICOM. Instead of parsing
  * DICOM files, a tiny custom "sample" image loader + metadata provider serve the
  * slices of a gzipped raw int16 (HU) volume (produced by scripts/make-sample).
+ *
+ * Each load gets its own image-id scheme (`sample<N>:`) and registry entry, so
+ * re-loading never invalidates a sample volume that is still on screen.
  */
 
 import { imageLoader, metaData, volumeLoader, type Types } from '@cornerstonejs/core';
 import { VOLUME_ID_PREFIX } from './constants';
+import { gunzip } from './import/gzip';
 import type { DicomStudyInfo } from '@/types/dicom';
 
-const SCHEME = 'sample';
+const SCHEME_BASE = 'sample';
 const FRAME_OF_REF = 'sample-frame-of-ref';
+const IMAGE_ID = /^sample(\d+):(\d+)$/;
 
 interface SampleMeta {
   dimensions: [number, number, number];
@@ -32,21 +37,34 @@ export interface LoadedSample {
   windowLevel: { wc: number; ww: number };
 }
 
-let registered = false;
-let store: { data: Int16Array; meta: SampleMeta } | null = null;
-let counter = 0;
+interface StoredSample {
+  data: Int16Array;
+  meta: SampleMeta;
+}
 
-const sliceIdx = (imageId: string) => parseInt(imageId.split(':')[1], 10);
+let providerRegistered = false;
+let counter = 0;
+// scheme key (`sample<N>`) → volume; volumeId → scheme key (for disposal)
+const volumes = new Map<string, StoredSample>();
+const schemeByVolumeId = new Map<string, string>();
+const registeredSchemes = new Set<string>();
+
+function parseImageId(imageId: string): { key: string; index: number } | null {
+  if (typeof imageId !== 'string') return null;
+  const m = imageId.match(IMAGE_ID);
+  return m ? { key: `${SCHEME_BASE}${m[1]}`, index: parseInt(m[2], 10) } : null;
+}
 
 /** Custom image loader: one slice of the raw volume as a bare image object. */
 function loadImage(imageId: string): Types.IImageLoadObject {
   const promise = new Promise<any>((resolve, reject) => {
-    if (!store) return reject(new Error('sample not loaded'));
-    const { data, meta } = store;
+    const parsed = parseImageId(imageId);
+    const entry = parsed && volumes.get(parsed.key);
+    if (!parsed || !entry) return reject(new Error(`sample volume not loaded: ${imageId}`));
+    const { data, meta } = entry;
     const [cols, rows] = meta.dimensions;
     const sliceLen = cols * rows;
-    const i = sliceIdx(imageId);
-    const pixelData = data.subarray(i * sliceLen, (i + 1) * sliceLen);
+    const pixelData = data.subarray(parsed.index * sliceLen, (parsed.index + 1) * sliceLen);
     resolve({
       imageId,
       getPixelData: () => pixelData,
@@ -58,8 +76,9 @@ function loadImage(imageId: string): Types.IImageLoadObject {
       numberOfComponents: 1,
       rgba: false,
       sliceThickness: meta.spacing[2],
-      columnPixelSpacing: meta.spacing[1],
-      rowPixelSpacing: meta.spacing[0],
+      // DICOM convention: row spacing = Δ between rows (column direction) = sy.
+      columnPixelSpacing: meta.spacing[0],
+      rowPixelSpacing: meta.spacing[1],
       slope: 1,
       intercept: 0,
       minPixelValue: -1024,
@@ -73,14 +92,16 @@ function loadImage(imageId: string): Types.IImageLoadObject {
   return { promise } as Types.IImageLoadObject;
 }
 
-/** Metadata provider for sample: image ids (geometry + pixel + scaling). */
+/** Metadata provider for sample<N>: image ids (geometry + pixel + scaling). */
 function provider(type: string, imageId: string): unknown {
-  if (typeof imageId !== 'string' || !imageId.startsWith(`${SCHEME}:`) || !store) return undefined;
-  const { meta } = store;
+  const parsed = parseImageId(imageId);
+  const entry = parsed && volumes.get(parsed.key);
+  if (!parsed || !entry) return undefined;
+  const { meta } = entry;
   const [cols, rows] = meta.dimensions;
   const [sx, sy, sz] = meta.spacing;
   const [ox, oy, oz] = meta.origin;
-  const i = sliceIdx(imageId);
+  const i = parsed.index;
   switch (type) {
     case 'imagePixelModule':
       return { bitsAllocated: 16, bitsStored: 16, highBit: 15, samplesPerPixel: 1, pixelRepresentation: 1, photometricInterpretation: 'MONOCHROME2', rows, columns: cols };
@@ -105,11 +126,22 @@ function provider(type: string, imageId: string): unknown {
   }
 }
 
-function register() {
-  if (registered) return;
-  imageLoader.registerImageLoader(SCHEME, loadImage as any);
+/** Register the metadata provider once and the loader for this scheme. */
+function register(scheme: string) {
+  if (!registeredSchemes.has(scheme)) {
+    imageLoader.registerImageLoader(scheme, loadImage as any);
+    registeredSchemes.add(scheme);
+  }
+  if (providerRegistered) return;
   metaData.addProvider(provider as any, 10000);
-  registered = true;
+  providerRegistered = true;
+}
+
+/** Drop a sample volume's pixel data (call when its Cornerstone volume is purged). */
+export function disposeSampleVolume(volumeId: string): void {
+  const scheme = schemeByVolumeId.get(volumeId) ?? volumeId; // also accepts the scheme key
+  schemeByVolumeId.delete(volumeId);
+  volumes.delete(scheme);
 }
 
 async function fetchOk(url: string): Promise<Response> {
@@ -123,21 +155,18 @@ async function fetchOk(url: string): Promise<Response> {
   return resp;
 }
 
-/** Gunzip a buffer only if it is really gzip (1f 8b), else return it as-is. */
-async function maybeGunzip(raw: ArrayBuffer): Promise<ArrayBuffer> {
-  const head = new Uint8Array(raw.slice(0, 2));
-  const isGzip = head[0] === 0x1f && head[1] === 0x8b;
-  if (!isGzip) return raw; // server already decompressed it (Content-Encoding: gzip)
-  if (typeof DecompressionStream === 'undefined') throw new Error('gzip payload but no DecompressionStream');
-  const stream = new Blob([raw]).stream().pipeThrough(new DecompressionStream('gzip'));
-  return new Response(stream).arrayBuffer();
-}
-
 /** Read the volume body, reporting download fraction (0–1) as bytes arrive. */
-async function readVolumeWithProgress(resp: Response, onFrac?: (f: number) => void): Promise<ArrayBuffer> {
+async function readVolumeWithProgress(
+  resp: Response,
+  maxBytes: number,
+  onFrac?: (f: number) => void,
+): Promise<Int16Array> {
   const total = Number(resp.headers.get('Content-Length')) || 0;
   const reader = resp.body?.getReader();
-  if (!reader) return maybeGunzip(await resp.arrayBuffer());
+  if (!reader) {
+    const buf = await gunzip(new Uint8Array(await resp.arrayBuffer()), maxBytes);
+    return new Int16Array(buf.buffer, buf.byteOffset, buf.byteLength / 2);
+  }
 
   const chunks: Uint8Array[] = [];
   let received = 0;
@@ -152,26 +181,41 @@ async function readVolumeWithProgress(resp: Response, onFrac?: (f: number) => vo
   let off = 0;
   for (const c of chunks) { raw.set(c, off); off += c.length; }
   onFrac?.(1);
-  return maybeGunzip(raw.buffer);
+  const buf = await gunzip(raw, maxBytes);
+  return new Int16Array(buf.buffer, buf.byteOffset, buf.byteLength / 2);
 }
 
 export async function loadSample(base = '/sample', onProgress?: (pct: number) => void): Promise<LoadedSample> {
-  register();
   onProgress?.(0);
   const meta = (await (await fetchOk(`${base}/meta.json`)).json()) as SampleMeta;
   const gzResp = await fetchOk(`${base}/volume.raw.bin`);
+  const [cols, rows, depth] = meta.dimensions;
+  // Decompression budget: int16 voxels + slack for container padding.
+  const maxBytes = cols * rows * depth * 2 + 4096;
   // Download is the slow part on a network → map it to 0–90%.
-  const buf = await readVolumeWithProgress(gzResp, (f) => onProgress?.(Math.round(f * 90)));
+  const data = await readVolumeWithProgress(gzResp, maxBytes, (f) => onProgress?.(Math.round(f * 90)));
   onProgress?.(92);
-  store = { data: new Int16Array(buf), meta };
 
-  const depth = meta.dimensions[2];
-  const imageIds = Array.from({ length: depth }, (_, i) => `${SCHEME}:${i}`);
-  const volumeId = `${VOLUME_ID_PREFIX}sample${counter++}`;
+  const n = counter++;
+  const scheme = `${SCHEME_BASE}${n}`;
+  register(scheme);
+  volumes.set(scheme, { data, meta });
+
+  const imageIds = Array.from({ length: depth }, (_, i) => `${scheme}:${i}`);
+  const volumeId = `${VOLUME_ID_PREFIX}sample${n}`;
+  schemeByVolumeId.set(volumeId, scheme);
 
   const volume = await volumeLoader.createAndCacheVolume(volumeId, { imageIds });
   onProgress?.(96);
-  await new Promise<void>((resolve) => { (volume as any).load(() => resolve()); });
+  await new Promise<void>((resolve, reject) => {
+    (volume as any).load((evt: any) => {
+      if (evt && evt.success === false) {
+        reject(new Error(`Failed to load sample volume (${evt.imageId ?? 'frame load error'})`));
+      } else {
+        resolve();
+      }
+    });
+  });
   onProgress?.(100);
 
   const study: DicomStudyInfo = {

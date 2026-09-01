@@ -39,7 +39,13 @@ describe('serializePlan / planFromObject round-trip', () => {
     expect(file.version).toBe(PLAN_VERSION);
     expect(file.studyInstanceUID).toBe('S1');
     const restored = planFromObject(JSON.parse(JSON.stringify(file)));
-    expect(restored).toEqual(extractPlan(sample));
+    expect(restored).toEqual({ ...extractPlan(sample), studyInstanceUID: 'S1' });
+  });
+
+  it('exposes studyInstanceUID so callers can detect a study mismatch', () => {
+    const file = serializePlan(sample, { savedAt: '2026-06-24T10:00:00Z', studyInstanceUID: 'S9', patientId: null });
+    expect(planFromObject(JSON.parse(JSON.stringify(file)))!.studyInstanceUID).toBe('S9');
+    expect(planFromObject({ version: 1 })!.studyInstanceUID).toBeNull();
   });
 });
 
@@ -69,5 +75,69 @@ describe('planFromObject validation', () => {
     const r = planFromObject({ version: 1, crossSectionPosition: 'x', panoramicResolution: null })!;
     expect(r.crossSectionPosition).toBe(0.5);
     expect(r.panoramicResolution).toBe(0.3);
+  });
+
+  it('drops malformed array entries but keeps valid ones', () => {
+    const goodImplant = sample.implants[0];
+    const r = planFromObject({
+      version: 1,
+      implants: [
+        goodImplant,
+        null,
+        'nope',
+        { ...goodImplant, position: [0, NaN, 0] },
+        { ...goodImplant, diameter: '4.2' },
+        { position: [1, 2, 3], diameter: 4, length: 10 }, // no id
+      ],
+      anatomy: [
+        sample.anatomy[0],
+        { ...sample.anatomy[0], id: 'bad', points: [[0, 0, 0], [1, Infinity, 2]] },
+        42,
+      ],
+      measurements: [
+        sample.measurements[0],
+        { id: 'bad-points', points: [[0, 'x']] },
+        null,
+      ],
+      archCurveControlPoints: [[1, 2], [3, 'x'], null, [5, 6]],
+    })!;
+    expect(r.implants).toEqual([goodImplant]);
+    expect(r.anatomy).toEqual([sample.anatomy[0]]);
+    expect(r.measurements).toEqual([sample.measurements[0]]);
+    expect(r.archCurveControlPoints).toEqual([[1, 2], [5, 6]]);
+  });
+
+  it('caps array lengths', () => {
+    const imp = sample.implants[0];
+    const mea = sample.measurements[0];
+    const r = planFromObject({
+      version: 1,
+      implants: Array.from({ length: 150 }, (_, i) => ({ ...imp, id: `i${i}` })),
+      measurements: Array.from({ length: 600 }, (_, i) => ({ ...mea, id: `m${i}` })),
+      archCurveControlPoints: Array.from({ length: 300 }, (_, i) => [i, i]),
+    })!;
+    expect(r.implants).toHaveLength(100);
+    expect(r.measurements).toHaveLength(500);
+    expect(r.archCurveControlPoints).toHaveLength(200);
+  });
+
+  it('caps anatomy polylines and drops oversized point lists', () => {
+    const marker = sample.anatomy[0];
+    const r = planFromObject({
+      version: 1,
+      anatomy: [
+        { ...marker, id: 'huge', points: Array.from({ length: 2001 }, () => [0, 0, 0]) },
+        ...Array.from({ length: 60 }, (_, i) => ({ ...marker, id: `a${i}` })),
+      ],
+    })!;
+    expect(r.anatomy).toHaveLength(50);
+    expect(r.anatomy.some(a => a.id === 'huge')).toBe(false);
+  });
+
+  it('treats missing/non-array collections as empty, null arch curve as null', () => {
+    const r = planFromObject({ version: 1, implants: 'x', anatomy: 5, archCurveControlPoints: 'y' })!;
+    expect(r.implants).toEqual([]);
+    expect(r.anatomy).toEqual([]);
+    expect(r.archCurveControlPoints).toBeNull();
   });
 });

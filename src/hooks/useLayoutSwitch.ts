@@ -16,7 +16,7 @@ export function useLayoutSwitch() {
   return useCallback((layout: LayoutMode) => {
     dispatch({ type: 'SET_LAYOUT_MODE', payload: layout });
 
-    if (layout === 'OPG' || layout === 'OPG2+1') {
+    if (layout === 'OPG2+1') {
       // Initialize default arch curve if not yet drawn
       if (!state.archCurveControlPoints && state.volumeId) {
         const volume = cache.getVolume(state.volumeId);

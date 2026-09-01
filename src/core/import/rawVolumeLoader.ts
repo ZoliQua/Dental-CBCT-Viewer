@@ -4,14 +4,19 @@
  * the bundled sample uses, so non-DICOM sources (GALILEOS, OneVolume) render on
  * the identical pipeline as DICOM. The raw volume is stored slice-major:
  * slice k occupies data[k*cols*rows .. (k+1)*cols*rows).
+ *
+ * Each imported volume gets its own image-id scheme (`importvol<N>:`) and its
+ * own registry entry, so re-importing never invalidates a volume that is still
+ * on screen. Call `disposeRawVolume(volumeId)` when a volume is purged.
  */
 
 import { imageLoader, metaData, volumeLoader, type Types } from '@cornerstonejs/core';
 import { VOLUME_ID_PREFIX } from '../constants';
 import type { DicomStudyInfo } from '@/types/dicom';
 
-const SCHEME = 'importvol';
+const SCHEME_BASE = 'importvol';
 const FRAME_OF_REF = 'importvol-frame-of-ref';
+const IMAGE_ID = /^importvol(\d+):(\d+)$/;
 
 export interface RawVolume {
   /** int16 scalars, slice-major (k outer, then row j, then col i). */
@@ -28,7 +33,10 @@ export interface RawVolume {
   minValue: number;
   maxValue: number;
   patientName?: string;
+  patientId?: string;
   seriesDescription?: string;
+  /** Non-fatal assumptions made while decoding (e.g. header fallbacks). */
+  warnings?: string[];
 }
 
 interface LoadedRaw {
@@ -37,30 +45,39 @@ interface LoadedRaw {
   windowLevel: { wc: number; ww: number };
 }
 
-let registered = false;
-let store: RawVolume | null = null;
+let providerRegistered = false;
 let counter = 0;
+// scheme key (`importvol<N>`) → volume; volumeId → scheme key (for disposal)
+const volumes = new Map<string, RawVolume>();
+const schemeByVolumeId = new Map<string, string>();
+const registeredSchemes = new Set<string>();
 
-const sliceIdx = (imageId: string) => parseInt(imageId.split(':')[1], 10);
+function parseImageId(imageId: string): { key: string; index: number } | null {
+  if (typeof imageId !== 'string') return null;
+  const m = imageId.match(IMAGE_ID);
+  return m ? { key: `${SCHEME_BASE}${m[1]}`, index: parseInt(m[2], 10) } : null;
+}
 
 function loadImage(imageId: string): Types.IImageLoadObject {
   const promise = new Promise<any>((resolve, reject) => {
-    if (!store) return reject(new Error('import volume not loaded'));
-    const [cols, rows] = store.dimensions;
+    const parsed = parseImageId(imageId);
+    const vol = parsed && volumes.get(parsed.key);
+    if (!parsed || !vol) return reject(new Error(`import volume not loaded: ${imageId}`));
+    const [cols, rows] = vol.dimensions;
     const sliceLen = cols * rows;
-    const i = sliceIdx(imageId);
-    const pixelData = store.data.subarray(i * sliceLen, (i + 1) * sliceLen);
+    const pixelData = vol.data.subarray(parsed.index * sliceLen, (parsed.index + 1) * sliceLen);
     resolve({
       imageId,
       getPixelData: () => pixelData,
       rows, columns: cols, height: rows, width: cols,
       color: false, numberOfComponents: 1, rgba: false,
-      sliceThickness: store.spacing[2],
-      columnPixelSpacing: store.spacing[1],
-      rowPixelSpacing: store.spacing[0],
+      sliceThickness: vol.spacing[2],
+      // DICOM convention: row spacing = Δ between rows (column direction) = sy.
+      columnPixelSpacing: vol.spacing[0],
+      rowPixelSpacing: vol.spacing[1],
       slope: 1, intercept: 0,
-      minPixelValue: store.minValue, maxPixelValue: store.maxValue,
-      windowCenter: store.windowCenter, windowWidth: store.windowWidth,
+      minPixelValue: vol.minValue, maxPixelValue: vol.maxValue,
+      windowCenter: vol.windowCenter, windowWidth: vol.windowWidth,
       invert: false, sizeInBytes: pixelData.byteLength,
     });
   });
@@ -68,11 +85,13 @@ function loadImage(imageId: string): Types.IImageLoadObject {
 }
 
 function provider(type: string, imageId: string): unknown {
-  if (typeof imageId !== 'string' || !imageId.startsWith(`${SCHEME}:`) || !store) return undefined;
-  const [cols, rows] = store.dimensions;
-  const [sx, sy, sz] = store.spacing;
-  const o = store.origin ?? [-(cols * sx) / 2, -(rows * sy) / 2, -(store.dimensions[2] * sz) / 2];
-  const i = sliceIdx(imageId);
+  const parsed = parseImageId(imageId);
+  const vol = parsed && volumes.get(parsed.key);
+  if (!parsed || !vol) return undefined;
+  const [cols, rows] = vol.dimensions;
+  const [sx, sy, sz] = vol.spacing;
+  const o = vol.origin ?? [-(cols * sx) / 2, -(rows * sy) / 2, -(vol.dimensions[2] * sz) / 2];
+  const i = parsed.index;
   switch (type) {
     case 'imagePixelModule':
       return { bitsAllocated: 16, bitsStored: 16, highBit: 15, samplesPerPixel: 1, pixelRepresentation: 1, photometricInterpretation: 'MONOCHROME2', rows, columns: cols };
@@ -87,49 +106,81 @@ function provider(type: string, imageId: string): unknown {
         frameOfReferenceUID: FRAME_OF_REF,
       };
     case 'voiLutModule':
-      return { windowCenter: store.windowCenter, windowWidth: store.windowWidth };
+      return { windowCenter: vol.windowCenter, windowWidth: vol.windowWidth };
     case 'modalityLutModule':
       return { rescaleSlope: 1, rescaleIntercept: 0 };
     case 'generalSeriesModule':
-      return { modality: store.modality, seriesInstanceUID: 'import-series' };
+      return { modality: vol.modality, seriesInstanceUID: 'import-series' };
     default:
       return undefined;
   }
 }
 
-function register() {
-  if (registered) return;
-  imageLoader.registerImageLoader(SCHEME, loadImage as any);
+/** Register the metadata provider once and the loader for this scheme. */
+function register(scheme: string) {
+  if (!registeredSchemes.has(scheme)) {
+    imageLoader.registerImageLoader(scheme, loadImage as any);
+    registeredSchemes.add(scheme);
+  }
+  if (providerRegistered) return;
   metaData.addProvider(provider as any, 10000);
-  registered = true;
+  providerRegistered = true;
+}
+
+/** Drop a raw volume's pixel data (call when its Cornerstone volume is purged). */
+export function disposeRawVolume(volumeId: string): void {
+  const scheme = schemeByVolumeId.get(volumeId) ?? volumeId; // also accepts the scheme key
+  schemeByVolumeId.delete(volumeId);
+  volumes.delete(scheme);
 }
 
 /** Build a Cornerstone volume + study from a decoded raw volume. */
 export async function buildRawVolume(raw: RawVolume, onProgress?: (pct: number) => void): Promise<LoadedRaw> {
-  register();
-  store = raw;
+  const n = counter++;
+  const scheme = `${SCHEME_BASE}${n}`;
+  register(scheme);
+  volumes.set(scheme, raw);
   onProgress?.(90);
 
   const depth = raw.dimensions[2];
-  const imageIds = Array.from({ length: depth }, (_, i) => `${SCHEME}:${i}`);
-  const volumeId = `${VOLUME_ID_PREFIX}import${counter++}`;
+  const imageIds = Array.from({ length: depth }, (_, i) => `${scheme}:${i}`);
+  const volumeId = `${VOLUME_ID_PREFIX}import${n}`;
+  schemeByVolumeId.set(volumeId, scheme);
+
+  if (raw.warnings?.length) {
+    for (const w of raw.warnings) console.warn(`[DQ-DICOM] Import: ${w}`);
+  }
 
   const volume = await volumeLoader.createAndCacheVolume(volumeId, { imageIds });
   onProgress?.(96);
-  await new Promise<void>((resolve) => { (volume as any).load(() => resolve()); });
+  await new Promise<void>((resolve, reject) => {
+    (volume as any).load((evt: any) => {
+      if (evt && evt.success === false) {
+        reject(new Error(`Failed to load imported volume (${evt.imageId ?? 'frame load error'})`));
+      } else {
+        resolve();
+      }
+    });
+  });
   onProgress?.(100);
 
+  // Surface decoding assumptions where the user can actually see them.
+  const baseDescription = raw.seriesDescription ?? 'Imported CT';
+  const studyDescription = raw.warnings?.length
+    ? `${baseDescription} [warning: ${raw.warnings.join('; ')}]`
+    : baseDescription;
+
   const study: DicomStudyInfo = {
-    studyInstanceUID: `import-study-${counter}`,
-    studyDescription: raw.seriesDescription ?? 'Imported CT',
+    studyInstanceUID: `import-study-${n}`,
+    studyDescription,
     studyDate: '',
     patientName: raw.patientName ?? 'Imported',
-    patientId: 'IMPORT',
+    patientId: raw.patientId ?? 'IMPORT',
     patientBirthDate: '',
     institution: '',
     series: [{
       seriesInstanceUID: 'import-series',
-      seriesDescription: raw.seriesDescription ?? 'Imported CT',
+      seriesDescription: studyDescription,
       seriesNumber: 1,
       modality: raw.modality,
       imageCount: depth,

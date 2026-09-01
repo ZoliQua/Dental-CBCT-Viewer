@@ -151,6 +151,19 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
     };
   }, [volumeId, activePreset]);
 
+  // L4: the custom X-Ray preset builds its transfer function from the shared
+  // window/level — re-apply it on W/L changes. (The load effect above
+  // intentionally does NOT depend on state.windowLevel; re-running it on
+  // every W/L drag would reload the volume.)
+  useEffect(() => {
+    if (activePreset !== XRAY_PRESET_ID || !ready) return;
+    const engine = getRenderingEngine(RENDERING_ENGINE_ID);
+    const viewport = engine?.getViewport(VP_3D) as Types.IVolumeViewport | undefined;
+    if (!viewport) return;
+    applyXrayPreset((viewport as any).getDefaultActor?.()?.actor, state.windowLevel);
+    viewport.render();
+  }, [state.windowLevel, activePreset, ready]);
+
   // Apply preset change
   const handlePresetChange = useCallback(
     (preset: string) => {

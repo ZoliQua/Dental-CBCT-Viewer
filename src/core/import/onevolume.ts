@@ -19,6 +19,11 @@ const CT_VOL = /(^|\/)CT_0\.vol$/i;
 const SENTINEL = -32768;
 const VERSION = 'JmVolumeVersion=1';
 
+// Sanity limits for declared geometry (validated before any allocation).
+const MAX_AXIS = 2048;
+const MAX_DEPTH = 2000;
+const MAX_VOXELS = 2 ** 30;
+
 export function matchOneVolume(files: File[]): boolean {
   return files.some((f) => CT_VOL.test(baseName(f)) || CT_VOL.test((f as any).webkitRelativePath || ''));
 }
@@ -58,8 +63,23 @@ export async function parseOneVolume(files: File[], onProgress?: (pct: number) =
   // Aligned int16 view of the remaining payload.
   const payload = new Int16Array(buf.slice(off));
   if (!cols || !rows) throw new Error('OneVolume: could not read dimensions from header');
+  // Validate declared geometry before allocating anything.
+  if (cols > MAX_AXIS || rows > MAX_AXIS) {
+    throw new Error(`OneVolume: implausible dimensions ${cols}×${rows} (per-axis limit ${MAX_AXIS})`);
+  }
   if (!depth) depth = Math.floor(payload.length / (cols * rows));
+  if (depth < 1) throw new Error('OneVolume: no slice data in payload');
+  if (depth > MAX_DEPTH) throw new Error(`OneVolume: implausible depth ${depth} (limit ${MAX_DEPTH})`);
   const voxels = cols * rows * depth;
+  if (voxels > MAX_VOXELS) {
+    throw new Error(`OneVolume: volume ${cols}×${rows}×${depth} exceeds the ${MAX_VOXELS} voxel limit`);
+  }
+  if (payload.length < voxels) {
+    throw new Error(
+      `OneVolume: payload too short — header declares ${cols}×${rows}×${depth} ` +
+      `(${voxels} voxels) but only ${payload.length} samples remain`,
+    );
+  }
 
   // Scale into viewer units; map the background sentinel to a low value.
   const spacing = sp > 0 && sp < 5 ? sp : 0.125;

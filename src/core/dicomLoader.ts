@@ -8,6 +8,7 @@ interface ParsedDicomFile {
   instanceNumber: number;
   sliceLocation: number;
   ippZ: number; // ImagePositionPatient Z coordinate
+  iop: string; // ImageOrientationPatient, raw "r\x\c\..." string
   seriesDescription: string;
   seriesNumber: number;
   modality: string;
@@ -20,6 +21,17 @@ interface ParsedDicomFile {
 }
 
 const utf8Decoder = new TextDecoder('utf-8');
+
+// Every object URL handed to the cornerstone wadouri loader. They must stay
+// alive while the study is open; revokeAllBlobUrls() releases them on purge.
+const blobUrls: string[] = [];
+
+/** Revoke every object URL created by parseDicomFiles and clear the list. */
+export function revokeAllBlobUrls(): void {
+  while (blobUrls.length) {
+    URL.revokeObjectURL(blobUrls.pop()!);
+  }
+}
 
 /**
  * Read a DICOM string, respecting SpecificCharacterSet.
@@ -55,6 +67,33 @@ function getIPPz(dataSet: dicomParser.DataSet): number {
   return parts.length >= 3 ? parseFloat(parts[2]) : 0;
 }
 
+/**
+ * Warn (never reject) when a series' geometry looks unreliable:
+ * inconsistent ImageOrientationPatient between slices, or irregular
+ * slice spacing (gaps/overlaps in an axial stack).
+ */
+function validateSeriesGeometry(uid: string, items: ParsedDicomFile[]): void {
+  const iop0 = items[0].iop;
+  if (iop0 && items.some((it) => it.iop && it.iop !== iop0)) {
+    console.warn(
+      `[DQ-DICOM] Series ${uid}: inconsistent ImageOrientationPatient across slices — slice order may be unreliable`,
+    );
+  }
+  if (items.length < 3) return;
+  const deltas: number[] = [];
+  for (let k = 1; k < items.length; k++) {
+    deltas.push(Math.abs(items[k].ippZ - items[k - 1].ippZ));
+  }
+  const mean = deltas.reduce((a, b) => a + b, 0) / deltas.length;
+  if (mean <= 0) return; // all slices share one position — nothing to judge
+  const maxDev = Math.max(...deltas.map((d) => Math.abs(d - mean)));
+  if (maxDev > Math.max(0.01, mean * 0.05)) {
+    console.warn(
+      `[DQ-DICOM] Series ${uid}: irregular slice spacing (mean ${mean.toFixed(3)} mm, max deviation ${maxDev.toFixed(3)} mm) — possible missing slices`,
+    );
+  }
+}
+
 export async function parseDicomFiles(
   files: File[],
   onProgress?: (loaded: number, total: number) => void,
@@ -73,6 +112,7 @@ export async function parseDicomFiles(
       // Create blob URL for cornerstone wadouri loader
       const blob = new Blob([byteArray], { type: 'application/dicom' });
       const url = URL.createObjectURL(blob);
+      blobUrls.push(url);
       const imageId = `wadouri:${url}`;
 
       // Check character set — ISO_IR 192 = UTF-8
@@ -86,12 +126,13 @@ export async function parseDicomFiles(
         instanceNumber: getInt(dataSet, 'x00200013'),
         sliceLocation: getFloat(dataSet, 'x00201041'),
         ippZ: getIPPz(dataSet),
+        iop: getString(dataSet, 'x00200037'),
         seriesDescription: getString(dataSet, 'x0008103e', utf8),
         seriesNumber: getInt(dataSet, 'x00200011'),
         modality: getString(dataSet, 'x00080060'),
         patientName: getString(dataSet, 'x00100010', utf8),
-        patientId: getString(dataSet, 'x00100020'),
-        patientBirthDate: getString(dataSet, 'x00100030'),
+        patientId: getString(dataSet, 'x00100020', utf8),
+        patientBirthDate: getString(dataSet, 'x00100030', utf8),
         studyDescription: getString(dataSet, 'x00081030', utf8),
         studyDate: getString(dataSet, 'x00080020'),
         institution: getString(dataSet, 'x00080080', utf8),
@@ -103,7 +144,23 @@ export async function parseDicomFiles(
 
   onProgress?.(files.length, files.length);
 
-  if (parsed.length === 0) return null;
+  if (parsed.length === 0) {
+    console.warn(`[DQ-DICOM] No readable DICOM files — all ${files.length} file(s) were skipped`);
+    return null;
+  }
+  if (parsed.length < files.length) {
+    console.warn(`[DQ-DICOM] Loaded ${parsed.length}/${files.length} files — ${files.length - parsed.length} skipped`);
+  }
+
+  // Mixed-patient drops: keep loading (metadata from the first file), but say so.
+  const patientIds = new Set(parsed.map((p) => p.patientId).filter(Boolean));
+  const multiPatient = patientIds.size > 1;
+  if (multiPatient) {
+    console.warn(
+      `[DQ-DICOM] Dropped files contain ${patientIds.size} different PatientIDs — ` +
+      'loading anyway; study metadata comes from the first parsed file',
+    );
+  }
 
   // Group by SeriesInstanceUID
   const seriesMap = new Map<string, ParsedDicomFile[]>();
@@ -122,6 +179,7 @@ export async function parseDicomFiles(
       if (a.sliceLocation !== b.sliceLocation) return a.sliceLocation - b.sliceLocation;
       return a.instanceNumber - b.instanceNumber;
     });
+    validateSeriesGeometry(uid, items);
 
     series.push({
       seriesInstanceUID: uid,
@@ -136,9 +194,12 @@ export async function parseDicomFiles(
   series.sort((a, b) => a.seriesNumber - b.seriesNumber);
 
   const first = parsed[0];
+  const baseDescription = first.studyDescription || 'DICOM study';
   return {
     studyInstanceUID: first.studyInstanceUID,
-    studyDescription: first.studyDescription,
+    studyDescription: multiPatient
+      ? `${baseDescription} [warning: ${patientIds.size} PatientIDs in file set]`
+      : first.studyDescription,
     studyDate: first.studyDate,
     patientName: first.patientName.replace(/\^/g, ' '),
     patientId: first.patientId,

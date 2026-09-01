@@ -38,6 +38,23 @@ export function getVolumeData(volumeId: string): VolumeSamplingData | null {
   const dims = volume.dimensions as [number, number, number];
   const spacing = volume.spacing as [number, number, number];
   const origin = volume.origin as [number, number, number];
+
+  // LIMITATION (M6): CPR sampling (panoramic + cross-section) assumes an
+  // IDENTITY direction matrix, i.e. an axis-aligned, axially acquired volume.
+  // All current loaders in this app hard-code identity direction, so results
+  // are correct today — but a non-axial / oblique volume would be sampled in
+  // the wrong orientation. Warn in dev builds if that assumption ever breaks.
+  if (import.meta.env.DEV && volume.direction) {
+    const d = Array.from(volume.direction as ArrayLike<number>);
+    const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+    if (d.length === 9 && d.some((v, i) => Math.abs(v - IDENTITY[i]) > 1e-3)) {
+      console.warn(
+        '[DQ-CPR] Volume has a non-identity direction matrix; CPR sampling assumes axial orientation and will be wrong for this volume.',
+        d,
+      );
+    }
+  }
+
   const vm = volume.voxelManager;
   const getVoxel = (i: number, j: number, k: number) => vm.getAtIJK(i, j, k) as number;
 

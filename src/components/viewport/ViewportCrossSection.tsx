@@ -200,24 +200,41 @@ export function ViewportCrossSection({ volumeId }: ViewportCrossSectionProps) {
     vp.render();
   }, []);
 
-  // Track axial Z
+  // Track axial Z. The axial viewport may not exist yet when this mounts (or
+  // may be recreated on a layout change), so poll until it is ready and
+  // re-attach — same pattern as ViewportPanoramic; a one-shot listener dies
+  // silently with the old viewport element.
   useEffect(() => {
-    const engine = getRenderingEngine(RENDERING_ENGINE_ID);
-    const vp = engine?.getViewport(VP_AXIAL);
-    if (!vp) return;
+    let cancelled = false;
+    let el: HTMLElement | null = null;
+    let handler: (() => void) | null = null;
+    let tries = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
-    const handler = () => {
-      const cam = vp.getCamera();
-      const z = cam.focalPoint?.[2] ?? 0;
-      const top = zToContainerY(z);
-      setLineTop(top);
+    const attach = () => {
+      if (cancelled) return;
+      const engine = getRenderingEngine(RENDERING_ENGINE_ID);
+      const vp = engine?.getViewport(VP_AXIAL);
+      if (!vp) {
+        if (tries++ < 40) timer = setTimeout(attach, 150);
+        return;
+      }
+      handler = () => {
+        const z = vp.getCamera().focalPoint?.[2] ?? 0;
+        setLineTop(zToContainerY(z));
+      };
+      handler();
+      el = vp.element;
+      el.addEventListener(Enums.Events.CAMERA_MODIFIED, handler);
     };
+    attach();
 
-    handler();
-    const el = vp.element;
-    el.addEventListener(Enums.Events.CAMERA_MODIFIED, handler);
-    return () => el.removeEventListener(Enums.Events.CAMERA_MODIFIED, handler);
-  }, [zToContainerY]);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      if (el && handler) el.removeEventListener(Enums.Events.CAMERA_MODIFIED, handler);
+    };
+  }, [zToContainerY, volumeId, state.layoutMode]);
 
   // Update line after recompute
   useEffect(() => {
@@ -311,6 +328,8 @@ export function ViewportCrossSection({ volumeId }: ViewportCrossSectionProps) {
           if (!r) return null;
           const ix = Math.round(u * (r.width - 1));
           const iy = Math.round(v * (r.height - 1));
+          // L5: outside the sampled CPR image → show no value
+          if (ix < 0 || ix >= r.width || iy < 0 || iy >= r.height) return null;
           return r.pixelData[iy * r.width + ix];
         }}
       />

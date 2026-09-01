@@ -6,7 +6,7 @@ import { VIEW_LABEL_KEYS, type MPROrientation } from '@/types/dicom';
 import { useI18n } from '@/i18n/I18nContext';
 import { ViewportOverlay } from './ViewportOverlay';
 import { SliceIndicator } from './SliceIndicator';
-import { OrientationLabel } from './OrientationLabel';
+import { OrientationLabel, MprOrientationMarkers } from './OrientationLabel';
 
 interface ViewportMPRProps {
   orientation: MPROrientation;
@@ -154,6 +154,8 @@ export function ViewportMPR({ orientation, volumeId }: ViewportMPRProps) {
       <ViewportOverlay sliceIndex={sliceIndex} totalSlices={totalSlices} viewKey={orientation} />
       {/* Orientation label */}
       <OrientationLabel text={t(VIEW_LABEL_KEYS[orientation])} viewKey={orientation} />
+      {/* Anatomical edge markers (A/P/R/L/S/I) */}
+      <MprOrientationMarkers orientation={orientation} />
       {totalSlices > 1 && (
         <SliceIndicator
           onJumpToSlice={handleJumpToSlice}

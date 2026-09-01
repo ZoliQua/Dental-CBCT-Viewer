@@ -38,6 +38,16 @@ export interface PlanFile extends PlanData {
   patientId: string | null;
 }
 
+/**
+ * Result of planFromObject: the validated plan plus the studyInstanceUID it was
+ * recorded against, so the caller can detect a study mismatch before applying.
+ * Optional so plain PlanData values (e.g. imperative-handle loads) remain
+ * assignable to it.
+ */
+export interface ParsedPlan extends PlanData {
+  studyInstanceUID?: string | null;
+}
+
 /** Pull the persistable slices out of a state-like object. */
 export function extractPlan(s: PlanData): PlanData {
   return {
@@ -69,8 +79,50 @@ const num = (v: unknown, fallback: number): number => (typeof v === 'number' && 
 const str = (v: unknown, fallback: string): string => (typeof v === 'string' ? v : fallback);
 const bool = (v: unknown, fallback: boolean): boolean => (typeof v === 'boolean' ? v : fallback);
 
+// ── Array shape validation (untrusted plan files) ─────────────
+// Cap list sizes so a crafted file cannot exhaust memory, and drop entries
+// whose coordinates/sizes are not finite numbers (they would corrupt geometry).
+
+const MAX_IMPLANTS = 100;
+const MAX_MEASUREMENTS = 500;
+const MAX_ANATOMY = 50;
+const MAX_ANATOMY_POINTS = 2000;
+const MAX_ARCH_POINTS = 200;
+
+const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+const isFiniteNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const isNumTuple = (v: unknown, n: number): boolean => Array.isArray(v) && v.length === n && v.every(isFiniteNum);
+
+function validateImplants(v: unknown): ImplantData[] {
+  if (!Array.isArray(v)) return [];
+  return v.filter((i): i is ImplantData =>
+    isObj(i) && typeof i.id === 'string' && isNumTuple(i.position, 3)
+    && isFiniteNum(i.diameter) && isFiniteNum(i.length)).slice(0, MAX_IMPLANTS);
+}
+
+function validateAnatomy(v: unknown): AnatomyMarker[] {
+  if (!Array.isArray(v)) return [];
+  return v.filter((a): a is AnatomyMarker =>
+    isObj(a) && typeof a.id === 'string' && isFiniteNum(a.radius)
+    && Array.isArray(a.points) && a.points.length <= MAX_ANATOMY_POINTS
+    && a.points.every(p => isNumTuple(p, 3))).slice(0, MAX_ANATOMY);
+}
+
+function validateMeasurements(v: unknown): MeasurementLayer[] {
+  if (!Array.isArray(v)) return [];
+  return v.filter((m): m is MeasurementLayer =>
+    isObj(m) && typeof m.id === 'string'
+    && (m.points === undefined || (Array.isArray(m.points) && m.points.every(p => isNumTuple(p, 2))))
+  ).slice(0, MAX_MEASUREMENTS);
+}
+
+function validateArchCurve(v: unknown): [number, number][] | null {
+  if (!Array.isArray(v)) return null;
+  return v.filter(p => isNumTuple(p, 2)).slice(0, MAX_ARCH_POINTS) as [number, number][];
+}
+
 /** Validate + coerce a parsed JSON object into PlanData (best-effort). */
-export function planFromObject(obj: any): PlanData | null {
+export function planFromObject(obj: any): ParsedPlan | null {
   if (!obj || typeof obj !== 'object' || typeof obj.version !== 'number') return null;
   const s = obj.safety ?? {};
   const g = obj.guide ?? {};
@@ -78,10 +130,11 @@ export function planFromObject(obj: any): PlanData | null {
   const r = obj.report ?? {};
   const d2 = obj.display ?? {};
   return {
-    implants: Array.isArray(obj.implants) ? obj.implants : [],
-    anatomy: Array.isArray(obj.anatomy) ? obj.anatomy : [],
-    measurements: Array.isArray(obj.measurements) ? obj.measurements : [],
-    archCurveControlPoints: Array.isArray(obj.archCurveControlPoints) ? obj.archCurveControlPoints : null,
+    studyInstanceUID: typeof obj.studyInstanceUID === 'string' ? obj.studyInstanceUID : null,
+    implants: validateImplants(obj.implants),
+    anatomy: validateAnatomy(obj.anatomy),
+    measurements: validateMeasurements(obj.measurements),
+    archCurveControlPoints: validateArchCurve(obj.archCurveControlPoints),
     crossSectionPosition: num(obj.crossSectionPosition, 0.5),
     crossSectionTiltDeg: num(obj.crossSectionTiltDeg, 0),
     panoramicSlabWidth: num(obj.panoramicSlabWidth, 20),

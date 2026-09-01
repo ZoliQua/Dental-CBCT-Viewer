@@ -151,23 +151,29 @@ export function ViewportPanoramic({ volumeId, showCrossSectionLine = false }: Vi
 
     const debounceMs = state.panoramicResolution <= 0.3 ? 400 : 250;
     debounceRef.current = setTimeout(() => {
-      const result = generatePanoramic({
-        volumeId,
-        controlPoints: state.archCurveControlPoints!,
-        slabWidth: state.panoramicSlabWidth,
-        projection: state.panoramicProjection,
-        resolution: state.panoramicResolution,
-      });
+      // M3: a sampling failure must never leave the "computing" overlay stuck
+      try {
+        const result = generatePanoramic({
+          volumeId,
+          controlPoints: state.archCurveControlPoints!,
+          slabWidth: state.panoramicSlabWidth,
+          projection: state.panoramicProjection,
+          resolution: state.panoramicResolution,
+        });
 
-      if (result) {
-        resultRef.current = result;
-        const canvas = canvasRef.current;
-        if (canvas) {
-          renderToCanvas(canvas, result.pixelData, result.width, result.height, result.horizontalSpacing, result.verticalSpacing, wcRef.current, wwRef.current);
+        if (result) {
+          resultRef.current = result;
+          const canvas = canvasRef.current;
+          if (canvas) {
+            renderToCanvas(canvas, result.pixelData, result.width, result.height, result.horizontalSpacing, result.verticalSpacing, wcRef.current, wwRef.current);
+          }
+          console.log(`[DQ-OPG] Rendered ${result.width}x${result.height}`);
         }
-        console.log(`[DQ-OPG] Rendered ${result.width}x${result.height}`);
+      } catch (err) {
+        console.error('[DQ-OPG] Panoramic generation failed:', err);
+      } finally {
+        setComputing(false);
       }
-      setComputing(false);
     }, debounceMs);
 
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
@@ -760,6 +766,8 @@ export function ViewportPanoramic({ volumeId, showCrossSectionLine = false }: Vi
           if (!r) return null;
           const ix = Math.round(u * (r.width - 1));
           const iy = Math.round(v * (r.height - 1));
+          // L5: outside the sampled CPR image → show no value
+          if (ix < 0 || ix >= r.width || iy < 0 || iy >= r.height) return null;
           return r.pixelData[iy * r.width + ix];
         }}
       />

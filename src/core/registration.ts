@@ -151,6 +151,22 @@ export function kabschTransform(src: Vec3[], tgt: Vec3[]): number[] | null {
   return rigidMatrix(R, t);
 }
 
+/**
+ * kabschTransform() plus the RMS point-pair residual in mm — the fit quality
+ * of the registration. Large RMS (> ~1 mm) means the landmark pairs do not
+ * agree with a single rigid transform (mis-picked points).
+ */
+export function kabschTransformWithRms(src: Vec3[], tgt: Vec3[]): { matrix: number[]; rmsMm: number } | null {
+  const matrix = kabschTransform(src, tgt);
+  if (!matrix) return null;
+  let sum = 0;
+  for (let i = 0; i < src.length; i++) {
+    const p = applyMat4(matrix, src[i]);
+    sum += (p[0] - tgt[i][0]) ** 2 + (p[1] - tgt[i][1]) ** 2 + (p[2] - tgt[i][2]) ** 2;
+  }
+  return { matrix, rmsMm: Math.sqrt(sum / src.length) };
+}
+
 // ── Ray-cast picking against a triangle soup ───────────────────
 
 /** Möller–Trumbore ray/triangle: returns t (ray param) of the hit, or null. */

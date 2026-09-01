@@ -1,9 +1,12 @@
 /**
  * Measurement overlay for the custom canvas viewports (panoramic and
- * cross-section). Both canvases are mm-square, so distances/areas are mm-true.
- * Each completed measurement becomes its own layer (named, hideable) in the
- * layers panel. Supported tools: length, angle, ellipse, circle, rectangle,
- * freehand, bidirectional, HU probe, arrow.
+ * cross-section). The cross-section canvas is mm-square, so distances/areas
+ * are mm-true; on the panoramic the horizontal axis is arc length along the
+ * arch curve, so off-curve structures may be distorted (a caveat hint is
+ * shown under the readout). Each completed measurement becomes its own layer
+ * (named, hideable) in the layers panel. Supported tools: length, angle,
+ * ellipse, circle, rectangle, freehand, bidirectional, density probe
+ * (uncalibrated CBCT gray values, shown as GV), arrow.
  *
  * Points are stored in normalized image coordinates (0-1 of the rendered
  * content rect), so they stay attached to the image across resizes.
@@ -128,8 +131,9 @@ export function CanvasMeasurementOverlay({
       case 'bidirectional':
         return `${mmDist(pts[0], pts[1], extent).toFixed(1)} × ${mmDist(pts[2], pts[3], extent).toFixed(1)} mm`;
       case 'probe': {
+        // CBCT gray values are not calibrated HU — display them as GV.
         const hu = sampleHU?.(pts[0][0], pts[0][1]);
-        return hu === null || hu === undefined ? '' : `${Math.round(hu)} HU`;
+        return hu === null || hu === undefined ? '' : `${Math.round(hu)} GV`;
       }
       case 'freehand': {
         let len = 0;
@@ -316,6 +320,13 @@ export function CanvasMeasurementOverlay({
         {visible.map(m => renderShape(m.tool, m.points!, m.value, m.id))}
         {toolKey && previewPts.length > 0 && renderShape(toolKey, previewPts, undefined, 'draft', true)}
       </svg>
+      {/* Panoramic caveat: the OPG horizontal axis is arc length along the
+          curve, so off-curve structures are distorted — disclose while measuring. */}
+      {viewport === 'panoramic' && (toolKey !== null || visible.length > 0) && (
+        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 pointer-events-none select-none text-[9px] font-mono text-amber-300/90 [text-shadow:_0_1px_2px_rgb(0_0_0_/_80%)]">
+          {t('measure.panoCaveat')}
+        </div>
+      )}
     </div>
   );
 }
