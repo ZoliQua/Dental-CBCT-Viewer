@@ -11,6 +11,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { LANGUAGES } from '@/i18n/translations';
 import { useLayoutSwitch } from '@/hooks/useLayoutSwitch';
 import { LayoutConfigButton } from './LayoutConfigButton';
+import { LandingNav } from '@/components/dicom/landing/LandingNav';
 import { exportPlanPdf, exportDrillGuideStl } from '@/core/viewerExports';
 import { serializePlan, planFromObject } from '@/core/planIO';
 import { loadSample } from '@/core/sampleLoader';
@@ -19,7 +20,7 @@ import { loadScanPolyData, setScanPolyData, polyDataCenter, translation16, IDENT
 import { SCAN_DEFAULTS, type LayoutMode } from '@/types/dicom';
 
 const LAYOUTS: { id: LayoutMode; labelKey?: string; label?: string }[] = [
-  { id: '1x1', label: '1×1' },
+  { id: '1x1', labelKey: 'layout.view2d' },
   { id: '1+3', labelKey: 'layout.view3d' },
   { id: 'OPG2+1', labelKey: 'layout.panoramic' },
 ];
@@ -187,11 +188,16 @@ export function TopBar() {
   /** Build and download the printable drill guide (STL) via CSG (manifold-3d). */
   const exportGuide = async () => {
     setExportOpen(false);
+    // Clinical safeguard: without a registered scan the guide has no
+    // tissue-fitting surface (and it never has a drill stop / metal sleeve) —
+    // require an explicit acknowledgment before exporting.
+    if (!state.scans.some(s => s.visible) && !window.confirm(t('guide.confirmNoScan'))) return;
     setGuideBusy(true);
     try {
       const { ok, warnings } = await exportDrillGuideStl(state);
       if (!ok) { window.alert(t('guide.noImplants')); return; }
       if (warnings.includes('scan-not-watertight')) window.alert(t('guide.warnScan'));
+      if (warnings.includes('housing-disconnected')) window.alert(t('guide.warnDisconnected'));
     } catch (err) {
       console.error('[guide] export failed', err);
       window.alert(t('guide.error'));
@@ -316,7 +322,7 @@ export function TopBar() {
         title={state.study ? t('topbar.newLoad') : t('app.title')}
         className="flex items-center gap-2 select-none rounded px-1 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
       >
-        <span className="text-base">🦷</span>
+        <img src="/cbct-icon.png" alt="" aria-hidden className="w-6 h-6 rounded-md object-contain" />
         <span className="text-sm font-semibold text-dental-600 dark:text-dental-400">{t('app.title')}</span>
       </button>
 
@@ -341,6 +347,9 @@ export function TopBar() {
           {(state.layoutMode === '1+3' || state.layoutMode === 'OPG2+1') && <LayoutConfigButton />}
         </div>
       )}
+
+      {/* Landing only: in-page section anchors (hidden once a study is open) */}
+      {!state.study && <LandingNav />}
 
       <div className="flex items-center gap-1">
         {/* New load dropdown: Import Scan (STL/OBJ/PLY) + Load Sample (soon) */}
@@ -411,7 +420,7 @@ export function TopBar() {
               <div className="absolute right-0 top-9 z-50 w-44 bg-white/95 border border-slate-200 rounded-lg shadow-xl py-1 dark:bg-slate-800/95 dark:border-slate-700 backdrop-blur-sm">
                 <button
                   onClick={() => exportCanvas('[data-panoramic-canvas]', `panorama_${Date.now()}.png`)}
-                  disabled={state.layoutMode !== 'OPG' && state.layoutMode !== 'OPG2+1'}
+                  disabled={state.layoutMode !== 'OPG2+1'}
                   className="w-full px-3 py-1.5 text-xs text-left text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
                 >
                   {t('opg.savePng')}

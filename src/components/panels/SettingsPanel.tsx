@@ -12,6 +12,7 @@ import { WindowLevelPresets } from '@/components/tools/WindowLevel';
 import { IMPLANT_SYSTEMS, VOLUME_3D_PRESETS, type ProjectionMode } from '@/types/dicom';
 import { XRAY_PRESET_ID } from '@/core/volume3DPreset';
 import { APP_VERSION } from '@/version';
+import { OtherProjects } from '@/components/common/OtherProjects';
 
 const FIELD =
   'w-full bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600 text-xs rounded-md px-2 py-1.5 border outline-none focus:border-dental-500';
@@ -296,6 +297,8 @@ export function SettingsPanel() {
                   </label>
                 ))}
               </div>
+              <Help>{t('settings.safetyHint')}</Help>
+              <Help>{t('safety.notChecked')}</Help>
             </Section>
           )}
 
@@ -341,6 +344,11 @@ export function SettingsPanel() {
                   ))}
                 </ul>
               </Section>
+
+              <div className="space-y-2">
+                <p className="text-xs text-slate-600 dark:text-slate-300">{t('about.otherProjects')}</p>
+                <OtherProjects />
+              </div>
 
               <p className="text-[11px] text-amber-700 dark:text-amber-300">⚠️ {t('landing.disclaimerShort')}</p>
             </>
