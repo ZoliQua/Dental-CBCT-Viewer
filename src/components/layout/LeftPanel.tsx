@@ -11,8 +11,18 @@ import { setActiveTool } from '@/core/toolManager';
 import { TOOL_ICONS } from './toolIcons';
 import { LayersContent, StackIcon } from '@/components/layers/LayersPanel';
 import { StudyTree } from '@/components/dicom/StudyTree';
+import { PatientContent } from '@/components/panels/PatientContent';
 import { ImplantEditPopup } from '@/components/implant/ImplantEditPopup';
 import type { ViewportTool } from '@/types/dicom';
+
+function PersonIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1" />
+    </svg>
+  );
+}
 
 function FolderIcon() {
   return (
@@ -103,10 +113,12 @@ function ToolButton({
 export function LeftPanel() {
   const { state, dispatch } = useViewer();
   const { t } = useI18n();
+  const patientOpen = state.patientOpen;
   const toolsOpen = state.toolsOpen;
   const layersOpen = state.layersOpen;
   const seriesOpen = state.seriesOpen;
   const panelOpen = toolsOpen || layersOpen;
+  const innerOpen = patientOpen || seriesOpen;
   const hasStudies = state.studies.length > 0;
   const isMulti = state.layoutMode === '2x2' || state.layoutMode === '1+3';
 
@@ -117,8 +129,15 @@ export function LeftPanel() {
 
   return (
     <div className="flex h-full shrink-0">
-      {/* Shared rail: Series (top), Layers, Tools (bottom) — each toggles independently */}
+      {/* Shared rail: Patient (top), Series, Layers, Tools (bottom) — each toggles independently */}
       <div className="w-10 shrink-0 flex flex-col border-r border-slate-200 dark:border-slate-700/60 bg-white/90 dark:bg-slate-900/90">
+        <RailButton
+          icon={<PersonIcon />}
+          label={t('topbar.patients')}
+          active={patientOpen}
+          onClick={() => dispatch({ type: 'TOGGLE_PATIENT' })}
+        />
+        <div className="border-t border-slate-200 dark:border-slate-700/60" />
         {hasStudies && (
           <>
             <RailButton
@@ -237,18 +256,26 @@ export function LeftPanel() {
         </div>
       </div>
 
-      {/* Study / series tree panel (inner) */}
-      {hasStudies && (
-        <div
-          className={`h-full overflow-hidden border-r border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800 transition-all duration-200 ${
-            seriesOpen ? 'w-56' : 'w-0'
-          }`}
-        >
-          <div className="w-56 h-full overflow-y-auto">
-            <StudyTree />
-          </div>
+      {/* Inner panel: Patient card (top) + study/series tree */}
+      <div
+        className={`h-full overflow-hidden border-r border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800 transition-all duration-200 ${
+          innerOpen ? 'w-56' : 'w-0'
+        }`}
+      >
+        <div className="w-56 h-full overflow-y-auto">
+          {patientOpen && (
+            <div className="p-2">
+              <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider px-1 mb-2">
+                {t('topbar.patients')}
+              </div>
+              <div className="rounded-lg border border-slate-200 dark:border-slate-700/60 p-2.5">
+                <PatientContent />
+              </div>
+            </div>
+          )}
+          {hasStudies && seriesOpen && <StudyTree />}
         </div>
-      )}
+      </div>
 
       {state.editingImplantId && (
         <ImplantEditPopup

@@ -10,7 +10,6 @@ import { ViewerShell } from '@/components/layout/ViewerShell';
 import { TopBar } from '@/components/layout/TopBar';
 import { StatusBar } from '@/components/layout/StatusBar';
 import { SettingsPanel } from '@/components/panels/SettingsPanel';
-import { PatientsPanel } from '@/components/panels/PatientsPanel';
 import { IntroTour } from '@/components/panels/IntroTour';
 import { HelpPanel } from '@/components/panels/HelpPanel';
 import { useDicomLoader } from '@/hooks/useDicomLoader';
@@ -220,7 +219,6 @@ function ViewerApp({
         <div className="flex-1 overflow-hidden">{content}</div>
         <StatusBar />
         <SettingsPanel />
-        <PatientsPanel />
         <IntroTour />
         <HelpPanel />
         {!props.embedded && <DisclaimerBanner />}
