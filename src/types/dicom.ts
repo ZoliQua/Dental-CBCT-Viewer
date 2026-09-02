@@ -5,6 +5,11 @@ export interface DicomSeriesInfo {
   modality: string;
   imageCount: number;
   imageIds: string[];
+  /** In-plane pixel dimensions (columns × rows) of a slice, if known. */
+  columns?: number;
+  rows?: number;
+  /** In-plane pixel spacing in mm (row spacing), if known. */
+  pixelSpacingMm?: number;
 }
 
 export interface DicomStudyInfo {

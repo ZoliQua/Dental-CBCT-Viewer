@@ -12,6 +12,9 @@ interface ParsedDicomFile {
   seriesDescription: string;
   seriesNumber: number;
   modality: string;
+  rows: number;
+  columns: number;
+  pixelSpacing: number;
   patientName: string;
   patientId: string;
   patientBirthDate: string;
@@ -130,6 +133,10 @@ export async function parseDicomFiles(
         seriesDescription: getString(dataSet, 'x0008103e', utf8),
         seriesNumber: getInt(dataSet, 'x00200011'),
         modality: getString(dataSet, 'x00080060'),
+        // Rows/Columns are US (uint16) — binary, not IntegerString.
+        rows: dataSet.uint16('x00280010') ?? 0,
+        columns: dataSet.uint16('x00280011') ?? 0,
+        pixelSpacing: parseFloat((dataSet.string('x00280030') ?? '').split('\\')[0]) || 0,
         patientName: getString(dataSet, 'x00100010', utf8),
         patientId: getString(dataSet, 'x00100020', utf8),
         patientBirthDate: getString(dataSet, 'x00100030', utf8),
@@ -188,6 +195,9 @@ export async function parseDicomFiles(
       modality: items[0].modality,
       imageCount: items.length,
       imageIds: items.map((i) => i.imageId),
+      rows: items[0].rows || undefined,
+      columns: items[0].columns || undefined,
+      pixelSpacingMm: items[0].pixelSpacing || undefined,
     });
   }
 

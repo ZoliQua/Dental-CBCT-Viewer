@@ -154,6 +154,34 @@ describe('multi-study: ADD_STUDIES', () => {
   });
 });
 
+describe('multi-study: REMOVE_STUDY', () => {
+  it('drops a non-active study without touching the active one', () => {
+    const prev = { ...plannedState('A'), studies: [study('A', ['se1', 'se2']), study('B', ['seB'])], volumeId: 'vol-A' };
+    const s = viewerReducer(prev, { type: 'REMOVE_STUDY', payload: 'B' });
+    expect(s.studies.map((x) => x.studyInstanceUID)).toEqual(['A']);
+    expect(s.study?.studyInstanceUID).toBe('A');
+    expect(s.volumeId).toBe('vol-A');
+    expect(s.implants).toHaveLength(1);
+  });
+
+  it('activates the next study when the active one is removed', () => {
+    const prev = { ...plannedState('A'), studies: [study('A', ['se1']), study('B', ['seB'])] };
+    const s = viewerReducer(prev, { type: 'REMOVE_STUDY', payload: 'A' });
+    expect(s.studies.map((x) => x.studyInstanceUID)).toEqual(['B']);
+    expect(s.study?.studyInstanceUID).toBe('B');
+    expect(s.activeSeriesUID).toBe('seB');
+    expect(s.implants).toEqual([]);
+  });
+
+  it('returns to the landing state when the last study is removed', () => {
+    const prev = { ...plannedState('A'), studies: [study('A')] };
+    const s = viewerReducer(prev, { type: 'REMOVE_STUDY', payload: 'A' });
+    expect(s.study).toBeNull();
+    expect(s.studies).toEqual([]);
+    expect(s.implants).toEqual([]);
+  });
+});
+
 describe('multi-study: per-study plan retention (lossless switching)', () => {
   it('restores each study’s volume + plan when switching back and forth', () => {
     const onA = { ...plannedState('A'), studies: [study('A', ['se1', 'se2']), study('B', ['seB'])], volumeId: 'vol-A' };

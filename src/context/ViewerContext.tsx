@@ -170,6 +170,7 @@ export type ViewerAction =
   | { type: 'SET_STUDY'; payload: DicomStudyInfo }
   | { type: 'ADD_STUDIES'; payload: DicomStudyInfo[] }
   | { type: 'SET_ACTIVE_STUDY'; payload: string }
+  | { type: 'REMOVE_STUDY'; payload: string }
   | { type: 'SET_ACTIVE_SERIES'; payload: string }
   | { type: 'SET_ACTIVE_TOOL'; payload: ViewportTool }
   | { type: 'SET_LAYOUT_MODE'; payload: LayoutMode }
@@ -366,6 +367,23 @@ export function viewerReducer(state: ViewerState, action: ViewerAction): ViewerS
       const study = state.studies.find((s) => s.studyInstanceUID === action.payload);
       if (!study) return state;
       return activateStudy(state, study, state.studies);
+    }
+    case 'REMOVE_STUDY': {
+      const uid = action.payload;
+      const studies = state.studies.filter((s) => s.studyInstanceUID !== uid);
+      const studyPlans = { ...state.studyPlans };
+      delete studyPlans[uid];
+      // Removing a non-active study: just drop it from the tree.
+      if (state.study?.studyInstanceUID !== uid) return { ...state, studies, studyPlans };
+      // Removing the active study with none left → back to landing (keep prefs).
+      if (studies.length === 0) return { ...initialState, isInitialized: state.isInitialized, display: state.display };
+      // Otherwise activate the first remaining study (restore its saved plan).
+      const next = studies[0];
+      const saved = studyPlans[next.studyInstanceUID];
+      const base = { ...state, studies, studyPlans, study: next, planMismatch: false };
+      return saved
+        ? { ...base, ...saved }
+        : { ...base, ...PLAN_RESET, activeSeriesUID: next.series[0]?.seriesInstanceUID ?? null };
     }
     case 'SET_ACTIVE_SERIES': {
       if (action.payload === state.activeSeriesUID) return state;

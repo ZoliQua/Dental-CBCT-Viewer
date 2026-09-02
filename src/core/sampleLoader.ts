@@ -233,6 +233,9 @@ export async function loadSample(base = '/sample', onProgress?: (pct: number) =>
       modality: meta.modality,
       imageCount: depth,
       imageIds: [], // volume is already built here; keep empty so the shell won't rebuild it
+      columns: cols,
+      rows,
+      pixelSpacingMm: meta.spacing[0],
     }],
   };
 

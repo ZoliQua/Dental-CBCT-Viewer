@@ -279,12 +279,12 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
             <button
               onClick={() => { setPresetOpen((o) => !o); setCropOpen(false); }}
               title={t('view3d.preset')}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] text-slate-200 hover:bg-slate-700/60 transition-colors"
+              className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] text-slate-200 hover:bg-slate-700/60 transition-colors whitespace-nowrap"
             >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+              <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
                 <path d="M12 2 21 7v10l-9 5-9-5V7l9-5z" /><path d="M3 7l9 5 9-5M12 12v10" />
               </svg>
-              <span>{activePreset === XRAY_PRESET_ID ? t('preset3d.xray') : t(VOLUME_3D_PRESETS.find((p) => p.id === activePreset)?.labelKey ?? 'preset3d.bone')}</span>
+              <span className="whitespace-nowrap">{activePreset === XRAY_PRESET_ID ? t('preset3d.xray') : t(VOLUME_3D_PRESETS.find((p) => p.id === activePreset)?.labelKey ?? 'preset3d.bone')}</span>
             </button>
             {presetOpen && (
               <div className="absolute bottom-9 left-0 w-36 rounded-lg bg-slate-900/95 border border-slate-700 shadow-xl p-1 z-20">

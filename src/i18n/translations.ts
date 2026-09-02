@@ -125,6 +125,7 @@ const en: Dict = {
   'series.panel': 'Series',
   'series.load': 'Load',
   'series.study': 'DICOM study',
+  'series.remove': 'Remove',
 
   // Errors
   'error.noDicom': 'No DICOM files found. Files must have a .dcm extension or no extension.',
@@ -189,6 +190,8 @@ const en: Dict = {
 
   // Layers panel
   'layers.title': 'Layers',
+  'layers.addText': 'Add text',
+  'layers.addImplant': 'Add implant',
   'panel.tools': 'Tools',
   'chrome.view': 'View',
   'layers.implants': 'Implants',
@@ -525,6 +528,7 @@ const de: Dict = {
   'series.panel': 'Serien',
   'series.load': 'Laden',
   'series.study': 'DICOM-Studie',
+  'series.remove': 'Entfernen',
 
   'error.noDicom': 'Keine DICOM-Dateien gefunden. Dateien müssen die Endung .dcm oder keine Endung haben.',
   'error.processFailed': 'DICOM-Dateien konnten nicht verarbeitet werden.',
@@ -582,6 +586,8 @@ const de: Dict = {
   'viewport.slices': 'Schichten',
 
   'layers.title': 'Ebenen',
+  'layers.addText': 'Text hinzufügen',
+  'layers.addImplant': 'Implantat hinzufügen',
   'panel.tools': 'Werkzeuge',
   'chrome.view': 'Ansicht',
   'layers.implants': 'Implantate',
@@ -914,6 +920,7 @@ const es: Dict = {
   'series.panel': 'Series',
   'series.load': 'Cargar',
   'series.study': 'Estudio DICOM',
+  'series.remove': 'Quitar',
 
   'error.noDicom': 'No se encontraron archivos DICOM. Los archivos deben tener extensión .dcm o ninguna.',
   'error.processFailed': 'No se pudieron procesar los archivos DICOM.',
@@ -971,6 +978,8 @@ const es: Dict = {
   'viewport.slices': 'cortes',
 
   'layers.title': 'Capas',
+  'layers.addText': 'Añadir texto',
+  'layers.addImplant': 'Añadir implante',
   'panel.tools': 'Herramientas',
   'chrome.view': 'Vista',
   'layers.implants': 'Implantes',
@@ -1303,6 +1312,7 @@ const hu: Dict = {
   'series.panel': 'Sorozatok',
   'series.load': 'Betöltés',
   'series.study': 'DICOM vizsgálat',
+  'series.remove': 'Eltávolítás',
 
   'error.noDicom': 'Nem található DICOM fájl. A fájloknak .dcm kiterjesztéssel vagy kiterjesztés nélkülinek kell lenniük.',
   'error.processFailed': 'Nem sikerült a DICOM fájlok feldolgozása.',
@@ -1360,6 +1370,8 @@ const hu: Dict = {
   'viewport.slices': 'szelet',
 
   'layers.title': 'Rétegek',
+  'layers.addText': 'Szöveg hozzáadása',
+  'layers.addImplant': 'Implant hozzáadása',
   'panel.tools': 'Eszközök',
   'chrome.view': 'Nézet',
   'layers.implants': 'Implantátumok',
