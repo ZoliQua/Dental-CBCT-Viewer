@@ -39,7 +39,9 @@ export interface ViewerState {
   editingImplantId: string | null;
   // Right-side slide-in panels (one open at a time)
   activePanel: 'layers' | 'settings' | 'help' | 'patients' | 'intro' | null;
-  // Left rail panels expanded? (tools/layers, and the study/series tree)
+  // Left rail panels expanded? (tools, layers, and the study/series tree —
+  // each toggles independently; tools + layers share one panel column)
+  toolsOpen: boolean;
   layersOpen: boolean;
   seriesOpen: boolean;
   // Shared window/level (applies to panoramic, cross-section and MPR)
@@ -188,6 +190,7 @@ export type ViewerAction =
   | { type: 'SET_EDITING_IMPLANT'; payload: string | null }
   | { type: 'SET_ACTIVE_PANEL'; payload: 'layers' | 'settings' | 'help' | 'patients' | 'intro' | null }
   | { type: 'TOGGLE_PANEL'; payload: 'layers' | 'settings' | 'help' | 'patients' | 'intro' }
+  | { type: 'TOGGLE_TOOLS' }
   | { type: 'TOGGLE_LAYERS' }
   | { type: 'TOGGLE_SERIES' }
   | { type: 'SET_WINDOW_LEVEL'; payload: { wc: number; ww: number } }
@@ -242,6 +245,7 @@ export const initialState: ViewerState = {
   implantPlacementMode: false,
   editingImplantId: null,
   activePanel: null,
+  toolsOpen: false,
   layersOpen: false,
   seriesOpen: true,
   windowLevel: { wc: 300, ww: 2500 },
@@ -432,6 +436,8 @@ export function viewerReducer(state: ViewerState, action: ViewerAction): ViewerS
       return { ...state, activePanel: action.payload };
     case 'TOGGLE_PANEL':
       return { ...state, activePanel: state.activePanel === action.payload ? null : action.payload };
+    case 'TOGGLE_TOOLS':
+      return { ...state, toolsOpen: !state.toolsOpen };
     case 'TOGGLE_LAYERS':
       return { ...state, layersOpen: !state.layersOpen };
     case 'TOGGLE_SERIES':

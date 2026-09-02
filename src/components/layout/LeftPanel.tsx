@@ -22,6 +22,14 @@ function FolderIcon() {
   );
 }
 
+function WrenchIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.1-.4-.4-2.1 2.6-2.6z" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 /** One stacked rail toggle (icon + vertical label). */
 function RailButton({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void }) {
   return (
@@ -95,8 +103,10 @@ function ToolButton({
 export function LeftPanel() {
   const { state, dispatch } = useViewer();
   const { t } = useI18n();
-  const toolsOpen = state.layersOpen;
+  const toolsOpen = state.toolsOpen;
+  const layersOpen = state.layersOpen;
   const seriesOpen = state.seriesOpen;
+  const panelOpen = toolsOpen || layersOpen;
   const hasStudies = state.studies.length > 0;
   const isMulti = state.layoutMode === '2x2' || state.layoutMode === '1+3';
 
@@ -107,34 +117,45 @@ export function LeftPanel() {
 
   return (
     <div className="flex h-full shrink-0">
-      {/* Shared rail: Series (top) + Tools (bottom), each toggles its own panel */}
+      {/* Shared rail: Series (top), Layers, Tools (bottom) — each toggles independently */}
       <div className="w-10 shrink-0 flex flex-col border-r border-slate-200 dark:border-slate-700/60 bg-white/90 dark:bg-slate-900/90">
         {hasStudies && (
-          <RailButton
-            icon={<FolderIcon />}
-            label={t('series.panel')}
-            active={seriesOpen}
-            onClick={() => dispatch({ type: 'TOGGLE_SERIES' })}
-          />
+          <>
+            <RailButton
+              icon={<FolderIcon />}
+              label={t('series.panel')}
+              active={seriesOpen}
+              onClick={() => dispatch({ type: 'TOGGLE_SERIES' })}
+            />
+            <div className="border-t border-slate-200 dark:border-slate-700/60" />
+          </>
         )}
-        <div className="border-t border-slate-200 dark:border-slate-700/60" />
         <RailButton
           icon={<StackIcon />}
+          label={t('layers.title')}
+          active={layersOpen}
+          onClick={() => dispatch({ type: 'TOGGLE_LAYERS' })}
+        />
+        <div className="border-t border-slate-200 dark:border-slate-700/60" />
+        <RailButton
+          icon={<WrenchIcon />}
           label={t('panel.tools')}
           active={toolsOpen}
-          onClick={() => dispatch({ type: 'TOGGLE_LAYERS' })}
+          onClick={() => dispatch({ type: 'TOGGLE_TOOLS' })}
         />
       </div>
 
-      {/* Tools / Layers panel (outer) */}
+      {/* Tools + Layers share one panel column: Tools slides in above Layers,
+          each in its own framed block. */}
       <div
         className={`h-full overflow-hidden border-r border-slate-200 dark:border-slate-700/60 bg-white/95 dark:bg-slate-900/85 backdrop-blur-sm shadow-xl transition-all duration-200 ${
-          toolsOpen ? 'w-72' : 'w-0'
+          panelOpen ? 'w-72' : 'w-0'
         }`}
       >
-        <div className="w-72 h-full overflow-y-auto p-3 space-y-4">
+        <div className="w-72 h-full overflow-y-auto p-3 space-y-3">
           {/* Tools */}
-          <div className="space-y-2">
+          {toolsOpen && (
+          <div className="space-y-2 rounded-lg border border-slate-200 dark:border-slate-700/60 p-2">
             <SectionLabel>{t('toolbar.view')}</SectionLabel>
             <div className="grid grid-cols-2 gap-1">
               {NAV_TOOLS.map((tl) => (
@@ -204,14 +225,15 @@ export function LeftPanel() {
               </div>
             )}
           </div>
-
-          <div className="border-t border-slate-200 dark:border-slate-700/60" />
+          )}
 
           {/* Layers */}
-          <div className="space-y-2">
+          {layersOpen && (
+          <div className="space-y-2 rounded-lg border border-slate-200 dark:border-slate-700/60 p-2">
             <SectionLabel>{t('layers.title')}</SectionLabel>
             <LayersContent />
           </div>
+          )}
         </div>
       </div>
 
