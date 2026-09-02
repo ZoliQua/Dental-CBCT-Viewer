@@ -39,8 +39,9 @@ export interface ViewerState {
   editingImplantId: string | null;
   // Right-side slide-in panels (one open at a time)
   activePanel: 'layers' | 'settings' | 'help' | 'patients' | 'intro' | null;
-  // Left layers rail expanded?
+  // Left rail panels expanded? (tools/layers, and the study/series tree)
   layersOpen: boolean;
+  seriesOpen: boolean;
   // Shared window/level (applies to panoramic, cross-section and MPR)
   windowLevel: { wc: number; ww: number };
   // Implant safety-margin halo (mm + color) and clearance thresholds (mm)
@@ -188,6 +189,7 @@ export type ViewerAction =
   | { type: 'SET_ACTIVE_PANEL'; payload: 'layers' | 'settings' | 'help' | 'patients' | 'intro' | null }
   | { type: 'TOGGLE_PANEL'; payload: 'layers' | 'settings' | 'help' | 'patients' | 'intro' }
   | { type: 'TOGGLE_LAYERS' }
+  | { type: 'TOGGLE_SERIES' }
   | { type: 'SET_WINDOW_LEVEL'; payload: { wc: number; ww: number } }
   | { type: 'SET_SAFETY'; payload: Partial<{ marginMm: number; color: string; nerveMm: number; sinusMm: number; neighborMm: number }> }
   | { type: 'SET_GUIDE'; payload: Partial<GuideParams> }
@@ -241,6 +243,7 @@ export const initialState: ViewerState = {
   editingImplantId: null,
   activePanel: null,
   layersOpen: false,
+  seriesOpen: true,
   windowLevel: { wc: 300, ww: 2500 },
   safety: { marginMm: 1, color: '#ff3c3c', nerveMm: 2, sinusMm: 1, neighborMm: 3 },
   guide: { ...GUIDE_DEFAULTS },
@@ -431,6 +434,8 @@ export function viewerReducer(state: ViewerState, action: ViewerAction): ViewerS
       return { ...state, activePanel: state.activePanel === action.payload ? null : action.payload };
     case 'TOGGLE_LAYERS':
       return { ...state, layersOpen: !state.layersOpen };
+    case 'TOGGLE_SERIES':
+      return { ...state, seriesOpen: !state.seriesOpen };
     case 'SET_WINDOW_LEVEL':
       return { ...state, windowLevel: action.payload };
     case 'SET_SAFETY':

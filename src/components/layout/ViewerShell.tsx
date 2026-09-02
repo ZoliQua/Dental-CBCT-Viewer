@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { RenderingEngine, eventTarget, cache } from '@cornerstonejs/core';
 import { Enums as csToolsEnums } from '@cornerstonejs/tools';
 import { LeftPanel } from './LeftPanel';
-import { StudyTree } from '@/components/dicom/StudyTree';
 import { ViewportGrid } from '@/components/viewport/ViewportGrid';
 import { RegistrationPanel } from '@/components/registration/RegistrationPanel';
 import { WindowLevelSync } from '@/components/viewport/WindowLevelSync';
@@ -21,7 +20,6 @@ export function ViewerShell() {
   const { t } = useI18n();
   const measurementsRef = useRef(state.measurements);
   measurementsRef.current = state.measurements;
-  const showStudyTree = state.studies.length > 0;
   const renderingEngineRef = useRef<RenderingEngine | null>(null);
   const buildingVolumeRef = useRef<string | null>(null); // series UID currently building
   const [engineReady, setEngineReady] = useState(false);
@@ -210,11 +208,6 @@ export function ViewerShell() {
   return (
     <div className="flex h-full w-full overflow-hidden bg-gray-100 dark:bg-gray-900">
       <LeftPanel />
-      {showStudyTree && (
-        <div className="w-56 bg-white border-r border-gray-300 dark:bg-gray-800 dark:border-gray-700 overflow-y-auto">
-          <StudyTree />
-        </div>
-      )}
       <div className="flex-1 relative overflow-hidden">
         {engineReady ? (
           <ViewportGrid />

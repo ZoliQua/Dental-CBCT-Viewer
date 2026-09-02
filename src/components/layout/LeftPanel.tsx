@@ -10,8 +10,35 @@ import { useI18n } from '@/i18n/I18nContext';
 import { setActiveTool } from '@/core/toolManager';
 import { TOOL_ICONS } from './toolIcons';
 import { LayersContent, StackIcon } from '@/components/layers/LayersPanel';
+import { StudyTree } from '@/components/dicom/StudyTree';
 import { ImplantEditPopup } from '@/components/implant/ImplantEditPopup';
 import type { ViewportTool } from '@/types/dicom';
+
+function FolderIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** One stacked rail toggle (icon + vertical label). */
+function RailButton({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      className={`flex flex-col items-center gap-2 py-3 transition-colors ${
+        active
+          ? 'bg-dental-600 text-white'
+          : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+      }`}
+    >
+      {icon}
+      <span className="text-[10px] tracking-wide select-none [writing-mode:vertical-rl] rotate-180">{label}</span>
+    </button>
+  );
+}
 
 const NAV_TOOLS: { id: ViewportTool; key: string; sc: string }[] = [
   { id: 'windowLevel', key: 'tool.windowLevel', sc: 'W' },
@@ -68,7 +95,9 @@ function ToolButton({
 export function LeftPanel() {
   const { state, dispatch } = useViewer();
   const { t } = useI18n();
-  const open = state.layersOpen;
+  const toolsOpen = state.layersOpen;
+  const seriesOpen = state.seriesOpen;
+  const hasStudies = state.studies.length > 0;
   const isMulti = state.layoutMode === '2x2' || state.layoutMode === '1+3';
 
   const pick = (tool: ViewportTool) => {
@@ -78,24 +107,29 @@ export function LeftPanel() {
 
   return (
     <div className="flex h-full shrink-0">
-      <button
-        onClick={() => dispatch({ type: 'TOGGLE_LAYERS' })}
-        title={t('panel.tools')}
-        className={`w-10 shrink-0 flex flex-col items-center gap-2 pt-3 border-r transition-colors ${
-          open
-            ? 'bg-dental-600 text-white border-dental-700'
-            : 'bg-white/90 text-slate-600 border-slate-200 hover:bg-slate-100 dark:bg-slate-900/90 dark:text-slate-300 dark:border-slate-700/60 dark:hover:bg-slate-800'
-        }`}
-      >
-        <StackIcon />
-        <span className="text-[10px] tracking-wide select-none [writing-mode:vertical-rl] rotate-180">
-          {t('panel.tools')}
-        </span>
-      </button>
+      {/* Shared rail: Series (top) + Tools (bottom), each toggles its own panel */}
+      <div className="w-10 shrink-0 flex flex-col border-r border-slate-200 dark:border-slate-700/60 bg-white/90 dark:bg-slate-900/90">
+        {hasStudies && (
+          <RailButton
+            icon={<FolderIcon />}
+            label={t('series.panel')}
+            active={seriesOpen}
+            onClick={() => dispatch({ type: 'TOGGLE_SERIES' })}
+          />
+        )}
+        <div className="border-t border-slate-200 dark:border-slate-700/60" />
+        <RailButton
+          icon={<StackIcon />}
+          label={t('panel.tools')}
+          active={toolsOpen}
+          onClick={() => dispatch({ type: 'TOGGLE_LAYERS' })}
+        />
+      </div>
 
+      {/* Tools / Layers panel (outer) */}
       <div
         className={`h-full overflow-hidden border-r border-slate-200 dark:border-slate-700/60 bg-white/95 dark:bg-slate-900/85 backdrop-blur-sm shadow-xl transition-all duration-200 ${
-          open ? 'w-72' : 'w-0'
+          toolsOpen ? 'w-72' : 'w-0'
         }`}
       >
         <div className="w-72 h-full overflow-y-auto p-3 space-y-4">
@@ -180,6 +214,19 @@ export function LeftPanel() {
           </div>
         </div>
       </div>
+
+      {/* Study / series tree panel (inner) */}
+      {hasStudies && (
+        <div
+          className={`h-full overflow-hidden border-r border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800 transition-all duration-200 ${
+            seriesOpen ? 'w-56' : 'w-0'
+          }`}
+        >
+          <div className="w-56 h-full overflow-y-auto">
+            <StudyTree />
+          </div>
+        </div>
+      )}
 
       {state.editingImplantId && (
         <ImplantEditPopup
