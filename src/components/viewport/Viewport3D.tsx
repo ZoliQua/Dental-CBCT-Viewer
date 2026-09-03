@@ -18,6 +18,7 @@ import {
   applyXrayPreset,
   applyColormap3D,
   applyQuality3D,
+  applyVolumeStyle,
   XRAY_PRESET_ID,
   VOLUME_3D_COLORMAPS,
   type Volume3DQuality,
@@ -25,23 +26,6 @@ import {
 } from '@/core/volume3DPreset';
 
 const QUALITIES: Volume3DQuality[] = ['low', 'medium', 'high'];
-
-/** Apply preset (opacity/shape) + colormap (hue) + quality (sampling) as one style pass. */
-function applyVolumeStyle(
-  viewport: any,
-  opts: { preset: string; colormap: Volume3DColormap; quality: Volume3DQuality; wl: { wc: number; ww: number } },
-) {
-  const { preset, colormap, quality, wl } = opts;
-  if (preset === XRAY_PRESET_ID) {
-    applyXrayPreset(viewport.getDefaultActor?.()?.actor, wl);
-  } else {
-    viewport.setProperties({ preset });
-  }
-  const actor = viewport.getDefaultActor?.()?.actor;
-  applyColormap3D(actor, colormap, wl);
-  applyQuality3D(actor, quality);
-  viewport.render();
-}
 
 interface Viewport3DProps {
   volumeId: string;

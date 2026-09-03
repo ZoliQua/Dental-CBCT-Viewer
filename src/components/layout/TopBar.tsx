@@ -12,6 +12,7 @@ import { LANGUAGES } from '@/i18n/translations';
 import { useLayoutSwitch } from '@/hooks/useLayoutSwitch';
 import { LayoutConfigButton } from './LayoutConfigButton';
 import { LandingNav } from '@/components/dicom/landing/LandingNav';
+import { ImageExportModal } from '@/components/panels/ImageExportModal';
 import { exportPlanPdf, exportDrillGuideStl } from '@/core/viewerExports';
 import { serializePlan, planFromObject } from '@/core/planIO';
 import { loadSample } from '@/core/sampleLoader';
@@ -150,6 +151,7 @@ export function TopBar() {
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const [imageExportOpen, setImageExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const [newLoadOpen, setNewLoadOpen] = useState(false);
   const newLoadRef = useRef<HTMLDivElement>(null);
@@ -273,16 +275,6 @@ export function TopBar() {
     window.addEventListener('mousedown', handler);
     return () => window.removeEventListener('mousedown', handler);
   }, [newLoadOpen]);
-
-  const exportCanvas = (selector: string, filename: string) => {
-    const canvas = document.querySelector(selector) as HTMLCanvasElement | null;
-    if (!canvas) return;
-    const link = document.createElement('a');
-    link.download = filename;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-    setExportOpen(false);
-  };
 
   // Close the language dropdown on outside click
   useEffect(() => {
@@ -410,18 +402,10 @@ export function TopBar() {
             {exportOpen && (
               <div className="absolute right-0 top-9 z-50 w-44 bg-white/95 border border-slate-200 rounded-lg shadow-xl py-1 dark:bg-slate-800/95 dark:border-slate-700 backdrop-blur-sm">
                 <button
-                  onClick={() => exportCanvas('[data-panoramic-canvas]', `panorama_${Date.now()}.png`)}
-                  disabled={state.layoutMode !== 'OPG2+1'}
-                  className="w-full px-3 py-1.5 text-xs text-left text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                  onClick={() => { setExportOpen(false); setImageExportOpen(true); }}
+                  className="w-full px-3 py-1.5 text-xs text-left text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
                 >
-                  {t('opg.savePng')}
-                </button>
-                <button
-                  onClick={() => exportCanvas('[data-crosssection-canvas]', `crosssection_${Date.now()}.png`)}
-                  disabled={state.layoutMode !== 'OPG2+1'}
-                  className="w-full px-3 py-1.5 text-xs text-left text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
-                >
-                  {t('opg.sectionPng')}
+                  {t('export.saveImage')}
                 </button>
                 <button
                   onClick={() => {
@@ -534,6 +518,8 @@ export function TopBar() {
           </>
         )}
       </div>
+
+      <ImageExportModal open={imageExportOpen} onClose={() => setImageExportOpen(false)} />
     </div>
   );
 }

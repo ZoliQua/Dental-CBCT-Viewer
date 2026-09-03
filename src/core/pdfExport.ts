@@ -6,102 +6,14 @@
  */
 
 import { jsPDF } from 'jspdf';
-import { getRenderingEngine } from '@cornerstonejs/core';
-import { RENDERING_ENGINE_ID, VP_3D } from './constants';
 import { ROBOTO_FONT_NAME, ROBOTO_REGULAR_BASE64 } from './robotoFont';
 import { APP_VERSION } from '@/version';
 import type { DicomStudyInfo, ImplantData, MeasurementLayer, AnatomyMarker } from '@/types/dicom';
 import { getImplantSystem } from '@/types/dicom';
 import { implantWorldAxis } from '@/core/implantGeometry';
 import { evaluateImplant, type ImplantSeg } from '@/core/safety';
+import { captureView, hide3DSlicePlanes, restore3DSlicePlanes } from './viewCapture';
 import type { ReportFields } from '@/context/ViewerContext';
-
-/** Render an inline <svg> overlay to an Image at the given on-screen size. */
-function svgToImage(svg: SVGSVGElement, w: number, h: number): Promise<HTMLImageElement | null> {
-  const clone = svg.cloneNode(true) as SVGSVGElement;
-  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-  clone.setAttribute('width', String(w));
-  clone.setAttribute('height', String(h));
-  const str = new XMLSerializer().serializeToString(clone);
-  const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(str)}`;
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = url;
-  });
-}
-
-/**
- * Composite a viewport's image canvas with its SVG overlays (implants,
- * sleeves, measurements) into one undistorted canvas at the image's own
- * aspect ratio. The overlays are drawn over the canvas content rect only
- * (the letterboxed area), so nothing is stretched — unlike html2canvas,
- * which ignores the canvas object-fit and squashes the image.
- */
-async function captureView(view: HTMLElement): Promise<HTMLCanvasElement | null> {
-  const bare = view.querySelector('canvas') as HTMLCanvasElement | null;
-  if (!bare || !bare.width || !bare.height) return null;
-
-  const W = bare.width;
-  const H = bare.height;
-  const CW = view.clientWidth;
-  const CH = view.clientHeight;
-  if (!CW || !CH) return null;
-
-  // Content rect: where the image actually sits inside the container (object-fit: contain)
-  const scale = Math.min(CW / W, CH / H);
-  const rw = W * scale;
-  const rh = H * scale;
-  const left = (CW - rw) / 2;
-  const top = (CH - rh) / 2;
-
-  const SS = 2; // supersample so vector overlays stay crisp
-  const out = document.createElement('canvas');
-  out.width = W * SS;
-  out.height = H * SS;
-  const ctx = out.getContext('2d');
-  if (!ctx) return null;
-
-  ctx.drawImage(bare, 0, 0, out.width, out.height);
-
-  // Map the on-screen content rect of each SVG overlay onto the full output
-  for (const svg of Array.from(view.querySelectorAll('svg')) as SVGSVGElement[]) {
-    const img = await svgToImage(svg, CW, CH);
-    if (img) ctx.drawImage(img, left, top, rw, rh, 0, 0, out.width, out.height);
-  }
-
-  return out;
-}
-
-/** Hide the 3D cutting (slice) planes so the 3D export shows only the model.
- *  Returns the actors that were hidden, to restore afterwards. */
-async function hide3DSlicePlanes(): Promise<any[]> {
-  const vp = getRenderingEngine(RENDERING_ENGINE_ID)?.getViewport(VP_3D) as any;
-  if (!vp?.getActors) return [];
-  const hidden: any[] = [];
-  try {
-    for (const entry of vp.getActors()) {
-      if (typeof entry.uid === 'string' && entry.uid.startsWith('slice3d:') && entry.actor?.getVisibility?.()) {
-        entry.actor.setVisibility(false);
-        hidden.push(entry.actor);
-      }
-    }
-    if (hidden.length) {
-      vp.render();
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
-    }
-  } catch { /* viewport gone */ }
-  return hidden;
-}
-
-function restore3DSlicePlanes(hidden: any[]): void {
-  if (!hidden.length) return;
-  try {
-    for (const a of hidden) a.setVisibility?.(true);
-    getRenderingEngine(RENDERING_ENGINE_ID)?.getViewport(VP_3D)?.render();
-  } catch { /* viewport gone */ }
-}
 
 interface PdfExportOptions {
   t: (key: string, params?: Record<string, string | number>) => string;

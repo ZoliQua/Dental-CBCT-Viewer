@@ -55,6 +55,23 @@ export function applyColormap3D(actor: any, colormap: Volume3DColormap, wl: { wc
   prop.setRGBTransferFunction(0, ctf);
 }
 
+/** Apply preset (opacity/shape) + colormap (hue) + quality (sampling) to a VOLUME_3D viewport. */
+export function applyVolumeStyle(
+  viewport: any,
+  opts: { preset: string; colormap: Volume3DColormap; quality: Volume3DQuality; wl: { wc: number; ww: number } },
+): void {
+  const { preset, colormap, quality, wl } = opts;
+  if (preset === XRAY_PRESET_ID) {
+    applyXrayPreset(viewport.getDefaultActor?.()?.actor, wl);
+  } else {
+    viewport.setProperties({ preset });
+  }
+  const actor = viewport.getDefaultActor?.()?.actor;
+  applyColormap3D(actor, colormap, wl);
+  applyQuality3D(actor, quality);
+  viewport.render();
+}
+
 /**
  * Apply the translucent X-ray transfer function to a vtk volume actor, mapping
  * the window/level (HU) range to a soft grayscale, low-opacity ramp.
