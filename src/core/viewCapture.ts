@@ -56,16 +56,26 @@ export async function captureView(view: HTMLElement, scale = 2): Promise<HTMLCan
 
   ctx.drawImage(bare, 0, 0, out.width, out.height);
 
-  // Map the on-screen content rect of each SVG overlay onto the full output
-  for (const svg of Array.from(view.querySelectorAll('svg')) as SVGSVGElement[]) {
-    const img = await svgToImage(svg, CW, CH);
-    if (img) ctx.drawImage(img, left, top, rw, rh, 0, 0, out.width, out.height);
+  // Map the on-screen content rect of each SVG overlay onto the full output.
+  // The 3D volume view's SVG layer is just tool chrome (the crosshair reference
+  // lines + rotation handles show up as a thick dark cross) — skip it so the 3D
+  // export is the model only.
+  if (view.getAttribute('data-vp') !== '3D') {
+    for (const svg of Array.from(view.querySelectorAll('svg')) as SVGSVGElement[]) {
+      const img = await svgToImage(svg, CW, CH);
+      if (img) ctx.drawImage(img, left, top, rw, rh, 0, 0, out.width, out.height);
+    }
   }
 
   return out;
 }
 
-/** Hide the 3D cutting (slice) planes so a 3D capture shows only the model. */
+/**
+ * Force a fresh render of the 3D volume viewport and hide its cutting (slice)
+ * planes so the capture shows only the model. The render also repopulates the
+ * WebGL drawing buffer (which clears between frames), so the 3D capture isn't
+ * blank. Returns the hidden actors to restore afterwards.
+ */
 export async function hide3DSlicePlanes(): Promise<any[]> {
   const vp = getRenderingEngine(RENDERING_ENGINE_ID)?.getViewport(VP_3D) as any;
   if (!vp?.getActors) return [];
@@ -77,12 +87,15 @@ export async function hide3DSlicePlanes(): Promise<any[]> {
         hidden.push(entry.actor);
       }
     }
-    if (hidden.length) {
-      vp.render();
-      // setTimeout, not requestAnimationFrame: rAF can starve while a full-screen
-      // export modal is open, which would hang the export.
-      await new Promise((r) => setTimeout(r, 50));
-    }
+    vp.render();
+    // Wait two animation frames so the render paints before the capture reads
+    // the canvas, with a timeout fallback so a starved rAF can never hang.
+    await new Promise((resolve) => {
+      let done = false;
+      const fin = () => { if (!done) { done = true; resolve(null); } };
+      requestAnimationFrame(() => requestAnimationFrame(fin));
+      setTimeout(fin, 1500);
+    });
   } catch { /* viewport gone */ }
   return hidden;
 }

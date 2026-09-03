@@ -164,8 +164,8 @@ export async function exportViewPdf({ t, study, implants, measurements, report, 
       }
     }
   }
-
   restore3DSlicePlanes(hidden3DSlices);
+
   if (shots.length > 0) {
     pageBreak(8);
     doc.setFontSize(12);
