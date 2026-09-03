@@ -103,8 +103,8 @@ export function LandingPage() {
       <div className="relative z-10 max-w-5xl mx-auto px-6 py-8 flex flex-col gap-12">
         {/* ── Hero + loader ─────────────────────────────── */}
         <section id="get-started" className="scroll-mt-24 flex flex-col items-center text-center gap-4 pt-2">
-          <img src="/cbct-icon.png" alt="Dental CBCT Viewer" className="w-24 h-24 rounded-2xl shadow-md object-contain" />
-          <h1 className="text-3xl sm:text-4xl font-bold text-dental-600 dark:text-dental-400">{t('app.title')}</h1>
+          <img src="/cbct-icon.png" alt="DenCT" className="w-24 h-24 rounded-2xl shadow-md object-contain" />
+          <h1 className="text-3xl sm:text-4xl font-bold text-dental-600 dark:text-dental-400">{t('landing.title')}</h1>
           <p className="max-w-2xl text-base text-gray-700 dark:text-gray-300 leading-relaxed">{t('landing.heroSub')}</p>
           <GithubStar />
 

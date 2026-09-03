@@ -9,12 +9,15 @@ import { SidePanel } from './SidePanel';
 
 const SECTIONS = [
   ['help.loadTitle', 'help.loadBody'],
+  ['help.panelsTitle', 'help.panelsBody'],
   ['help.toolsTitle', 'help.toolsBody'],
   ['help.layoutsTitle', 'help.layoutsBody'],
   ['help.panoramicTitle', 'help.panoramicBody'],
   ['help.crossTitle', 'help.crossBody'],
   ['help.implantTitle', 'help.implantBody'],
   ['help.layersTitle', 'help.layersBody'],
+  ['help.view3dTitle', 'help.view3dBody'],
+  ['help.exportTitle', 'help.exportBody'],
   ['help.shortcutsTitle', 'help.shortcutsBody'],
 ] as const;
 

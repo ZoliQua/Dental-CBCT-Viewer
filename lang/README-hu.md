@@ -1,4 +1,4 @@
-# 🦷 Dental CBCT Viewer — Magyar
+# 🦷 DenCT — Magyar
 
 🇭🇺 Magyar · 🇬🇧 [English](README-en.md) · 🇩🇪 [Deutsch](README-de.md) · 🇪🇸 [Español](README-es.md) · [⬅ Vissza](../README.md)
 

@@ -5,6 +5,56 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
 `1.0.0` onward.
 
+## [1.2.0] — 2026-09-03
+
+### Added
+
+- **Multi-study** — load and hold several CTs at once in a left-panel **series
+  tree**; switch between studies instantly (each keeps its own volume and plan),
+  append more with "+ Load", and close one with its ✕. Series rows show pixel
+  dimensions and spacing.
+- **3D render controls** — a **Low/Medium/High quality** selector (a real
+  sampling-density difference) and **Grayscale / Cool / Warm / Spectral /
+  Inverted** colormaps, alongside the existing presets and slice planes.
+- **Save Image** export modal — **PNG/JPG** at a chosen resolution, pick which of
+  the current layout's views, tick the on-image info to burn in (name, clinic,
+  orientation, slice number…), as separate files or a single grid.
+- **Configurable Save PDF** — toggle header fields and report sections (views,
+  implants, measurements, safety, bone quality, disclaimer), **portrait or
+  landscape**, and which views to embed.
+- **Bottom status bar** — a "local processing — data is not uploaded" line plus
+  modality/image count, WW/WL, live zoom, view mode and active tool.
+
+### Changed
+
+- **Renamed to DenCT** (display name, browser title and docs). The npm package
+  `dental-cbct-viewer` and the repository are unchanged.
+- **Left panel reworked** into one collapsible rail with independent
+  **Patients / Series / Layers / Tools** toggles; the Patient card and the
+  study/series tree moved here. Layouts are now **2D view / 3D view /
+  Panoramic view**.
+- **Landing page** rebuilt as a sectioned overview (metrics, views, tools,
+  imaging, privacy) with in-top-bar section navigation; the settings / intro /
+  help controls stay hidden until a study is open.
+
+### Fixed
+
+- **Blank viewports on load in dev** — React StrictMode's mount→unmount→remount
+  purged the volume that the loader had just created; the release is now deferred
+  and cancelled on remount.
+- The exported **3D view** no longer includes the crosshair tool's dark cross.
+
+### Security
+
+- **OneVolume import** now validates the declared geometry *before* allocating
+  and reads exactly the declared voxels (no oversized transient copy; handles an
+  odd byte offset), matching the GALILEOS loader's validate-then-allocate order.
+- Ran `npm audit fix`; the remaining advisories are transitive build-time/dev
+  dependencies of the imaging libraries (not shipped runtime code).
+- Documented the recommended host **Content-Security-Policy** for embedders (see
+  the README "Security & privacy" section). The viewer performs no network
+  egress of scan or patient data.
+
 ## [1.1.0] — 2026-08-31
 
 ### Added
@@ -72,6 +122,7 @@ First public release — the viewer is packaged as an embeddable React library.
   `SharedArrayBuffer`).
 - This is research / demonstration software — **not** a certified medical device.
 
+[1.2.0]: https://github.com/ZoliQua/Dental-CBCT-Viewer/releases/tag/v1.2.0
 [1.1.0]: https://github.com/ZoliQua/Dental-CBCT-Viewer/releases/tag/v1.1.0
 [1.0.1]: https://github.com/ZoliQua/Dental-CBCT-Viewer/releases/tag/v1.0.1
 [1.0.0]: https://github.com/ZoliQua/Dental-CBCT-Viewer/releases/tag/v1.0.0

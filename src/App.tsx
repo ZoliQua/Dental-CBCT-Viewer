@@ -228,7 +228,7 @@ function ViewerApp({
 }
 
 /**
- * Embeddable Dental CBCT Viewer. Render it (optionally with a ref for the
+ * Embeddable DenCT (Dental CBCT Viewer). Render it (optionally with a ref for the
  * imperative API) and import `dental-cbct-viewer/style.css` once.
  */
 const DicomViewer = forwardRef<DicomViewerHandle, DicomViewerProps>((props, ref) => {

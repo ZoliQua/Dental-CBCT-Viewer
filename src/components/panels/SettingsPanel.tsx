@@ -341,7 +341,7 @@ export function SettingsPanel() {
                   <a href="https://github.com/ZoliQua" target="_blank" rel="noreferrer" className="text-dental-600 dark:text-dental-400 hover:underline">github.com/ZoliQua ↗</a>
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Dental CBCT Viewer v{APP_VERSION} · MIT ·{' '}
+                  DenCT v{APP_VERSION} · MIT ·{' '}
                   <a href="https://github.com/ZoliQua/Dental-CBCT-Viewer" target="_blank" rel="noreferrer" className="text-dental-600 dark:text-dental-400 hover:underline">Repository ↗</a>
                 </p>
               </Section>

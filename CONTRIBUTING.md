@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for considering a contribution to **Dental CBCT Viewer**. Bug reports,
+Thanks for considering a contribution to **DenCT**. Bug reports,
 fixes, translations and new features are all welcome, and contributions are
 acknowledged in the project's commit history.
 

@@ -1,5 +1,5 @@
 /**
- * Package entry — the embeddable Dental CBCT Viewer React component.
+ * Package entry — the embeddable DenCT React component.
  *
  * Consumers import the component here and the stylesheet from
  * `dental-cbct-viewer/style.css`. Pure, React-free helpers, the implant data

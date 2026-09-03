@@ -60,26 +60,34 @@ export async function parseOneVolume(files: File[], onProgress?: (pct: number) =
   const slope = num(/(?:slope|rescaleslope)\D{0,6}([0-9]*\.?[0-9]+)/i, xml, 1);
   const intercept = num(/(?:intercept|rescaleintercept)\D{0,6}(-?[0-9]*\.?[0-9]+)/i, xml, 0);
 
-  // Aligned int16 view of the remaining payload.
-  const payload = new Int16Array(buf.slice(off));
+  // Validate the declared geometry BEFORE allocating anything (a crafted header
+  // must not be able to trigger a huge allocation). Dimensions come from the XML
+  // that is already parsed, so no payload copy is needed to check them.
   if (!cols || !rows) throw new Error('OneVolume: could not read dimensions from header');
-  // Validate declared geometry before allocating anything.
   if (cols > MAX_AXIS || rows > MAX_AXIS) {
     throw new Error(`OneVolume: implausible dimensions ${cols}×${rows} (per-axis limit ${MAX_AXIS})`);
   }
-  if (!depth) depth = Math.floor(payload.length / (cols * rows));
+  // int16 samples available in the remaining payload (floored to whole samples).
+  const availSamples = (buf.byteLength - off) >> 1;
+  if (!depth) depth = Math.floor(availSamples / (cols * rows));
   if (depth < 1) throw new Error('OneVolume: no slice data in payload');
   if (depth > MAX_DEPTH) throw new Error(`OneVolume: implausible depth ${depth} (limit ${MAX_DEPTH})`);
   const voxels = cols * rows * depth;
   if (voxels > MAX_VOXELS) {
     throw new Error(`OneVolume: volume ${cols}×${rows}×${depth} exceeds the ${MAX_VOXELS} voxel limit`);
   }
-  if (payload.length < voxels) {
+  if (availSamples < voxels) {
     throw new Error(
       `OneVolume: payload too short — header declares ${cols}×${rows}×${depth} ` +
-      `(${voxels} voxels) but only ${payload.length} samples remain`,
+      `(${voxels} voxels) but only ${availSamples} samples remain`,
     );
   }
+  // Only now build an int16 view of exactly `voxels` samples — a zero-copy view
+  // when the offset is 2-byte aligned, otherwise a copy of just the needed bytes
+  // (never the whole remainder), which also handles an odd byte offset.
+  const payload = off % 2 === 0
+    ? new Int16Array(buf, off, voxels)
+    : new Int16Array(buf.slice(off, off + voxels * 2));
 
   // Scale into viewer units; map the background sentinel to a low value.
   const spacing = sp > 0 && sp < 5 ? sp : 0.125;

@@ -1,4 +1,4 @@
-# 🦷 Dental CBCT Viewer
+# 🦷 DenCT — Dental CBCT Viewer
 
 [![npm](https://img.shields.io/npm/v/dental-cbct-viewer?style=for-the-badge&logo=npm&color=CB3837)](https://www.npmjs.com/package/dental-cbct-viewer)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Dental-CBCT-Viewer/blob/main/LICENSE)
@@ -10,10 +10,10 @@
 🇬🇧 [English](lang/README-en.md) · 🇩🇪 [Deutsch](lang/README-de.md) · 🇪🇸 [Español](lang/README-es.md) · 🇭🇺 [Magyar](lang/README-hu.md)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ZoliQua/Dental-CBCT-Viewer/main/public/cbct-icon.png" width="120" alt="Dental CBCT Viewer" />
+  <img src="https://raw.githubusercontent.com/ZoliQua/Dental-CBCT-Viewer/main/public/cbct-icon.png" width="120" alt="DenCT" />
 </p>
 
-An embeddable **dental CBCT / CT DICOM viewer** for **React + TypeScript** — MPR and true-**3D** views, **panoramic (OPG)** reconstruction along the dental arch, perpendicular **cross-sections**, **guided implant planning** with nerve/sinus/neighbour **safety clearances** and **bone quality** (Misch D1–D5), a **printable drill-guide (STL)** export, a multilingual **PDF report**, and a 4-language UI (EN/DE/ES/HU). Built on [Cornerstone3D](https://www.cornerstonejs.org/) and [vtk.js](https://kitware.github.io/vtk.js/).
+**DenCT** is an embeddable **dental CBCT / CT DICOM viewer** for **React + TypeScript**. Load several CTs at once and switch between them; MPR and true-**3D** views (with render presets, colormaps and a low/medium/high quality control), **panoramic (OPG)** reconstruction along the dental arch, perpendicular **cross-sections**, **guided implant planning** with nerve/sinus/neighbour **safety clearances** and **bone quality** (Misch D1–D5), a **printable drill-guide (STL)** export, and configurable **image (PNG/JPG)** and **PDF report** exports — all in a 4-language UI (EN/DE/ES/HU). Everything runs **locally in the browser — no upload**. Built on [Cornerstone3D](https://www.cornerstonejs.org/) and [vtk.js](https://kitware.github.io/vtk.js/).
 
 🔗 **Repository:** https://github.com/ZoliQua/Dental-CBCT-Viewer
 
@@ -98,18 +98,26 @@ The heavy CSG kernel (drill-guide Boolean via `manifold-3d`) is loaded lazily, s
 
 ## ✨ Highlights
 
-- 🧊 **True-3D** volume rendering (translucent X-ray preset) with intersecting MPR slice planes and a crop box
+- 🗂️ **Multi-study** — load several CTs (DICOM folders, `.dcm` files, GALILEOS and OneVolume/Morita folders) into a left-panel **series tree** and switch between them instantly; each study keeps its own plan
+- 🧊 **True-3D** volume rendering with render **presets** (incl. translucent X-ray), **colormaps** (Grayscale / Cool / Warm / Spectral / Inverted) and a **Low/Medium/High quality** control, intersecting slice planes and a crop box
 - 🩻 **MPR** (axial / sagittal / coronal) with linked crosshairs, plus **panoramic (OPG)** reconstruction and tiltable **cross-sections** along a draggable dental arch curve
 - 🦷 **Guided implant planning** — 3D implant + drill sleeve, nerve / sinus / neighbour **safety clearances**, **bone quality** (Misch D1–D5, indicative class from uncalibrated CBCT gray values at the implant site)
 - 🖨️ **Printable drill guide (STL)** via constructive solid geometry (`manifold-3d`). The exported guide has **no integrated drill stop and no metal sleeve**, and tissue fit requires a **registered surface scan** — verify the fit on a printed model before any clinical use.
-- 📄 **Multilingual PDF report** (jsPDF, bundled Unicode font — Hungarian accents render correctly)
+- 🖼️ **Image export** (PNG/JPG) — pick views, resolution, on-image info to burn in, separate files or one grid — and a **configurable PDF report** (toggle header fields and sections, portrait/landscape; jsPDF with a bundled Unicode font so Hungarian accents render)
 - 🔗 Plan save/load (JSON), imperative ref API, controlled props/callbacks
+- 🔒 **100% local** — DICOM parsing, rendering and exports run in the browser; **nothing is uploaded**
 - 🌐 4 UI languages (EN / DE / ES / HU) · 🌓 self-scoped dark mode · 🧱 embeddable
 
 ## ⚙️ Notes for host bundlers
 
 - **Vite:** works out of the box.
 - **Next.js / webpack 5:** render the viewer in a **client component** (`"use client"`) — it reads the DOM on mount. Ensure the COOP/COEP headers above are set (e.g. via `next.config.js` headers). Worker/WASM assets are pre-bundled into the package.
+
+## 🔒 Security & privacy
+
+- **No network egress.** The viewer never uploads scans or patient data — all parsing, rendering and exports happen in the browser. It contacts no analytics or third-party host; the only `fetch` is for its own bundled sample asset. Exported PDF/PNG/STL/plan files are user-initiated downloads.
+- **Untrusted input is bounded.** Decompression enforces an output budget (gzip-bomb safe), the native-volume decoders validate geometry against hard caps before allocating, and plan JSON is parsed with a strict field allowlist (no prototype pollution).
+- **Content-Security-Policy.** The hosted demo ships a strict CSP (`connect-src 'self'`, `object-src 'none'`, no `unsafe-eval` for scripts). When you embed the component, **set an appropriate CSP on your host page** — the library needs `script-src 'wasm-unsafe-eval'` and `worker-src blob:` for the WASM decode workers, plus the COOP/COEP headers below.
 
 ## 📄 License & disclaimer
 
