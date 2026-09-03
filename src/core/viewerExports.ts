@@ -5,15 +5,33 @@
  * touches the Cornerstone volume + jsPDF), only the component bundle.
  */
 
-import { exportViewPdf } from './pdfExport';
+import { exportViewPdf, type PdfConfig } from './pdfExport';
 import { getVolumeData } from './cprEngine';
 import { implantWorldAxis } from './implantGeometry';
 import { sampleImplantBoneHU } from './boneQuality';
 import { getImplantSystem } from '@/types/dicom';
 import { scanTriangleSoupWorld } from './scanMesh';
+import { formatDicomDate } from '@/utils/dicomUtils';
+import type { OverlayData } from './viewCapture';
 import type { ViewerState } from '@/context/ViewerContext';
 
 type TFn = (key: string, params?: Record<string, string | number>) => string;
+
+/** Resolve the on-image overlay strings (name, clinic, …) from viewer state. */
+export function overlayDataFromState(state: ViewerState): OverlayData {
+  const st = state.study;
+  const rep = state.report;
+  const birthRaw = rep.patientBirthDate || st?.patientBirthDate || '';
+  return {
+    name: rep.patientName || st?.patientName || '',
+    birth: birthRaw ? formatDicomDate(birthRaw) : '',
+    date: st?.studyDate ? formatDicomDate(st.studyDate) : '',
+    clinic: rep.clinic || st?.institution || '',
+    series: st?.series.find((s) => s.seriesInstanceUID === state.activeSeriesUID)?.seriesDescription || '',
+    modality: st?.series[0]?.modality || '',
+    color: state.display.labelColor,
+  };
+}
 
 /** Compute per-implant bone-quality labels sampled from the volume. */
 function boneQualityLabels(state: ViewerState): Record<string, string> {
@@ -32,7 +50,7 @@ function boneQualityLabels(state: ViewerState): Record<string, string> {
 }
 
 /** Build and download the multi-view implant-planning PDF report. */
-export async function exportPlanPdf(state: ViewerState, t: TFn, lang: string): Promise<void> {
+export async function exportPlanPdf(state: ViewerState, t: TFn, lang: string, config?: Partial<PdfConfig>): Promise<void> {
   await exportViewPdf({
     t,
     study: state.study,
@@ -44,6 +62,8 @@ export async function exportPlanPdf(state: ViewerState, t: TFn, lang: string): P
     thresholds: { nerve: state.safety.nerveMm, sinus: state.safety.sinusMm, neighbor: state.safety.neighborMm },
     boneQuality: boneQualityLabels(state),
     lang,
+    config,
+    overlayData: overlayDataFromState(state),
   });
 }
 

@@ -79,7 +79,9 @@ export async function hide3DSlicePlanes(): Promise<any[]> {
     }
     if (hidden.length) {
       vp.render();
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
+      // setTimeout, not requestAnimationFrame: rAF can starve while a full-screen
+      // export modal is open, which would hang the export.
+      await new Promise((r) => setTimeout(r, 50));
     }
   } catch { /* viewport gone */ }
   return hidden;

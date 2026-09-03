@@ -12,8 +12,40 @@ import type { DicomStudyInfo, ImplantData, MeasurementLayer, AnatomyMarker } fro
 import { getImplantSystem } from '@/types/dicom';
 import { implantWorldAxis } from '@/core/implantGeometry';
 import { evaluateImplant, type ImplantSeg } from '@/core/safety';
-import { captureView, hide3DSlicePlanes, restore3DSlicePlanes } from './viewCapture';
+import { captureView, burnOverlays, hide3DSlicePlanes, restore3DSlicePlanes, type OverlayContent, type OverlayData } from './viewCapture';
 import type { ReportFields } from '@/context/ViewerContext';
+
+/** What the PDF report includes — every section/field can be toggled. */
+export interface PdfConfig {
+  // Header/patient fields
+  patientName: boolean;
+  birth: boolean;
+  studyDate: boolean;
+  age: boolean;
+  quote: boolean;
+  status: boolean;
+  clinic: boolean;
+  // Sections
+  views: boolean;
+  implants: boolean;
+  measurements: boolean;
+  safety: boolean;
+  boneQuality: boolean;
+  disclaimer: boolean;
+  // Page + views
+  landscape: boolean;
+  viewsCols: number;
+  /** data-vp keys to capture (null = every view on screen) */
+  selectedViews: string[] | null;
+  /** on-image info burned onto the view images (null = only the SVG overlays) */
+  overlays: OverlayContent | null;
+}
+
+export const PDF_CONFIG_DEFAULTS: PdfConfig = {
+  patientName: true, birth: true, studyDate: true, age: true, quote: true, status: true, clinic: true,
+  views: true, implants: true, measurements: true, safety: true, boneQuality: true, disclaimer: true,
+  landscape: false, viewsCols: 2, selectedViews: null, overlays: null,
+};
 
 interface PdfExportOptions {
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -27,15 +59,19 @@ interface PdfExportOptions {
   /** implant id → bone quality label (e.g. "D2 · 712 GV" — uncalibrated CBCT gray values) */
   boneQuality?: Record<string, string>;
   lang: string;
+  config?: Partial<PdfConfig>;
+  /** resolved overlay strings, when config.overlays burns info onto the images */
+  overlayData?: OverlayData;
 }
 
-const PAGE_W = 210;
-const PAGE_H = 297;
 const MARGIN = 14;
 const APP_URL = 'github.com/ZoliQua/Dental-CBCT-Viewer';
 
-export async function exportViewPdf({ t, study, implants, measurements, report, anatomy, archCurve, thresholds, boneQuality, lang }: PdfExportOptions): Promise<void> {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+export async function exportViewPdf({ t, study, implants, measurements, report, anatomy, archCurve, thresholds, boneQuality, lang, config, overlayData }: PdfExportOptions): Promise<void> {
+  const cfg: PdfConfig = { ...PDF_CONFIG_DEFAULTS, ...config };
+  const PAGE_W = cfg.landscape ? 297 : 210;
+  const PAGE_H = cfg.landscape ? 210 : 297;
+  const doc = new jsPDF({ orientation: cfg.landscape ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
   // Embed a Unicode font so Hungarian ő / ű (and other accents) render correctly
   // — jsPDF's built-in Helvetica is limited to WinAnsi/cp1252.
   doc.addFileToVFS('Roboto-Regular.ttf', ROBOTO_REGULAR_BASE64);
@@ -73,49 +109,59 @@ export async function exportViewPdf({ t, study, implants, measurements, report, 
   const nameSuffix = typedName && dicomName && typedName !== dicomName
     ? ` (${t('pdf.reportOverride', { value: typedName })})` : '';
   const shownName = nameSuffix ? dicomName : patientName;
-  doc.text(`${t('pdf.patient')}: ${shownName}${nameSuffix}${study?.patientId ? ` (${study.patientId})` : ''}`, MARGIN, y);
-  y += 5;
+  if (cfg.patientName) {
+    doc.text(`${t('pdf.patient')}: ${shownName}${nameSuffix}${study?.patientId ? ` (${study.patientId})` : ''}`, MARGIN, y);
+    y += 5;
+  }
+  if (cfg.studyDate && study?.studyDate?.trim()) {
+    doc.text(`${t('settings.studyDate')}: ${study.studyDate.trim()}`, MARGIN, y);
+    y += 5;
+  }
   const dicomBirth = study?.patientBirthDate?.trim() || '';
   const typedBirth = report?.patientBirthDate?.trim() || '';
   const birthSuffix = typedBirth && dicomBirth && typedBirth !== dicomBirth
     ? ` (${t('pdf.reportOverride', { value: typedBirth })})` : '';
   const birth = typedBirth || dicomBirth;
-  if (birth) {
+  if (cfg.birth && birth) {
     doc.text(`${t('report.birthDate')}: ${birthSuffix ? dicomBirth : birth}${birthSuffix}`, MARGIN, y);
     y += 5;
   }
-  if (report?.patientAge?.trim()) {
+  if (cfg.age && report?.patientAge?.trim()) {
     doc.text(`${t('pdf.age')}: ${report.patientAge.trim()}`, MARGIN, y);
     y += 5;
   }
-  if (report?.quoteNumber?.trim()) {
+  if (cfg.quote && report?.quoteNumber?.trim()) {
     doc.text(`${t('pdf.quote')}: ${report.quoteNumber.trim()}`, MARGIN, y);
     y += 5;
   }
-  if (report?.statusDescription?.trim()) {
+  if (cfg.status && report?.statusDescription?.trim()) {
     const lines = doc.splitTextToSize(`${t('pdf.status')}: ${report.statusDescription.trim()}`, PAGE_W - 2 * MARGIN);
     doc.text(lines, MARGIN, y);
     y += 5 * lines.length;
   }
-  if (study?.institution) {
+  if (cfg.clinic && study?.institution) {
     doc.text(study.institution, MARGIN, y);
     y += 5;
   }
   y += 3;
 
-  // The 3D export should show only the model: temporarily hide the cutting
-  // (slice) planes in the 3D viewport so they don't appear in the capture.
-  const hidden3DSlices = await hide3DSlicePlanes();
-
-  // Capture every viewport currently on screen (layout-agnostic) into a grid,
-  // so the 3D view exports all four panes, the panoramic view its four, etc.
-  const viewEls = Array.from(document.querySelectorAll('[data-vp]')) as HTMLElement[];
+  // Views: capture the selected viewports on screen (layout-agnostic), burning
+  // in the chosen on-image info. The 3D pane hides its cutting planes only when
+  // the slice-plane overlay was not explicitly requested.
   const shots: { title: string; canvas: HTMLCanvasElement }[] = [];
-  for (const v of viewEls) {
-    let shot: HTMLCanvasElement | null = null;
-    try { shot = await captureView(v); } catch { shot = null; }
-    if (shot && shot.width && shot.height) {
-      shots.push({ title: v.getAttribute('data-vp-title') || v.getAttribute('data-vp') || '', canvas: shot });
+  const hidden3DSlices = cfg.views ? await hide3DSlicePlanes() : [];
+  if (cfg.views) {
+    const viewEls = Array.from(document.querySelectorAll('[data-vp]')) as HTMLElement[];
+    for (const v of viewEls) {
+      const key = v.getAttribute('data-vp') || '';
+      if (cfg.selectedViews && !cfg.selectedViews.includes(key)) continue;
+      let shot: HTMLCanvasElement | null = null;
+      try { shot = await captureView(v); } catch { shot = null; }
+      if (shot && shot.width && shot.height) {
+        const title = v.getAttribute('data-vp-title') || key;
+        if (cfg.overlays && overlayData) burnOverlays(shot, v, key, cfg.overlays, overlayData, title);
+        shots.push({ title, canvas: shot });
+      }
     }
   }
 
@@ -125,7 +171,7 @@ export async function exportViewPdf({ t, study, implants, measurements, report, 
     doc.setFontSize(12);
     doc.text(t('pdf.viewsTitle'), MARGIN, y);
     y += 5;
-    const cols = shots.length === 1 ? 1 : 2;
+    const cols = Math.min(cfg.viewsCols, shots.length);
     const gap = 4;
     const cellW = (PAGE_W - 2 * MARGIN - (cols - 1) * gap) / cols;
     let col = 0;
@@ -146,7 +192,7 @@ export async function exportViewPdf({ t, study, implants, measurements, report, 
   }
 
   // Implants
-  if (implants.length > 0) {
+  if (cfg.implants && implants.length > 0) {
     pageBreak(12);
     doc.setFontSize(12);
     doc.text(t('pdf.implantsTitle'), MARGIN, y);
@@ -160,7 +206,7 @@ export async function exportViewPdf({ t, study, implants, measurements, report, 
         MARGIN + 2, y,
       );
       y += 4.5;
-      const bq = boneQuality?.[imp.id];
+      const bq = cfg.boneQuality ? boneQuality?.[imp.id] : undefined;
       if (bq) {
         pageBreak(5);
         doc.setTextColor(110);
@@ -185,7 +231,7 @@ export async function exportViewPdf({ t, study, implants, measurements, report, 
       }
     }
     // Bone-quality caveat (once, when any bone label was printed)
-    if (Object.keys(boneQuality ?? {}).length > 0) {
+    if (cfg.boneQuality && Object.keys(boneQuality ?? {}).length > 0) {
       pageBreak(5);
       doc.setFontSize(7.5);
       doc.setTextColor(120);
@@ -208,7 +254,7 @@ export async function exportViewPdf({ t, study, implants, measurements, report, 
   }
 
   // Measurements
-  if (measurements.length > 0) {
+  if (cfg.measurements && measurements.length > 0) {
     pageBreak(12);
     doc.setFontSize(12);
     doc.text(t('pdf.measurementsTitle'), MARGIN, y);
@@ -224,7 +270,7 @@ export async function exportViewPdf({ t, study, implants, measurements, report, 
 
   // Safety summary (clearance of each implant to anatomy + neighbours)
   const vis = (anatomy ?? []).filter((a) => a.visible && a.points.length > 0);
-  if (archCurve && implants.length > 0 && (vis.length > 0 || implants.length > 1)) {
+  if (cfg.safety && archCurve && implants.length > 0 && (vis.length > 0 || implants.length > 1)) {
     const thr = thresholds ?? { nerve: 2, sinus: 1, neighbor: 3 };
     const segs: ImplantSeg[] = implants.flatMap((i) => {
       const wa = implantWorldAxis(archCurve, i);
@@ -268,16 +314,18 @@ export async function exportViewPdf({ t, study, implants, measurements, report, 
   }
 
   // Disclaimer block (research-use-only) at the end of the content
-  pageBreak(20);
-  y += 2;
-  doc.setDrawColor(200);
-  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
-  y += 4;
-  doc.setFontSize(7.5);
-  doc.setTextColor(120);
-  const discLines = doc.splitTextToSize(t('disclaimer.text'), PAGE_W - 2 * MARGIN);
-  doc.text(discLines, MARGIN, y);
-  doc.setTextColor(0);
+  if (cfg.disclaimer) {
+    pageBreak(20);
+    y += 2;
+    doc.setDrawColor(200);
+    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+    y += 4;
+    doc.setFontSize(7.5);
+    doc.setTextColor(120);
+    const discLines = doc.splitTextToSize(t('disclaimer.text'), PAGE_W - 2 * MARGIN);
+    doc.text(discLines, MARGIN, y);
+    doc.setTextColor(0);
+  }
 
   // Footer on every page: app name, version and contact URL
   const pages = doc.getNumberOfPages();

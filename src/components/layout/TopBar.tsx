@@ -13,7 +13,8 @@ import { useLayoutSwitch } from '@/hooks/useLayoutSwitch';
 import { LayoutConfigButton } from './LayoutConfigButton';
 import { LandingNav } from '@/components/dicom/landing/LandingNav';
 import { ImageExportModal } from '@/components/panels/ImageExportModal';
-import { exportPlanPdf, exportDrillGuideStl } from '@/core/viewerExports';
+import { PdfExportModal } from '@/components/panels/PdfExportModal';
+import { exportDrillGuideStl } from '@/core/viewerExports';
 import { serializePlan, planFromObject } from '@/core/planIO';
 import { loadSample } from '@/core/sampleLoader';
 import { getVolumeData } from '@/core/cprEngine';
@@ -152,6 +153,7 @@ export function TopBar() {
   const langRef = useRef<HTMLDivElement>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [imageExportOpen, setImageExportOpen] = useState(false);
+  const [pdfExportOpen, setPdfExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const [newLoadOpen, setNewLoadOpen] = useState(false);
   const newLoadRef = useRef<HTMLDivElement>(null);
@@ -305,7 +307,7 @@ export function TopBar() {
         title={state.study ? t('topbar.newLoad') : t('app.title')}
         className="flex items-center gap-2 select-none rounded px-1 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
       >
-        <img src="/cbct-icon.png" alt="" aria-hidden className="w-6 h-6 rounded-md object-contain" />
+        <img src="/denct-ikon.png" alt="" aria-hidden className="w-6 h-6 rounded-md object-contain" />
         <span className="text-sm font-semibold text-dental-600 dark:text-dental-400">{t('app.title')}</span>
       </button>
 
@@ -408,10 +410,7 @@ export function TopBar() {
                   {t('export.saveImage')}
                 </button>
                 <button
-                  onClick={() => {
-                    setExportOpen(false);
-                    void exportPlanPdf(state, t, lang);
-                  }}
+                  onClick={() => { setExportOpen(false); setPdfExportOpen(true); }}
                   className="w-full px-3 py-1.5 text-xs text-left text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
                 >
                   {t('export.savePdf')}
@@ -520,6 +519,7 @@ export function TopBar() {
       </div>
 
       <ImageExportModal open={imageExportOpen} onClose={() => setImageExportOpen(false)} />
+      <PdfExportModal open={pdfExportOpen} onClose={() => setPdfExportOpen(false)} />
     </div>
   );
 }
