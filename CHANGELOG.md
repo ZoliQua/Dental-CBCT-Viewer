@@ -43,6 +43,10 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
   purged the volume that the loader had just created; the release is now deferred
   and cancelled on remount.
 - The exported **3D view** no longer includes the crosshair tool's dark cross.
+- The **sample-loading progress bar** now advances smoothly on the deployed CDN;
+  it used the response `Content-Length`, which is absent on the CDN's chunked /
+  compressed response, so it jumped straight from 0 % to 100 %. Progress is now
+  measured against the bundled file size recorded in the sample metadata.
 
 ### Security
 

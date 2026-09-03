@@ -85,6 +85,7 @@ function main() {
 
   fs.mkdirSync(OUT, { recursive: true });
   const gz = zlib.gzipSync(Buffer.from(vol.buffer), { level: 9 });
+  meta.fileBytes = gz.length; // download denominator for the loading progress bar
   fs.writeFileSync(path.join(OUT, 'volume.raw.bin'), gz);
   fs.writeFileSync(path.join(OUT, 'meta.json'), JSON.stringify(meta));
 

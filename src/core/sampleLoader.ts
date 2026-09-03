@@ -29,6 +29,8 @@ interface SampleMeta {
   studyDate: string;
   institution: string;
   seriesDescription: string;
+  /** Byte length of volume.raw.bin — a reliable progress denominator. */
+  fileBytes?: number;
 }
 
 export interface LoadedSample {
@@ -159,9 +161,15 @@ async function fetchOk(url: string): Promise<Response> {
 async function readVolumeWithProgress(
   resp: Response,
   maxBytes: number,
+  expectedBytes: number | undefined,
   onFrac?: (f: number) => void,
 ): Promise<Int16Array> {
-  const total = Number(resp.headers.get('Content-Length')) || 0;
+  // Prefer the bundled file size over the Content-Length header: on the deployed
+  // CDN the header is often absent (chunked / transport-compressed responses),
+  // which left the download reporting no progress until it jumped to 100%.
+  // After the browser strips any transport encoding, the streamed byte count
+  // converges on the raw file size, so it is the correct denominator either way.
+  const total = expectedBytes || Number(resp.headers.get('Content-Length')) || 0;
   const reader = resp.body?.getReader();
   if (!reader) {
     const buf = await gunzip(new Uint8Array(await resp.arrayBuffer()), maxBytes);
@@ -193,7 +201,7 @@ export async function loadSample(base = '/sample', onProgress?: (pct: number) =>
   // Decompression budget: int16 voxels + slack for container padding.
   const maxBytes = cols * rows * depth * 2 + 4096;
   // Download is the slow part on a network → map it to 0–90%.
-  const data = await readVolumeWithProgress(gzResp, maxBytes, (f) => onProgress?.(Math.round(f * 90)));
+  const data = await readVolumeWithProgress(gzResp, maxBytes, meta.fileBytes, (f) => onProgress?.(Math.round(f * 90)));
   onProgress?.(92);
 
   const n = counter++;
