@@ -167,6 +167,79 @@ export function kabschTransformWithRms(src: Vec3[], tgt: Vec3[]): { matrix: numb
   return { matrix, rmsMm: Math.sqrt(sum / src.length) };
 }
 
+// ── Iterative Closest Point (surface refinement) ───────────────
+
+export interface IcpOptions {
+  /** Max iterations (default 40). */
+  maxIterations?: number;
+  /** Stop when the RMS improvement between iterations drops below this (mm, default 1e-4). */
+  tolerance?: number;
+  /** Initial source→target transform (default identity — pass the 3-point Kabsch result). */
+  initial?: number[];
+}
+
+export interface IcpResult {
+  /** Refined source → target rigid transform (4×4 column-major). */
+  transform: number[];
+  /** Final RMS of each source point to its nearest target point, mm. */
+  rmsMm: number;
+  iterations: number;
+}
+
+/** Nearest target point to `q` (brute force). */
+function nearestPoint(target: Vec3[], q: Vec3): Vec3 {
+  let bd = Infinity, bj = 0;
+  for (let j = 0; j < target.length; j++) {
+    const t = target[j];
+    const d = (q[0] - t[0]) ** 2 + (q[1] - t[1]) ** 2 + (q[2] - t[2]) ** 2;
+    if (d < bd) { bd = d; bj = j; }
+  }
+  return target[bj];
+}
+
+/** RMS of source (under transform `m`) to its nearest target point, mm. */
+function nearestRms(source: Vec3[], target: Vec3[], m: number[]): number {
+  let sum = 0;
+  for (const p of source) {
+    const q = applyMat4(m, p);
+    const t = nearestPoint(target, q);
+    sum += (q[0] - t[0]) ** 2 + (q[1] - t[1]) ** 2 + (q[2] - t[2]) ** 2;
+  }
+  return Math.sqrt(sum / source.length);
+}
+
+/**
+ * Point-to-point ICP: refine a source point cloud onto a target cloud by
+ * repeatedly matching each source point to its nearest target and solving the
+ * best rigid transform (Kabsch) for those correspondences. Seed `initial` with
+ * the coarse 3-point Kabsch result so ICP only has to polish it.
+ *
+ * Pure (no Cornerstone/vtk) → unit-testable. Nearest-neighbour is brute force,
+ * so callers should subsample large surfaces before passing them in.
+ */
+export function icpAlign(source: Vec3[], target: Vec3[], opts: IcpOptions = {}): IcpResult | null {
+  const maxIter = opts.maxIterations ?? 40;
+  const tol = opts.tolerance ?? 1e-4;
+  if (source.length < 3 || target.length < 1) return null;
+
+  let current = opts.initial ? [...opts.initial] : [...IDENTITY4];
+  let prevRms = Infinity;
+  let iter = 0;
+  for (; iter < maxIter; iter++) {
+    const moved = source.map((p) => applyMat4(current, p));
+    const matched = moved.map((m) => nearestPoint(target, m));
+    const delta = kabschTransform(moved, matched);
+    if (!delta) break;
+    current = mul4(delta, current);
+    const rms = nearestRms(source, target, current);
+    const improved = prevRms - rms;
+    prevRms = rms;
+    if (improved >= 0 && improved < tol) { iter++; break; }
+  }
+  const rmsMm = prevRms === Infinity ? nearestRms(source, target, current) : prevRms;
+  return { transform: current, rmsMm, iterations: iter };
+}
+
 // ── Ray-cast picking against a triangle soup ───────────────────
 
 /** Möller–Trumbore ray/triangle: returns t (ray param) of the hit, or null. */
