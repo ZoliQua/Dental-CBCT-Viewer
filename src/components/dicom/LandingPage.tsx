@@ -113,6 +113,7 @@ export function LandingPage() {
             <button
               onClick={openSample}
               disabled={samplePct !== null}
+              data-testid="load-sample"
               className="group h-80 flex flex-col items-center justify-center text-center gap-3 rounded-2xl border-2 border-dental-400 bg-dental-50/80 hover:bg-dental-100 dark:bg-dental-900/20 dark:hover:bg-dental-900/40 transition-colors px-6 disabled:opacity-60 backdrop-blur-md"
             >
               <svg className="w-14 h-14 text-dental-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

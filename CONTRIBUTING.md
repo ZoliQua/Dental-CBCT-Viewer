@@ -46,6 +46,12 @@ tested without Cornerstone (a linear-field trick decodes exact sampled world
 positions). Add or update tests for anything you change, and keep the geometry
 math covered — the whole point of `/core` is that it is verifiable in isolation.
 
+`npm run test:e2e` runs the Playwright end-to-end smoke tests in `e2e/` against
+a headless Chromium (it starts the dev server automatically). They cover the
+critical path the unit tests can't reach — loading the bundled sample into a
+real Cornerstone volume and mounting the MPR / panoramic viewports. First run
+needs the browser once: `npx playwright install chromium`.
+
 ## Before you open a pull request
 
 - Keep changes small and focused — one topic per pull request.

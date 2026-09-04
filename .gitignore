@@ -11,3 +11,8 @@ dicom_test/
 # Local reference material / saved third-party pages
 docs/
 demo-dist/
+
+# Playwright
+playwright-report/
+test-results/
+.playwright/
