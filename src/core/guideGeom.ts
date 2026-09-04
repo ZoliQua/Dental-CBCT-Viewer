@@ -194,3 +194,64 @@ export function isClosedOriented(m: TriMesh): boolean {
   }
   return true;
 }
+
+// ── sleeve seat (stepped bore for a metal drill sleeve) ────────
+
+/** Cylinder segment: axis endpoints + radius. */
+export interface BoreCylinder { a: Vec3; b: Vec3; radius: number; }
+
+export interface SleeveSeatPlan {
+  /** Wide pocket the metal sleeve drops into (from the occlusal opening down). */
+  seat: BoreCylinder;
+  /** Narrow drill channel below the seat, continuing toward the apex. */
+  channel: BoreCylinder;
+  /** Housing outer radius (wall around the seat). */
+  housingRadius: number;
+  /** Axis parameter (mm from entry, +apical) of the seat floor the sleeve rests on. */
+  shoulderT: number;
+}
+
+export interface SleeveSeatParams {
+  wallMm: number;
+  seatClearanceMm: number;
+  sleeveWallMm: number;
+  channelTolMm: number;
+}
+
+/**
+ * Plan a stepped sleeve seat along an implant axis so the printed guide accepts
+ * a real metal drill sleeve of outer diameter `sleeveOuterDiameter`:
+ *
+ *   ── occlusal opening ──┐  seat  Ø = outer + 2·clearance   (depth = sleeveHeight)
+ *          shoulder  ─────┤  ← the sleeve rests here (repeatable drill stop)
+ *                         │  channel  Ø = (outer − 2·sleeveWall) + 2·channelTol
+ *                        apex
+ *
+ * `at(t) = entry + axis·t`; the sleeve occupies the occlusal region (negative t,
+ * above the platform). Pure — no WASM.
+ */
+export function planSleeveSeat(
+  entry: Vec3,
+  axis: Vec3,
+  implantLength: number,
+  sleeveOuterDiameter: number,
+  sleeveOffset: number,
+  sleeveHeight: number,
+  p: SleeveSeatParams,
+): SleeveSeatPlan {
+  const at = (t: number): Vec3 => [entry[0] + axis[0] * t, entry[1] + axis[1] * t, entry[2] + axis[2] * t];
+  const OVERSHOOT = 2; // break the occlusal surface so the pocket opens cleanly
+
+  const sleeveTop = -(sleeveOffset + sleeveHeight); // most occlusal
+  const sleeveBottom = -sleeveOffset;               // seat floor / shoulder
+  const seatRadius = sleeveOuterDiameter / 2 + p.seatClearanceMm;
+  const innerDiameter = Math.max(0.5, sleeveOuterDiameter - 2 * p.sleeveWallMm);
+  const channelRadius = innerDiameter / 2 + p.channelTolMm;
+
+  return {
+    seat: { a: at(sleeveTop - OVERSHOOT), b: at(sleeveBottom), radius: seatRadius },
+    channel: { a: at(implantLength + 2), b: at(sleeveTop - OVERSHOOT), radius: channelRadius },
+    housingRadius: seatRadius + p.wallMm,
+    shoulderT: sleeveBottom,
+  };
+}

@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { cylinderMesh, sweptBarMesh, meshVolume, isClosedOriented } from '../src/core/guideGeom';
+import { cylinderMesh, sweptBarMesh, meshVolume, isClosedOriented, planSleeveSeat } from '../src/core/guideGeom';
 import type { Vec3 } from '../src/core/implantGeometry';
 
 describe('cylinderMesh', () => {
@@ -62,5 +62,44 @@ describe('sweptBarMesh', () => {
     const m = sweptBarMesh([[0, 0, 0]], 5, 4);
     expect(m.positions.length).toBe(0);
     expect(m.indices.length).toBe(0);
+  });
+});
+
+describe('planSleeveSeat', () => {
+  // Axis pointing +Z (apical), entry at origin. Occlusal = −Z.
+  const entry: Vec3 = [0, 0, 0];
+  const axis: Vec3 = [0, 0, 1];
+  const p = { wallMm: 1.5, seatClearanceMm: 0.05, sleeveWallMm: 0.9, channelTolMm: 0.1 };
+  const outer = 5, offset = 9, height = 5, length = 12;
+  const plan = planSleeveSeat(entry, axis, length, outer, offset, height, p);
+
+  it('seats the sleeve on a shoulder at −offset (repeatable drill stop)', () => {
+    expect(plan.shoulderT).toBe(-offset);
+    // Seat floor sits at z = −offset (occlusal side).
+    expect(plan.seat.b[2]).toBeCloseTo(-offset, 6);
+  });
+
+  it('opens the seat at the occlusal surface with depth = sleeveHeight', () => {
+    // Seat spans from above the occlusal opening down to the shoulder.
+    const seatSpan = plan.seat.b[2] - plan.seat.a[2]; // b is more apical (larger z)
+    expect(seatSpan).toBeCloseTo(height + 2, 6); // sleeveHeight + 2 mm overshoot
+    expect(plan.seat.a[2]).toBeCloseTo(-(offset + height) - 2, 6);
+  });
+
+  it('makes the seat wider than the drill channel (a real shoulder forms)', () => {
+    expect(plan.seat.radius).toBeGreaterThan(plan.channel.radius);
+    expect(plan.seat.radius).toBeCloseTo(outer / 2 + p.seatClearanceMm, 6);
+    // channel Ø = (outer − 2·sleeveWall) + 2·channelTol
+    const innerD = outer - 2 * p.sleeveWallMm;
+    expect(plan.channel.radius).toBeCloseTo(innerD / 2 + p.channelTolMm, 6);
+  });
+
+  it('wraps the seat in a wall of thickness wallMm', () => {
+    expect(plan.housingRadius).toBeCloseTo(plan.seat.radius + p.wallMm, 6);
+  });
+
+  it('runs the drill channel from past the apex up to the seat opening', () => {
+    expect(plan.channel.a[2]).toBeCloseTo(length + 2, 6);          // past apex
+    expect(plan.channel.b[2]).toBeCloseTo(plan.seat.a[2], 6);       // meets the seat top
   });
 });

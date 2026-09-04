@@ -14,7 +14,7 @@ import type { Vec3 } from './implantGeometry';
 import type { Point2 } from './cprMath';
 import { archFrameAt, nearestArchFrame } from './implantGeometry';
 import { distSegmentToPolyline3 } from './safety';
-import { cylinderMesh, sweptBarMesh, type TriMesh } from './guideGeom';
+import { cylinderMesh, sweptBarMesh, planSleeveSeat, type TriMesh } from './guideGeom';
 import type { GuideParams } from '@/types/dicom';
 
 export type { GuideParams };
@@ -191,16 +191,32 @@ export async function buildDrillGuide(input: BuildGuideInput): Promise<BuildGuid
       const { entry, axis } = imp;
       const at = (t: number): Vec3 => [entry[0] + axis[0] * t, entry[1] + axis[1] * t, entry[2] + axis[2] * t];
       const sleeveTop = -(imp.sleeveOffset + imp.sleeveHeight); // occlusal side (−axis)
+
+      // Housing radius + bores depend on whether we cut a metal-sleeve seat.
+      let housingRadius: number;
+      const bores: TriMesh[] = [];
+      if (params.sleeveSeat) {
+        // Stepped seat: a wide pocket that holds the metal sleeve (resting on a
+        // shoulder = repeatable drill stop) over a narrower drill channel.
+        const plan = planSleeveSeat(
+          entry, axis, imp.length, imp.sleeveDiameter, imp.sleeveOffset, imp.sleeveHeight, params,
+        );
+        housingRadius = plan.housingRadius;
+        bores.push(cylinderMesh(plan.seat.a, plan.seat.b, plan.seat.radius, params.segments));
+        bores.push(cylinderMesh(plan.channel.a, plan.channel.b, plan.channel.radius, params.segments));
+      } else {
+        // Sleeveless: a single through-bore sized for the drill directly.
+        housingRadius = imp.sleeveDiameter / 2 + params.wallMm;
+        bores.push(cylinderMesh(
+          at(imp.length + 2), at(sleeveTop - 2),
+          (imp.sleeveDiameter + params.channelTolMm) / 2, params.segments,
+        ));
+      }
+
       // Housing: from just past the platform (toward apex) up to the sleeve top.
-      const housingRadius = imp.sleeveDiameter / 2 + params.wallMm;
       const housingBase = at(params.baseHeightMm);
       const housingTop = at(sleeveTop);
-      const housing = cylinderMesh(
-        housingBase,
-        housingTop,
-        housingRadius,
-        params.segments,
-      );
+      const housing = cylinderMesh(housingBase, housingTop, housingRadius, params.segments);
       // Clinical safeguard: a housing floating free of the base bar would
       // break off the printed guide.
       if (
@@ -210,14 +226,7 @@ export async function buildDrillGuide(input: BuildGuideInput): Promise<BuildGuid
         warnings.push('housing-disconnected');
       }
       solids.push(track(triToManifold(wasm, housing)));
-      // Channel: full through-bore for the sleeve / drill.
-      const channel = cylinderMesh(
-        at(imp.length + 2),
-        at(sleeveTop - 2),
-        (imp.sleeveDiameter + params.channelTolMm) / 2,
-        params.segments,
-      );
-      channels.push(track(triToManifold(wasm, channel)));
+      for (const b of bores) channels.push(track(triToManifold(wasm, b)));
     }
 
     // 3) union frame, subtract channels

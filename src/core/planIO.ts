@@ -153,6 +153,9 @@ export function planFromObject(obj: any): ParsedPlan | null {
       baseHeightMm: num(g.baseHeightMm, GUIDE_DEFAULTS.baseHeightMm),
       channelTolMm: num(g.channelTolMm, GUIDE_DEFAULTS.channelTolMm),
       segments: num(g.segments, GUIDE_DEFAULTS.segments),
+      sleeveSeat: typeof g.sleeveSeat === 'boolean' ? g.sleeveSeat : GUIDE_DEFAULTS.sleeveSeat,
+      seatClearanceMm: num(g.seatClearanceMm, GUIDE_DEFAULTS.seatClearanceMm),
+      sleeveWallMm: num(g.sleeveWallMm, GUIDE_DEFAULTS.sleeveWallMm),
     },
     windowLevel: { wc: num(wl.wc, 300), ww: num(wl.ww, 2500) },
     report: {

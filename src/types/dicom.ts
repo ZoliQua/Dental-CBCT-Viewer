@@ -231,6 +231,12 @@ export interface GuideParams {
   channelTolMm: number;
   /** Angular tessellation of cylinders */
   segments: number;
+  /** Cut a stepped seat that accepts a real metal drill sleeve (else a plain bore) */
+  sleeveSeat: boolean;
+  /** Radial fit clearance of the sleeve outer Ø in the seat, mm */
+  seatClearanceMm: number;
+  /** Metal sleeve wall thickness (radial), mm — sets the inner drill channel Ø */
+  sleeveWallMm: number;
 }
 
 export const GUIDE_DEFAULTS: GuideParams = {
@@ -239,6 +245,9 @@ export const GUIDE_DEFAULTS: GuideParams = {
   baseHeightMm: 4,
   channelTolMm: 0.1,
   segments: 48,
+  sleeveSeat: true,
+  seatClearanceMm: 0.05,
+  sleeveWallMm: 0.9,
 };
 
 export function getImplantSystem(id: string | undefined): ImplantSystem {

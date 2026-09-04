@@ -317,12 +317,22 @@ export function SettingsPanel() {
           {tab === 'guide' && (
             <Section title={t('settings.guide')}>
               <Help>{t('settings.help.guide')}</Help>
+              <label className="flex items-center gap-2 mb-2 text-[12px] text-slate-700 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={state.guide.sleeveSeat}
+                  onChange={(e) => dispatch({ type: 'SET_GUIDE', payload: { sleeveSeat: e.target.checked } })}
+                />
+                {t('guide.sleeveSeat')}
+              </label>
               <div className="grid grid-cols-2 gap-2">
                 {([
                   ['wallMm', t('guide.wall'), 0.5, 4, 0.1],
                   ['baseWidthMm', t('guide.baseWidth'), 2, 10, 0.5],
                   ['baseHeightMm', t('guide.baseHeight'), 2, 10, 0.5],
                   ['channelTolMm', t('guide.channelTol'), 0, 0.5, 0.05],
+                  ['seatClearanceMm', t('guide.seatClearance'), 0, 0.5, 0.01],
+                  ['sleeveWallMm', t('guide.sleeveWall'), 0.3, 2, 0.1],
                 ] as const).map(([key, label, min, max, step]) => (
                   <label key={key} className="space-y-1">
                     <span className="block text-[11px] text-slate-600 dark:text-slate-300">{label}</span>
@@ -330,6 +340,7 @@ export function SettingsPanel() {
                   </label>
                 ))}
               </div>
+              <Help>{t('guide.seatHint')}</Help>
             </Section>
           )}
 
