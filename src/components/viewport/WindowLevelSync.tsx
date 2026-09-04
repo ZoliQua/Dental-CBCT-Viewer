@@ -45,7 +45,9 @@ export function WindowLevelSync() {
       if (!el) continue;
       const handler = () => {
         if (applyingRef.current) return;
-        const voi = vp.getProperties?.().voiRange;
+        // getProperties() can return undefined while the actor is still being
+        // created (VOI_MODIFIED fires mid-setup) → guard the whole chain.
+        const voi = vp.getProperties?.()?.voiRange;
         if (!voi) return;
         const nWw = voi.upper - voi.lower;
         const nWc = (voi.upper + voi.lower) / 2;
