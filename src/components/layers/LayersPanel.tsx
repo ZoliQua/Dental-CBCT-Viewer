@@ -282,22 +282,51 @@ export function LayersContent() {
             </div>
           )}
           {state.measurements.map(m => (
-            <LayerRow
-              key={m.id}
-              name={m.value ? `${m.name} · ${m.value}` : m.name}
-              visible={m.visible}
-              onToggleVisible={() => {
-                const next = !m.visible;
-                if (m.kind === 'annotation') setAnnotationVisible(m.id, next);
-                dispatch({ type: 'UPDATE_MEASUREMENT', payload: { ...m, visible: next } });
-              }}
-              onDelete={() => {
-                if (m.kind === 'annotation') removeAnnotationByUid(m.id);
-                dispatch({ type: 'REMOVE_MEASUREMENT', payload: m.id });
-              }}
-              onRename={(name) => dispatch({ type: 'UPDATE_MEASUREMENT', payload: { ...m, name } })}
-            />
+            <div key={m.id}>
+              <LayerRow
+                name={m.value ? `${m.name} · ${m.value}` : m.name}
+                visible={m.visible}
+                onToggleVisible={() => {
+                  const next = !m.visible;
+                  if (m.kind === 'annotation') setAnnotationVisible(m.id, next);
+                  dispatch({ type: 'UPDATE_MEASUREMENT', payload: { ...m, visible: next } });
+                }}
+                onDelete={() => {
+                  if (m.kind === 'annotation') removeAnnotationByUid(m.id);
+                  dispatch({ type: 'REMOVE_MEASUREMENT', payload: m.id });
+                }}
+                onRename={(name) => dispatch({ type: 'UPDATE_MEASUREMENT', payload: { ...m, name } })}
+              />
+              {m.visible && m.profile && m.profile.length > 1 && <Sparkline data={m.profile} />}
+            </div>
           ))}
+    </div>
+  );
+}
+
+/** Tiny HU-profile chart for a line measurement (values along the line). */
+function Sparkline({ data }: { data: number[] }) {
+  const w = 180, h = 28;
+  let min = Infinity, max = -Infinity;
+  for (const v of data) { if (v < min) min = v; if (v > max) max = v; }
+  const span = max - min || 1;
+  const pts = data
+    .map((v, i) => `${((i / (data.length - 1)) * w).toFixed(1)},${(h - ((v - min) / span) * h).toFixed(1)}`)
+    .join(' ');
+  return (
+    <div className="px-2 pb-1 -mt-1">
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-7" preserveAspectRatio="none">
+        <polyline
+          points={pts}
+          fill="none"
+          stroke="rgb(96,165,250)"
+          strokeWidth={1}
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+      <div className="text-[9px] text-gray-500 leading-none">
+        HU {Math.round(min)}–{Math.round(max)}
+      </div>
     </div>
   );
 }

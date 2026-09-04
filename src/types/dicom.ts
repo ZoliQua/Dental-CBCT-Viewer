@@ -315,6 +315,8 @@ export interface MeasurementLayer {
   points?: [number, number][];
   /** Formatted measured value (mm, °, HU) */
   value?: string;
+  /** HU samples along a line measurement (for the profile sparkline) */
+  profile?: number[];
 }
 
 export type Volume3DPreset = 'CT-Bone' | 'CT-Bones' | 'CT-Coronary-Arteries-3' | 'CT-MIP';

@@ -12,7 +12,9 @@ import { createVolume } from '@/core/volumeBuilder';
 import { revokeAllBlobUrls } from '@/core/dicomLoader';
 import { clearScanRegistry } from '@/core/scanMesh';
 import { serializePlan, planFromObject } from '@/core/planIO';
-import { CS_TOOL_KEYS } from '@/core/annotationLayer';
+import { CS_TOOL_KEYS, readAnnotationMeasure } from '@/core/annotationLayer';
+import { getVolumeData } from '@/core/cprEngine';
+import { lineProfileHU } from '@/core/measureStats';
 import { RENDERING_ENGINE_ID } from '@/core/constants';
 
 export function ViewerShell() {
@@ -20,6 +22,8 @@ export function ViewerShell() {
   const { t } = useI18n();
   const measurementsRef = useRef(state.measurements);
   measurementsRef.current = state.measurements;
+  const volumeIdRef = useRef(state.volumeId);
+  volumeIdRef.current = state.volumeId;
   const renderingEngineRef = useRef<RenderingEngine | null>(null);
   const buildingVolumeRef = useRef<string | null>(null); // series UID currently building
   const [engineReady, setEngineReady] = useState(false);
@@ -40,28 +44,59 @@ export function ViewerShell() {
     };
   }, [state.isInitialized]);
 
-  // Every completed Cornerstone measurement becomes its own layer
+  // Cornerstone measurements → one layer each, with live value + HU profile.
+  // Tool stats are computed asynchronously, so ANNOTATION_COMPLETED creates the
+  // layer and ANNOTATION_MODIFIED (debounced) fills in / refreshes the value.
   useEffect(() => {
-    const handler = (evt: Event) => {
-      const ann = (evt as CustomEvent).detail?.annotation;
+    const readProfile = (pts?: [number, number, number][]): number[] | undefined => {
+      const vid = volumeIdRef.current;
+      if (!vid || !pts || pts.length < 2) return undefined;
+      const vol = getVolumeData(vid);
+      return vol ? lineProfileHU(vol, pts[0], pts[pts.length - 1], 64) : undefined;
+    };
+
+    const upsert = (ann: any) => {
       const uid = ann?.annotationUID;
       const toolKey = CS_TOOL_KEYS[ann?.metadata?.toolName as string];
       if (!uid || !toolKey) return;
-      if (measurementsRef.current.some(m => m.id === uid)) return;
-      const sameTool = measurementsRef.current.filter(m => m.tool === toolKey).length;
-      dispatch({
-        type: 'ADD_MEASUREMENT',
-        payload: {
-          id: uid,
-          kind: 'annotation',
-          tool: toolKey,
-          name: `${t(`tool.${toolKey}`)} ${sameTool + 1}`,
-          visible: true,
-        },
-      });
+      const { value, points } = readAnnotationMeasure(ann);
+      const profile = toolKey === 'length' ? readProfile(points) : undefined;
+      const existing = measurementsRef.current.find(m => m.id === uid);
+      if (existing) {
+        if (existing.value === value && !profile) return; // nothing changed
+        dispatch({
+          type: 'UPDATE_MEASUREMENT',
+          payload: { ...existing, value: value ?? existing.value, profile: profile ?? existing.profile },
+        });
+      } else {
+        const sameTool = measurementsRef.current.filter(m => m.tool === toolKey).length;
+        dispatch({
+          type: 'ADD_MEASUREMENT',
+          payload: { id: uid, kind: 'annotation', tool: toolKey, name: `${t(`tool.${toolKey}`)} ${sameTool + 1}`, visible: true, value, profile },
+        });
+      }
     };
-    eventTarget.addEventListener(csToolsEnums.Events.ANNOTATION_COMPLETED, handler);
-    return () => eventTarget.removeEventListener(csToolsEnums.Events.ANNOTATION_COMPLETED, handler);
+
+    const onCompleted = (evt: Event) => upsert((evt as CustomEvent).detail?.annotation);
+
+    // MODIFIED fires continuously during a drag → debounce per annotation.
+    const timers = new Map<string, ReturnType<typeof setTimeout>>();
+    const onModified = (evt: Event) => {
+      const ann = (evt as CustomEvent).detail?.annotation;
+      const uid = ann?.annotationUID;
+      if (!uid) return;
+      const prev = timers.get(uid);
+      if (prev) clearTimeout(prev);
+      timers.set(uid, setTimeout(() => { timers.delete(uid); upsert(ann); }, 200));
+    };
+
+    eventTarget.addEventListener(csToolsEnums.Events.ANNOTATION_COMPLETED, onCompleted);
+    eventTarget.addEventListener(csToolsEnums.Events.ANNOTATION_MODIFIED, onModified);
+    return () => {
+      eventTarget.removeEventListener(csToolsEnums.Events.ANNOTATION_COMPLETED, onCompleted);
+      eventTarget.removeEventListener(csToolsEnums.Events.ANNOTATION_MODIFIED, onModified);
+      timers.forEach(clearTimeout);
+    };
   }, [dispatch, t]);
 
   // Build volume for MPR/3D views (always needed since default viewMode is AXIAL)
