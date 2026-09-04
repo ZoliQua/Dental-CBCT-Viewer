@@ -234,6 +234,8 @@ const en: Dict = {
   'layers.rename': 'Rename',
   'layers.confirmClear': 'Delete all measurements?',
   'layers.close': 'Close',
+  'arch.auto': 'Auto arch',
+  'arch.autoTitle': 'Estimate the dental arch from the scan (editable afterwards)',
 
   // Implant
   'implant.defaultName': 'Implant {n}',
@@ -665,6 +667,8 @@ const de: Dict = {
   'layers.rename': 'Umbenennen',
   'layers.confirmClear': 'Alle Messungen löschen?',
   'layers.close': 'Schließen',
+  'arch.auto': 'Auto-Bogen',
+  'arch.autoTitle': 'Zahnbogen aus dem Scan schätzen (danach bearbeitbar)',
 
   'implant.defaultName': 'Implantat {n}',
   'implant.diameter': 'Durchmesser',
@@ -1092,6 +1096,8 @@ const es: Dict = {
   'layers.rename': 'Renombrar',
   'layers.confirmClear': '¿Eliminar todas las mediciones?',
   'layers.close': 'Cerrar',
+  'arch.auto': 'Arco automático',
+  'arch.autoTitle': 'Estimar el arco dental a partir del escáner (editable después)',
 
   'implant.defaultName': 'Implante {n}',
   'implant.diameter': 'Diámetro',
@@ -1519,6 +1525,8 @@ const hu: Dict = {
   'layers.rename': 'Átnevezés',
   'layers.confirmClear': 'Minden mérés törlése?',
   'layers.close': 'Bezárás',
+  'arch.auto': 'Automatikus ív',
+  'arch.autoTitle': 'Fogív becslése a felvételből (utána szerkeszthető)',
 
   'implant.defaultName': 'Implantátum {n}',
   'implant.diameter': 'Átmérő',

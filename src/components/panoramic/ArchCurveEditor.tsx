@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { getRenderingEngine, Enums, cache } from '@cornerstonejs/core';
 import { useViewer } from '@/context/ViewerContext';
+import { useI18n } from '@/i18n/I18nContext';
 import { RENDERING_ENGINE_ID, VP_AXIAL } from '@/core/constants';
 import {
   interpolateArchCurve,
@@ -14,6 +15,8 @@ import {
   generateDefaultArchCurve,
 } from '@/core/archCurve';
 import { crossSectionFrame, buildUniformCurve } from '@/core/cprMath';
+import { getVolumeData } from '@/core/cprEngine';
+import { detectArchControlPoints } from '@/core/archDetect';
 
 type Point2 = [number, number];
 
@@ -42,6 +45,7 @@ function pointsToPath(pts: Point2[]): string {
 
 export function ArchCurveEditor() {
   const { state, dispatch } = useViewer();
+  const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const dragIdxRef = useRef<number | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
@@ -96,6 +100,16 @@ export function ArchCurveEditor() {
     const cam = vp.getCamera();
     return cam.focalPoint?.[2] ?? 0;
   }, [getViewport]);
+
+  // Estimate the arch from the scan at the current axial level; the result is a
+  // suggestion the user can still drag. Falls back silently if nothing traceable.
+  const handleAutoArch = useCallback(() => {
+    if (!state.volumeId) return;
+    const vol = getVolumeData(state.volumeId);
+    if (!vol) return;
+    const cps = detectArchControlPoints(vol, { focalWorldZ: getFocalZ() });
+    if (cps) dispatch({ type: 'SET_ARCH_CURVE', payload: cps as [number, number][] });
+  }, [state.volumeId, getFocalZ, dispatch]);
 
   // Reproject world control points → screen coordinates
   const updateScreen = useCallback(() => {
@@ -250,6 +264,15 @@ export function ArchCurveEditor() {
 
   return (
     <div ref={containerRef} className="absolute inset-0" style={{ zIndex: 10, pointerEvents: 'none' }}>
+      <button
+        type="button"
+        onClick={handleAutoArch}
+        title={t('arch.autoTitle')}
+        className="absolute top-2 left-2 px-2 py-1 rounded text-xs font-medium bg-slate-800/70 hover:bg-slate-700/80 text-white backdrop-blur-sm border border-white/10"
+        style={{ pointerEvents: 'auto' }}
+      >
+        ⟳ {t('arch.auto')}
+      </button>
       <svg className="w-full h-full">
         {/* Slab width lines */}
         <path d={screenData.innerPath} fill="none" stroke="rgba(255,80,80,0.4)" strokeWidth={1} />
