@@ -31,8 +31,7 @@ import {
   type Vec3,
 } from '@/core/implantGeometry';
 import { evaluateImplant, type ImplantSeg } from '@/core/safety';
-import { slicePlaneSegments } from '@/core/meshSlice';
-import { scanTriangleSoupWorld } from '@/core/scanMesh';
+import { sliceScanWorld } from '@/core/scanMesh';
 
 interface ImplantOverlayProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -85,10 +84,9 @@ export function ImplantOverlay({ containerRef, canvasRef, widthMm, zMin, zMax }:
   const scanContours = useMemo(() => {
     if (!frame) return [];
     const n = cross3(frame.eU, frame.eV);
-    return state.scans.filter(s => s.visible).map(s => {
-      const soup = scanTriangleSoupWorld(s.id, s.transform);
-      return { id: s.id, color: s.color, segs: soup ? slicePlaneSegments(soup, frame.origin, n) : [] };
-    });
+    return state.scans.filter(s => s.visible).map(s => ({
+      id: s.id, color: s.color, segs: sliceScanWorld(s.id, s.transform, frame.origin, n),
+    }));
   }, [state.scans, frame]);
 
   // ── Image (h, zImg) ↔ pixel mapping ─────────────────────────

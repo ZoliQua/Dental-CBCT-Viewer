@@ -11,8 +11,7 @@ import { useViewer } from '@/context/ViewerContext';
 import { getImplantSystem } from '@/types/dicom';
 import { RENDERING_ENGINE_ID, VP_AXIAL } from '@/core/constants';
 import { nearestArchFrame, implantAxis, radiusProfile } from '@/core/implantGeometry';
-import { slicePlaneSegments } from '@/core/meshSlice';
-import { scanTriangleSoupWorld } from '@/core/scanMesh';
+import { sliceScanWorld } from '@/core/scanMesh';
 
 export function ImplantAxialOverlay() {
   const { state } = useViewer();
@@ -44,9 +43,8 @@ export function ImplantAxialOverlay() {
       <svg className="w-full h-full">
         {/* Registered scan contours where they cross this axial slice */}
         {state.scans.filter(s => s.visible).map(s => {
-          const soup = scanTriangleSoupWorld(s.id, s.transform);
-          if (!soup) return null;
-          const segs = slicePlaneSegments(soup, [0, 0, zFocal], [0, 0, 1]);
+          const segs = sliceScanWorld(s.id, s.transform, [0, 0, zFocal], [0, 0, 1]);
+          if (segs.length === 0) return null;
           return (
             <g key={`scan-${s.id}`}>
               {segs.map((seg, i) => {

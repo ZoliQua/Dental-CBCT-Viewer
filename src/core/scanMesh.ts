@@ -12,18 +12,26 @@ import vtkOBJReader from '@kitware/vtk.js/IO/Misc/OBJReader';
 import vtkActor from '@kitware/vtk.js/Rendering/Core/Actor';
 import vtkMapper from '@kitware/vtk.js/Rendering/Core/Mapper';
 import { applyMat4 } from './registration';
+import { buildTriangleBVH, slicePlaneBVH, type TriangleBVH } from './meshSlice';
+import type { Vec3 } from './implantGeometry';
 
 // id → vtkPolyData (kept here, not in state/JSON — meshes are large)
 const registry = new Map<string, any>();
 
+// id → cached world soup + BVH for slicing, keyed by the transform that built
+// it. The plane is scrubbed far more often than the scan is re-registered, so
+// this rebuilds the O(n) world soup + tree only when the transform changes.
+const sliceCache = new Map<string, { key: string; soup: Float32Array; bvh: TriangleBVH }>();
+
 export const getScanPolyData = (id: string): any | null => registry.get(id) ?? null;
 export const setScanPolyData = (id: string, pd: any): void => { registry.set(id, pd); };
-export const removeScanPolyData = (id: string): void => { registry.delete(id); };
+export const removeScanPolyData = (id: string): void => { registry.delete(id); sliceCache.delete(id); };
 export const hasScanPolyData = (id: string): boolean => registry.has(id);
 
 /** Empty the whole scan-mesh registry (e.g. when the session is purged). */
 export function clearScanRegistry(): void {
   registry.clear();
+  sliceCache.clear();
 }
 
 /** 4×4 column-major identity. */
@@ -141,6 +149,29 @@ export function scanTriangleSoupWorld(id: string, transform: number[]): Float32A
     i += n;
   }
   return new Float32Array(tris);
+}
+
+/**
+ * World-space contour of a scan cut by a plane, using a cached BVH. Rebuilds the
+ * world soup + tree only when `transform` changes; otherwise a plane scrub only
+ * traverses the tree (≈O(crossings)) — replacing the old rebuild-and-brute-force
+ * per move. Returns [] if the mesh is not registered.
+ */
+export function sliceScanWorld(
+  id: string,
+  transform: number[],
+  planePoint: Vec3,
+  planeNormal: Vec3,
+): [Vec3, Vec3][] {
+  const key = transform.join(',');
+  let entry = sliceCache.get(id);
+  if (!entry || entry.key !== key) {
+    const soup = scanTriangleSoupWorld(id, transform);
+    if (!soup) { sliceCache.delete(id); return []; }
+    entry = { key, soup, bvh: buildTriangleBVH(soup) };
+    sliceCache.set(id, entry);
+  }
+  return slicePlaneBVH(entry.soup, entry.bvh, planePoint, planeNormal);
 }
 
 /** Build a vtk actor for a scan mesh with color / opacity / transform. */
