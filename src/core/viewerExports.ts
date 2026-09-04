@@ -5,7 +5,7 @@
  * touches the Cornerstone volume + jsPDF), only the component bundle.
  */
 
-import { exportViewPdf, type PdfConfig } from './pdfExport';
+import type { PdfConfig } from './pdfExport';
 import { getVolumeData } from './cprEngine';
 import { implantWorldAxis } from './implantGeometry';
 import { sampleImplantBoneHU } from './boneQuality';
@@ -54,6 +54,9 @@ function boneQualityLabels(state: ViewerState): Record<string, string> {
 
 /** Build and download the multi-view implant-planning PDF report. */
 export async function exportPlanPdf(state: ViewerState, t: TFn, lang: string, config?: Partial<PdfConfig>): Promise<void> {
+  // Dynamic import: jsPDF + html2canvas (~0.6 MB) load only when a PDF is
+  // actually exported, keeping them out of the initial app bundle.
+  const { exportViewPdf } = await import('./pdfExport');
   await exportViewPdf({
     t,
     study: state.study,
