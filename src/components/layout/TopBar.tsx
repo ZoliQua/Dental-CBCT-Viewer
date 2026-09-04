@@ -14,7 +14,7 @@ import { LayoutConfigButton } from './LayoutConfigButton';
 import { LandingNav } from '@/components/dicom/landing/LandingNav';
 import { ImageExportModal } from '@/components/panels/ImageExportModal';
 import { PdfExportModal } from '@/components/panels/PdfExportModal';
-import { exportDrillGuideStl } from '@/core/viewerExports';
+import { exportDrillGuideStl, checkGuide } from '@/core/viewerExports';
 import { serializePlan, planFromObject } from '@/core/planIO';
 import { loadSample } from '@/core/sampleLoader';
 import { getVolumeData } from '@/core/cprEngine';
@@ -184,9 +184,19 @@ export function TopBar() {
   const exportGuide = async () => {
     setExportOpen(false);
     // Clinical safeguard: without a registered scan the guide has no
-    // tissue-fitting surface (and it never has a drill stop / metal sleeve) —
-    // require an explicit acknowledgment before exporting.
+    // tissue-fitting surface — require an explicit acknowledgment before export.
     if (!state.scans.some(s => s.visible) && !window.confirm(t('guide.confirmNoScan'))) return;
+    // Printability / safety pre-check (pure, cheap) before the heavy CSG build.
+    const issues = checkGuide(state);
+    if (issues.length > 0) {
+      const lines = issues.map((i) => {
+        const mark = i.severity === 'error' ? '⛔' : '⚠️';
+        return `${mark} ${t(`guideCheck.${i.code}`)}${i.detail ? ` (${i.detail})` : ''}`;
+      });
+      const hasError = issues.some((i) => i.severity === 'error');
+      const prompt = `${t(hasError ? 'guideCheck.errorIntro' : 'guideCheck.warnIntro')}\n\n${lines.join('\n')}\n\n${t('guideCheck.proceed')}`;
+      if (!window.confirm(prompt)) return;
+    }
     setGuideBusy(true);
     try {
       const { ok, warnings } = await exportDrillGuideStl(state);

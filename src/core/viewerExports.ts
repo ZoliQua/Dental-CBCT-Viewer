@@ -11,9 +11,12 @@ import { implantWorldAxis } from './implantGeometry';
 import { sampleImplantBoneHU } from './boneQuality';
 import { getImplantSystem } from '@/types/dicom';
 import { scanTriangleSoupWorld } from './scanMesh';
+import { validateGuide, type GuideCheckImplant, type GuideIssue } from './guideValidate';
 import { formatDicomDate } from '@/utils/dicomUtils';
 import type { OverlayData } from './viewCapture';
 import type { ViewerState } from '@/context/ViewerContext';
+
+export type { GuideIssue };
 
 type TFn = (key: string, params?: Record<string, string | number>) => string;
 
@@ -67,18 +70,12 @@ export async function exportPlanPdf(state: ViewerState, t: TFn, lang: string, co
   });
 }
 
-/** Build the printable drill guide via CSG and download it as a binary STL.
- *  `ok` is false when there is no arch curve or no guided implant; `warnings`
- *  carries build warnings (e.g. a non-watertight scan). */
-export async function exportDrillGuideStl(state: ViewerState): Promise<{ ok: boolean; warnings: string[] }> {
+/** Build the guided-implant inputs (world entry + axis) for the drill guide. */
+function guideImplantInputs(state: ViewerState): GuideCheckImplant[] {
   const cps = state.archCurveControlPoints;
   const guided = state.implants.filter((i) => i.guided?.enabled);
-  if (!cps || guided.length === 0) return { ok: false, warnings: [] };
-
-  const { buildDrillGuide } = await import('./guideBuilder');
-  const { triMeshToBinarySTL } = await import('./guideExport');
-
-  const implants = guided.flatMap((imp) => {
+  if (!cps || guided.length === 0) return [];
+  return guided.flatMap((imp) => {
     const wa = implantWorldAxis(cps, imp);
     if (!wa) return [];
     const sys = getImplantSystem(imp.systemId);
@@ -91,7 +88,30 @@ export async function exportDrillGuideStl(state: ViewerState): Promise<{ ok: boo
       sleeveHeight: imp.guided!.sleeveHeight,
     }];
   });
-  if (implants.length === 0) return { ok: false, warnings: [] };
+}
+
+/** Pure printability/safety pre-check for the current guide plan (no CSG). */
+export function checkGuide(state: ViewerState): GuideIssue[] {
+  const implants = guideImplantInputs(state);
+  if (implants.length === 0) return [];
+  return validateGuide({
+    implants,
+    params: state.guide,
+    anatomy: state.anatomy,
+    thresholds: { nerve: state.safety.nerveMm, sinus: state.safety.sinusMm },
+  });
+}
+
+/** Build the printable drill guide via CSG and download it as a binary STL.
+ *  `ok` is false when there is no arch curve or no guided implant; `warnings`
+ *  carries build warnings (e.g. a non-watertight scan). */
+export async function exportDrillGuideStl(state: ViewerState): Promise<{ ok: boolean; warnings: string[] }> {
+  const cps = state.archCurveControlPoints;
+  const implants = guideImplantInputs(state);
+  if (!cps || implants.length === 0) return { ok: false, warnings: [] };
+
+  const { buildDrillGuide } = await import('./guideBuilder');
+  const { triMeshToBinarySTL } = await import('./guideExport');
 
   const scanSoups = state.scans
     .filter((s) => s.visible)
