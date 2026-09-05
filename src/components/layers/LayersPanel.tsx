@@ -8,8 +8,9 @@ import { useState } from 'react';
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
 import { setAnnotationVisible, removeAnnotationByUid } from '@/core/annotationLayer';
-import { removeScanPolyData } from '@/core/scanMesh';
-import { SCAN_TYPES, SCAN_DEFAULTS, type ScanType } from '@/types/dicom';
+import { removeScanPolyData, scanTriangleSoupWorld } from '@/core/scanMesh';
+import { suggestImplantFromMesh } from '@/core/toothSetup';
+import { SCAN_TYPES, SCAN_DEFAULTS, type ScanType, type ImplantData } from '@/types/dicom';
 
 // ── Tiny inline icons ──────────────────────────────────────────
 
@@ -168,6 +169,29 @@ export function LayersContent() {
   const { state, dispatch } = useViewer();
   const { t } = useI18n();
 
+  // Prosthetically-driven planning: derive a suggested implant from a
+  // tooth-setup (wax-up) mesh — its long axis is the ideal screw axis.
+  const planFromCrown = (sc: { id: string; transform: number[] }) => {
+    const cps = state.archCurveControlPoints;
+    if (!cps) { window.alert(t('crown.needArch')); return; }
+    const soup = scanTriangleSoupWorld(sc.id, sc.transform);
+    const s = soup && suggestImplantFromMesh(cps, soup);
+    if (!s) { window.alert(t('crown.failed')); return; }
+    const implant: ImplantData = {
+      id: `imp_${Date.now()}`,
+      name: t('implant.defaultName', { n: state.implants.length + 1 }),
+      visible: true,
+      position: s.position,
+      diameter: 4.0,
+      length: 10.0,
+      angleBLDeg: s.angleBLDeg,
+      angleMDDeg: s.angleMDDeg,
+      systemId: state.defaultSystemId,
+    };
+    dispatch({ type: 'ADD_IMPLANT', payload: implant });
+    dispatch({ type: 'SET_ACTIVE_IMPLANT', payload: implant.id });
+  };
+
   return (
     <div className="space-y-1">
           {/* Implant layers */}
@@ -263,15 +287,26 @@ export function LayersContent() {
                   title={`${Math.round(sc.opacity * 100)}%`}
                 />
               </div>
-              <button
-                onClick={() => {
-                  dispatch({ type: 'SET_LAYOUT_MODE', payload: '2x2' });
-                  dispatch({ type: 'START_REGISTRATION', payload: sc.id });
-                }}
-                className="mt-1 ml-2 px-2 py-0.5 text-[11px] rounded bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors"
-              >
-                {t('reg.start')}
-              </button>
+              <div className="flex items-center gap-1.5 mt-1 ml-2">
+                <button
+                  onClick={() => {
+                    dispatch({ type: 'SET_LAYOUT_MODE', payload: '2x2' });
+                    dispatch({ type: 'START_REGISTRATION', payload: sc.id });
+                  }}
+                  className="px-2 py-0.5 text-[11px] rounded bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors"
+                >
+                  {t('reg.start')}
+                </button>
+                {sc.type === 'toothSetup' && (
+                  <button
+                    onClick={() => planFromCrown(sc)}
+                    title={t('crown.planHint')}
+                    className="px-2 py-0.5 text-[11px] rounded bg-dental-600 text-white hover:bg-dental-700 transition-colors"
+                  >
+                    {t('crown.plan')}
+                  </button>
+                )}
+              </div>
             </div>
           ))}
 
