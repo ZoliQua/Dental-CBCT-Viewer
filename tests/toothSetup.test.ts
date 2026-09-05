@@ -4,10 +4,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { principalAxis, anglesFromWorldAxis, suggestImplantFromMesh } from '../src/core/toothSetup';
+import { principalAxis, anglesFromWorldAxis, suggestImplantFromMesh, orientAxisByBone } from '../src/core/toothSetup';
 import { implantAxis, type ArchFrame } from '../src/core/implantGeometry';
 import type { Vec3 } from '../src/core/implantGeometry';
-import type { Point2 } from '../src/core/cprMath';
+import type { Point2, VolumeSamplingData } from '../src/core/cprMath';
 
 // Frame with normal +X, tangent = [normal[1], -normal[0]] = [0,-1] (the app's convention).
 const frame: ArchFrame = { s: 0.5, point: [0, 0], normal: [1, 0], tangent: [0, -1] };
@@ -64,6 +64,25 @@ describe('suggestImplantFromMesh', () => {
     // Platform at the apical (lower-Z) end of the crown.
     expect(s.position[2]).toBeLessThan(16);
     expect(s.position[0]).toBeCloseTo(10, 0);
+  });
+
+  it('auto-detects the jaw from bone density (apex toward denser bone)', () => {
+    // Bone below z = 20, air above → apex should point down (−Z).
+    const vol: VolumeSamplingData = {
+      dims: [60, 60, 60], origin: [0, 0, 0], invSx: 1, invSy: 1, invSz: 1,
+      zMin: 0, zMax: 59, vSpacing: 1, getVoxel: (_i, _j, k) => (k < 20 ? 1200 : -500),
+    };
+    const pts: number[] = [];
+    for (let z = -5; z <= 5; z += 1) pts.push(10, 5, 20 + z);
+    const s = suggestImplantFromMesh(arch, pts, { vol })!;
+    const axis = implantAxis(frame, s.angleBLDeg, s.angleMDDeg);
+    expect(Math.sign(axis[2])).toBe(-1); // apex into the bone below
+  });
+
+  it('orientAxisByBone flips toward the denser side', () => {
+    const huAt = (p: Vec3) => (p[2] < 0 ? 1000 : -400); // dense below
+    const out = orientAxisByBone([0, 0, 0], [0, 0, 1], 4, huAt);
+    expect(out[2]).toBe(-1); // flipped toward the dense (−Z) side
   });
 
   it('flips the axis for the upper jaw (apex up)', () => {

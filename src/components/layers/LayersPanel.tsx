@@ -10,6 +10,7 @@ import { useI18n } from '@/i18n/I18nContext';
 import { setAnnotationVisible, removeAnnotationByUid } from '@/core/annotationLayer';
 import { removeScanPolyData, scanTriangleSoupWorld } from '@/core/scanMesh';
 import { suggestImplantFromMesh } from '@/core/toothSetup';
+import { getVolumeData } from '@/core/cprEngine';
 import { SCAN_TYPES, SCAN_DEFAULTS, type ScanType, type ImplantData } from '@/types/dicom';
 
 // ── Tiny inline icons ──────────────────────────────────────────
@@ -175,7 +176,9 @@ export function LayersContent() {
     const cps = state.archCurveControlPoints;
     if (!cps) { window.alert(t('crown.needArch')); return; }
     const soup = scanTriangleSoupWorld(sc.id, sc.transform);
-    const s = soup && suggestImplantFromMesh(cps, soup);
+    // The CT lets us auto-detect the jaw (apex points into denser bone).
+    const vol = state.volumeId ? getVolumeData(state.volumeId) ?? undefined : undefined;
+    const s = soup && suggestImplantFromMesh(cps, soup, { vol });
     if (!s) { window.alert(t('crown.failed')); return; }
     const implant: ImplantData = {
       id: `imp_${Date.now()}`,

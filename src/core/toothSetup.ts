@@ -17,7 +17,7 @@
 import { jacobiEigenSymmetric } from './registration';
 import { nearestArchFrame, type ArchFrame } from './implantGeometry';
 import type { Vec3 } from './implantGeometry';
-import type { Point2 } from './cprMath';
+import { trilinear, type Point2, type VolumeSamplingData } from './cprMath';
 
 export interface PrincipalAxis {
   /** Mean of the input points. */
@@ -91,22 +91,54 @@ export interface CrownSuggestion {
 }
 
 /**
+ * Pick the apical direction (±axis) as the one with denser bone just beyond the
+ * crown — the apex points into the jaw. `huAt` samples volume intensity at a
+ * world point; returns the oriented axis. Auto-detects upper vs lower jaw.
+ */
+export function orientAxisByBone(
+  centroid: Vec3,
+  axis: Vec3,
+  extent: number,
+  huAt: (p: Vec3) => number,
+): Vec3 {
+  let sumPos = 0, sumNeg = 0;
+  const base = extent / 2;
+  for (let d = 2; d <= 8; d += 2) {
+    const r = base + d;
+    sumPos += huAt([centroid[0] + axis[0] * r, centroid[1] + axis[1] * r, centroid[2] + axis[2] * r]);
+    sumNeg += huAt([centroid[0] - axis[0] * r, centroid[1] - axis[1] * r, centroid[2] - axis[2] * r]);
+  }
+  return sumPos >= sumNeg ? axis : [-axis[0], -axis[1], -axis[2]];
+}
+
+/**
  * Suggest an implant placement from a tooth-setup mesh: its PCA long axis is
- * the screw axis, oriented apically (default apex down; pass `apexUp` for the
- * upper jaw), and the platform is placed at the mesh's apical (bone-facing) end.
+ * the screw axis, oriented apically, and the platform is placed at the mesh's
+ * apical (bone-facing) end. If `vol` is given the apical direction is detected
+ * from bone density (auto jaw); otherwise it defaults to apex down (pass
+ * `apexUp` for the maxilla).
  */
 export function suggestImplantFromMesh(
   controlPoints: Point2[],
   positions: ArrayLike<number>,
-  opts: { apexUp?: boolean } = {},
+  opts: { apexUp?: boolean; vol?: VolumeSamplingData } = {},
 ): CrownSuggestion | null {
   const pa = principalAxis(positions);
   if (!pa) return null;
-  let [ax, ay, az] = pa.axis;
-  // Orient apically: apex down (−Z) by default, up (+Z) for the maxilla.
-  const wantDown = !opts.apexUp;
-  if ((wantDown && az > 0) || (!wantDown && az < 0)) { ax = -ax; ay = -ay; az = -az; }
-  const axis: Vec3 = [ax, ay, az];
+  let axis: Vec3 = pa.axis;
+  if (opts.vol) {
+    const v = opts.vol;
+    const huAt = (p: Vec3) => trilinear(
+      v.getVoxel, v.dims,
+      (p[0] - v.origin[0]) * v.invSx, (p[1] - v.origin[1]) * v.invSy, (p[2] - v.origin[2]) * v.invSz,
+    );
+    axis = orientAxisByBone(pa.centroid, axis, pa.extent, huAt);
+  } else {
+    // No volume → apex down (−Z) by default, up (+Z) for the maxilla.
+    const wantDown = !opts.apexUp;
+    if ((wantDown && axis[2] > 0) || (!wantDown && axis[2] < 0)) axis = [-axis[0], -axis[1], -axis[2]];
+  }
+  const [ax, ay, az] = axis;
 
   // Platform at the apical end of the crown (centroid + half the long extent).
   const half = pa.extent / 2;

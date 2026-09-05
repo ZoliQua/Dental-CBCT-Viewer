@@ -391,6 +391,12 @@ export function ImplantOverlay({ containerRef, canvasRef, widthMm, zMin, zMax }:
 
         const apexPx = mmToPixel(u0 + au * imp.length, zMid + v0 + av * imp.length);
 
+        // Screw-access channel: the axis extended coronally (opposite the apex)
+        // — the abutment-screw trajectory out through the restoration. Its end
+        // marks where the screw would emerge; helps verify the exit is occlusal.
+        const SCREW_LEN = 10; // mm coronal
+        const screwPx = mmToPixel(u0 - au * SCREW_LEN, zMid + v0 - av * SCREW_LEN);
+
         // ── Guided surgery: drill sleeve strip + osteotomy axis ──
         let sleeveStripPts: string | undefined;
         let drillLine: { x1: number; y1: number; x2: number; y2: number } | undefined;
@@ -468,6 +474,20 @@ export function ImplantOverlay({ containerRef, canvasRef, widthMm, zMin, zMax }:
                 strokeWidth={1.5}
                 style={{ pointerEvents: 'none' }}
               />
+            )}
+            {/* Screw-access channel (active implant): coronal axis + exit mark */}
+            {isActive && screwPx && (
+              <g style={{ pointerEvents: 'none' }}>
+                <line
+                  x1={entryPx[0]} y1={entryPx[1]}
+                  x2={screwPx[0]} y2={screwPx[1]}
+                  stroke="rgb(255, 200, 0)"
+                  strokeWidth={1.25}
+                  strokeDasharray="3 3"
+                  opacity={0.8}
+                />
+                <circle cx={screwPx[0]} cy={screwPx[1]} r={2.5} fill="none" stroke="rgb(255, 200, 0)" strokeWidth={1.25} opacity={0.9} />
+              </g>
             )}
             {/* Name + size label for the active implant */}
             {isActive && (
