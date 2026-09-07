@@ -231,7 +231,11 @@ export interface GuideParams {
   channelTolMm: number;
   /** Angular tessellation of cylinders */
   segments: number;
-  /** Cut a stepped seat that accepts a real metal drill sleeve (else a plain bore) */
+  /**
+   * Cut a stepped seat that accepts a real metal drill sleeve (else a plain
+   * bore). Opt-in: enabling it changes the exported geometry, so a plan saved
+   * before the seat existed keeps exporting exactly what it did.
+   */
   sleeveSeat: boolean;
   /** Radial fit clearance of the sleeve outer Ø in the seat, mm */
   seatClearanceMm: number;
@@ -245,7 +249,7 @@ export const GUIDE_DEFAULTS: GuideParams = {
   baseHeightMm: 4,
   channelTolMm: 0.1,
   segments: 48,
-  sleeveSeat: true,
+  sleeveSeat: false,
   seatClearanceMm: 0.05,
   sleeveWallMm: 0.9,
 };

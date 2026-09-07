@@ -222,9 +222,9 @@ export interface SleeveSeatParams {
  * Plan a stepped sleeve seat along an implant axis so the printed guide accepts
  * a real metal drill sleeve of outer diameter `sleeveOuterDiameter`:
  *
- *   ── occlusal opening ──┐  seat  Ø = outer + 2·clearance   (depth = sleeveHeight)
+ *   ── occlusal opening ──┐  seat  Ø = working + 2·wall + 2·clearance
  *          shoulder  ─────┤  ← the sleeve rests here (repeatable drill stop)
- *                         │  channel  Ø = (outer − 2·sleeveWall) + 2·channelTol
+ *                         │  channel  Ø = working + channelTol
  *                        apex
  *
  * `at(t) = entry + axis·t`; the sleeve occupies the occlusal region (negative t,
@@ -234,7 +234,7 @@ export function planSleeveSeat(
   entry: Vec3,
   axis: Vec3,
   implantLength: number,
-  sleeveOuterDiameter: number,
+  sleeveWorkingDiameter: number,
   sleeveOffset: number,
   sleeveHeight: number,
   p: SleeveSeatParams,
@@ -244,9 +244,12 @@ export function planSleeveSeat(
 
   const sleeveTop = -(sleeveOffset + sleeveHeight); // most occlusal
   const sleeveBottom = -sleeveOffset;               // seat floor / shoulder
+  // `sleeveWorkingDiameter` is the bore the DRILL passes through (the catalog's
+  // sleeveDiameter). The metal sleeve wraps it, so the seat is built OUTWARD:
+  // the channel keeps the working bore, the pocket takes the sleeve's outer Ø.
+  const channelRadius = (sleeveWorkingDiameter + p.channelTolMm) / 2; // tol is on the diameter
+  const sleeveOuterDiameter = sleeveWorkingDiameter + 2 * p.sleeveWallMm;
   const seatRadius = sleeveOuterDiameter / 2 + p.seatClearanceMm;
-  const innerDiameter = Math.max(0.5, sleeveOuterDiameter - 2 * p.sleeveWallMm);
-  const channelRadius = innerDiameter / 2 + p.channelTolMm;
 
   return {
     seat: { a: at(sleeveTop - OVERSHOOT), b: at(sleeveBottom), radius: seatRadius },

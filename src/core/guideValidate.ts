@@ -61,13 +61,23 @@ const at = (imp: GuideCheckImplant, t: number): Vec3 => [
   imp.entry[2] + imp.axis[2] * t,
 ];
 
-/** Inner drill-channel radius for an implant, honouring the sleeve-seat mode. */
+/**
+ * Drill-channel radius. `sleeveDiameter` is the WORKING bore the drill passes
+ * through, and `channelTolMm` is extra **diameter** — identical in both guide
+ * modes (the seat is built outward from this bore, it does not shrink it).
+ */
 function drillRadius(imp: GuideCheckImplant, params: GuideParams): number {
-  if (params.sleeveSeat) {
-    const innerD = Math.max(0.5, imp.sleeveDiameter - 2 * params.sleeveWallMm);
-    return innerD / 2 + params.channelTolMm;
-  }
   return (imp.sleeveDiameter + params.channelTolMm) / 2;
+}
+
+/**
+ * Outermost bore radius that eats into the printed body: in seat mode the
+ * sleeve pocket (working bore + sleeve wall + fit clearance), otherwise just
+ * the drill channel. This is what governs the web between two adjacent bores.
+ */
+function boreOuterRadius(imp: GuideCheckImplant, params: GuideParams): number {
+  if (!params.sleeveSeat) return drillRadius(imp, params);
+  return (imp.sleeveDiameter + 2 * params.sleeveWallMm) / 2 + params.seatClearanceMm;
 }
 
 /**
@@ -93,16 +103,16 @@ export function validateGuide(input: GuideCheckInput): GuideIssue[] {
     }
   }
 
-  // 3. Web between two adjacent drill bores. Each drill runs entry → apex (+
-  //    overshoot); if the gap between two such cylinders is below MIN_WALL_MM
-  //    the printed wall between the channels is fragile.
+  // 3. Web between two adjacent bores. Each runs entry → apex (+ overshoot);
+  //    if the gap between the two OUTERMOST bores (the seat pockets in seat
+  //    mode) drops below MIN_WALL_MM the printed wall between them is fragile.
   for (let i = 0; i < implants.length; i++) {
     for (let j = i + 1; j < implants.length; j++) {
       const A = implants[i], B = implants[j];
       const aTip = at(A, A.length + DRILL_OVERSHOOT_MM);
       const bTip = at(B, B.length + DRILL_OVERSHOOT_MM);
       const gap = distSegmentToPolyline3(A.entry, aTip, [B.entry, bTip])
-        - drillRadius(A, params) - drillRadius(B, params);
+        - boreOuterRadius(A, params) - boreOuterRadius(B, params);
       if (gap < MIN_WALL_MM) {
         issues.push({ code: 'boresClose', severity: gap < 0 ? 'error' : 'warning', detail: `${f1(Math.max(0, gap))} mm` });
       }

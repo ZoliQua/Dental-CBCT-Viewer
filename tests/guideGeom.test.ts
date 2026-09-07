@@ -70,8 +70,8 @@ describe('planSleeveSeat', () => {
   const entry: Vec3 = [0, 0, 0];
   const axis: Vec3 = [0, 0, 1];
   const p = { wallMm: 1.5, seatClearanceMm: 0.05, sleeveWallMm: 0.9, channelTolMm: 0.1 };
-  const outer = 5, offset = 9, height = 5, length = 12;
-  const plan = planSleeveSeat(entry, axis, length, outer, offset, height, p);
+  const working = 5, offset = 9, height = 5, length = 12;
+  const plan = planSleeveSeat(entry, axis, length, working, offset, height, p);
 
   it('seats the sleeve on a shoulder at −offset (repeatable drill stop)', () => {
     expect(plan.shoulderT).toBe(-offset);
@@ -86,12 +86,18 @@ describe('planSleeveSeat', () => {
     expect(plan.seat.a[2]).toBeCloseTo(-(offset + height) - 2, 6);
   });
 
-  it('makes the seat wider than the drill channel (a real shoulder forms)', () => {
-    expect(plan.seat.radius).toBeGreaterThan(plan.channel.radius);
-    expect(plan.seat.radius).toBeCloseTo(outer / 2 + p.seatClearanceMm, 6);
-    // channel Ø = (outer − 2·sleeveWall) + 2·channelTol
-    const innerD = outer - 2 * p.sleeveWallMm;
-    expect(plan.channel.radius).toBeCloseTo(innerD / 2 + p.channelTolMm, 6);
+  it('keeps the working bore and builds the seat outward from it', () => {
+    expect(plan.seat.radius).toBeGreaterThan(plan.channel.radius); // a real shoulder
+    // The drill channel keeps the catalog WORKING diameter; tol is on the Ø.
+    expect(plan.channel.radius).toBeCloseTo((working + p.channelTolMm) / 2, 6);
+    // The pocket takes the metal sleeve's outer Ø = working + 2·wall.
+    const outerD = working + 2 * p.sleeveWallMm;
+    expect(plan.seat.radius).toBeCloseTo(outerD / 2 + p.seatClearanceMm, 6);
+  });
+
+  it('does not shrink the drill channel relative to a sleeveless bore', () => {
+    // Regression: the seat must never narrow the bore the drill passes through.
+    expect(plan.channel.radius * 2).toBeCloseTo(working + p.channelTolMm, 6);
   });
 
   it('wraps the seat in a wall of thickness wallMm', () => {
