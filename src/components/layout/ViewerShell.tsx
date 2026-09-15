@@ -55,13 +55,18 @@ export function ViewerShell() {
       return vol ? lineProfileHU(vol, pts[0], pts[pts.length - 1], 64) : undefined;
     };
 
-    const upsert = (ann: any) => {
+    // `allowCreate` guards against phantom layers: the tools compute their stats
+    // on an annotation's FIRST render (mouse-down, before any drag), which fires
+    // ANNOTATION_MODIFIED. A click without a drag never completes — so only
+    // ANNOTATION_COMPLETED may create a layer; MODIFIED just refreshes one.
+    const upsert = (ann: any, allowCreate: boolean) => {
       const uid = ann?.annotationUID;
       const toolKey = CS_TOOL_KEYS[ann?.metadata?.toolName as string];
       if (!uid || !toolKey) return;
+      const existing = measurementsRef.current.find(m => m.id === uid);
+      if (!existing && !allowCreate) return;
       const { value, points } = readAnnotationMeasure(ann);
       const profile = toolKey === 'length' ? readProfile(points) : undefined;
-      const existing = measurementsRef.current.find(m => m.id === uid);
       if (existing) {
         if (existing.value === value && !profile) return; // nothing changed
         dispatch({
@@ -77,7 +82,7 @@ export function ViewerShell() {
       }
     };
 
-    const onCompleted = (evt: Event) => upsert((evt as CustomEvent).detail?.annotation);
+    const onCompleted = (evt: Event) => upsert((evt as CustomEvent).detail?.annotation, true);
 
     // MODIFIED fires continuously during a drag → debounce per annotation.
     const timers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -87,7 +92,7 @@ export function ViewerShell() {
       if (!uid) return;
       const prev = timers.get(uid);
       if (prev) clearTimeout(prev);
-      timers.set(uid, setTimeout(() => { timers.delete(uid); upsert(ann); }, 200));
+      timers.set(uid, setTimeout(() => { timers.delete(uid); upsert(ann, false); }, 200));
     };
 
     eventTarget.addEventListener(csToolsEnums.Events.ANNOTATION_COMPLETED, onCompleted);

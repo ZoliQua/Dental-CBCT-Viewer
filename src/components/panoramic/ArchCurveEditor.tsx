@@ -104,12 +104,13 @@ export function ArchCurveEditor() {
   // Estimate the arch from the scan at the current axial level; the result is a
   // suggestion the user can still drag. Falls back silently if nothing traceable.
   const handleAutoArch = useCallback(() => {
-    if (!state.volumeId) return;
-    const vol = getVolumeData(state.volumeId);
-    if (!vol) return;
-    const cps = detectArchControlPoints(vol, { focalWorldZ: getFocalZ() });
-    if (cps) dispatch({ type: 'SET_ARCH_CURVE', payload: cps as [number, number][] });
-  }, [state.volumeId, getFocalZ, dispatch]);
+    const vol = state.volumeId ? getVolumeData(state.volumeId) : null;
+    const cps = vol ? detectArchControlPoints(vol, { focalWorldZ: getFocalZ() }) : null;
+    // Don't fail silently: the estimate needs bone in the slab, so it returns
+    // nothing when the axial slice sits above/below the alveolar ridge.
+    if (!cps) { window.alert(t('arch.autoFailed')); return; }
+    dispatch({ type: 'SET_ARCH_CURVE', payload: cps as [number, number][] });
+  }, [state.volumeId, getFocalZ, dispatch, t]);
 
   // Reproject world control points → screen coordinates
   const updateScreen = useCallback(() => {

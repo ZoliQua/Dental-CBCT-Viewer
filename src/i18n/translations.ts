@@ -235,6 +235,7 @@ const en: Dict = {
   'layers.confirmClear': 'Delete all measurements?',
   'layers.close': 'Close',
   'arch.auto': 'Auto arch',
+  'arch.autoFailed': 'Could not estimate the arch here — scroll the axial view to a slice through the teeth / alveolar ridge and try again.',
   'arch.autoTitle': 'Estimate the dental arch from the scan (editable afterwards)',
 
   // Implant
@@ -684,6 +685,7 @@ const de: Dict = {
   'layers.confirmClear': 'Alle Messungen löschen?',
   'layers.close': 'Schließen',
   'arch.auto': 'Auto-Bogen',
+  'arch.autoFailed': 'Der Bogen konnte hier nicht geschätzt werden — scrollen Sie die Axialansicht auf eine Schicht durch die Zähne / den Alveolarkamm und versuchen Sie es erneut.',
   'arch.autoTitle': 'Zahnbogen aus dem Scan schätzen (danach bearbeitbar)',
 
   'implant.defaultName': 'Implantat {n}',
@@ -1129,6 +1131,7 @@ const es: Dict = {
   'layers.confirmClear': '¿Eliminar todas las mediciones?',
   'layers.close': 'Cerrar',
   'arch.auto': 'Arco automático',
+  'arch.autoFailed': 'No se pudo estimar el arco aquí — desplace la vista axial a un corte que pase por los dientes / la cresta alveolar e inténtelo de nuevo.',
   'arch.autoTitle': 'Estimar el arco dental a partir del escáner (editable después)',
 
   'implant.defaultName': 'Implante {n}',
@@ -1574,6 +1577,7 @@ const hu: Dict = {
   'layers.confirmClear': 'Minden mérés törlése?',
   'layers.close': 'Bezárás',
   'arch.auto': 'Automatikus ív',
+  'arch.autoFailed': 'Itt nem sikerült megbecsülni az ívet — görgesd az axiális nézetet a fogakon / az alveoláris gerincen áthaladó szeletre, és próbáld újra.',
   'arch.autoTitle': 'Fogív becslése a felvételből (utána szerkeszthető)',
 
   'implant.defaultName': 'Implantátum {n}',

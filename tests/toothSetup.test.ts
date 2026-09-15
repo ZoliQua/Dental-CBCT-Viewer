@@ -85,6 +85,20 @@ describe('suggestImplantFromMesh', () => {
     expect(out[2]).toBe(-1); // flipped toward the dense (−Z) side
   });
 
+  it('rejects a full-arch wax-up instead of suggesting a sideways implant', () => {
+    // A whole-arch mesh: longest spread is mesio-distal (±30 mm along X).
+    const pts: number[] = [];
+    for (let x = -30; x <= 30; x += 2) pts.push(10 + x, 5, 20 + (x % 3));
+    expect(suggestImplantFromMesh(arch, pts)).toBeNull();
+  });
+
+  it('rejects a crown whose derived axis is implausibly far from vertical', () => {
+    // Small mesh (passes the extent gate) but elongated horizontally.
+    const pts: number[] = [];
+    for (let x = -6; x <= 6; x += 1) pts.push(10 + x, 5, 20);
+    expect(suggestImplantFromMesh(arch, pts)).toBeNull();
+  });
+
   it('flips the axis for the upper jaw (apex up)', () => {
     const pts: number[] = [];
     for (let z = -5; z <= 5; z += 1) pts.push(10, 5, 20 + z);

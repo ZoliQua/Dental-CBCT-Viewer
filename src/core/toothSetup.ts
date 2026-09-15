@@ -111,20 +111,31 @@ export function orientAxisByBone(
   return sumPos >= sumNeg ? axis : [-axis[0], -axis[1], -axis[2]];
 }
 
+/** A single crown's long axis is at most this tall; larger means a multi-tooth mesh. */
+export const MAX_CROWN_EXTENT_MM = 25;
+/** Reject a screw axis leaning further than this from vertical (degrees). */
+export const MAX_AXIS_TILT_DEG = 60;
+
 /**
  * Suggest an implant placement from a tooth-setup mesh: its PCA long axis is
  * the screw axis, oriented apically, and the platform is placed at the mesh's
  * apical (bone-facing) end. If `vol` is given the apical direction is detected
  * from bone density (auto jaw); otherwise it defaults to apex down (pass
- * `apexUp` for the maxilla).
+ * `apexUp` for the maxilla). Returns null when the mesh is not plausibly a
+ * single crown.
  */
 export function suggestImplantFromMesh(
   controlPoints: Point2[],
   positions: ArrayLike<number>,
-  opts: { apexUp?: boolean; vol?: VolumeSamplingData } = {},
+  opts: { apexUp?: boolean; vol?: VolumeSamplingData; maxExtentMm?: number } = {},
 ): CrownSuggestion | null {
   const pa = principalAxis(positions);
   if (!pa) return null;
+  // A full-arch wax-up's longest spread is the mesio-distal direction, not a
+  // tooth axis — deriving an implant from it yields a sideways screw. Reject
+  // anything too large to be one crown, or an axis too far off vertical.
+  if (pa.extent > (opts.maxExtentMm ?? MAX_CROWN_EXTENT_MM)) return null;
+  if (Math.abs(pa.axis[2]) < Math.cos((MAX_AXIS_TILT_DEG * Math.PI) / 180)) return null;
   let axis: Vec3 = pa.axis;
   if (opts.vol) {
     const v = opts.vol;
