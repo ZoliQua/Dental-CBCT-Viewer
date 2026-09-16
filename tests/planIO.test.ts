@@ -141,3 +141,22 @@ describe('planFromObject validation', () => {
     expect(r.archCurveControlPoints).toBeNull();
   });
 });
+
+describe('measurement profile validation', () => {
+  it('drops profiles that are not bounded finite numbers', () => {
+    const plan = planFromObject({
+      version: 1,
+      measurements: [
+        { id: 'nonNumeric', profile: ['x', 'y'] },
+        { id: 'ok', profile: [1, 2, 3] },
+        { id: 'tooLong', profile: new Array(600).fill(1) },
+        { id: 'noProfile' },
+      ],
+    })!;
+    const ids = plan.measurements.map((m) => m.id);
+    expect(ids).toContain('ok');
+    expect(ids).toContain('noProfile');
+    expect(ids).not.toContain('nonNumeric');
+    expect(ids).not.toContain('tooLong');
+  });
+});

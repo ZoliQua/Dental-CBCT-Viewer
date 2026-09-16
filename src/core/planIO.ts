@@ -88,6 +88,7 @@ const MAX_MEASUREMENTS = 500;
 const MAX_ANATOMY = 50;
 const MAX_ANATOMY_POINTS = 2000;
 const MAX_ARCH_POINTS = 200;
+const MAX_PROFILE_SAMPLES = 512;
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const isFiniteNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -113,6 +114,10 @@ function validateMeasurements(v: unknown): MeasurementLayer[] {
   return v.filter((m): m is MeasurementLayer =>
     isObj(m) && typeof m.id === 'string'
     && (m.points === undefined || (Array.isArray(m.points) && m.points.every(p => isNumTuple(p, 2))))
+    // The HU profile is drawn straight into an SVG polyline — non-numeric or
+    // unbounded samples would render NaN coordinates / an enormous points string.
+    && (m.profile === undefined
+      || (Array.isArray(m.profile) && m.profile.length <= MAX_PROFILE_SAMPLES && m.profile.every(isFiniteNum)))
   ).slice(0, MAX_MEASUREMENTS);
 }
 

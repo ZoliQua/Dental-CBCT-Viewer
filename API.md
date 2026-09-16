@@ -121,8 +121,11 @@ import {
 
 ### Data model & catalog (`types/dicom`)
 `ImplantData`, `ImplantSystem`, `GuidedPlan`, `GuideParams`, `AnatomyMarker`,
-`LayoutMode`, `ViewKey`, `PlanData`, plus the `IMPLANT_SYSTEMS` catalog and
+`LayoutMode`, `ViewKey`, plus the `IMPLANT_SYSTEMS` catalog and
 `getImplantSystem(id)`.
+
+> `PlanData` is **not** part of `/core` — import it from the main entry:
+> `import type { PlanData } from "dental-cbct-viewer"`.
 
 ### Implant geometry (`core/implantGeometry`)
 `implantWorldAxis(controlPoints, implant)` (entry→apex world axis),

@@ -150,6 +150,29 @@ describe('icpAlign', () => {
     expect(res.iterations).toBeLessThanOrEqual(3);
   });
 
+  it('never returns a transform worse than its seed', () => {
+    // Non-congruent target (anisotropically scaled) → no exact rigid fit, so a
+    // naive loop can wander away from a good seed.
+    const source = cloud(25);
+    const target: Vec3[] = cloud(25).map((p) => [p[0] * 1.3 + 4, p[1] - 3, p[2] * 0.8]);
+    const nearestRms = (m: number[]) => {
+      let sum = 0;
+      for (const p of source) {
+        const q = applyMat4(m, p);
+        let bd = Infinity;
+        for (const t of target) bd = Math.min(bd, (q[0] - t[0]) ** 2 + (q[1] - t[1]) ** 2 + (q[2] - t[2]) ** 2);
+        sum += bd;
+      }
+      return Math.sqrt(sum / source.length);
+    };
+    const seed = kabschTransform(source.slice(0, 3), target.slice(0, 3))!;
+    const before = nearestRms(seed);
+    const res = icpAlign(source, target, { initial: seed, maxIterations: 60 })!;
+    expect(res.rmsMm).toBeLessThanOrEqual(before + 1e-9);
+    // The reported RMS belongs to the returned transform.
+    expect(nearestRms(res.transform)).toBeCloseTo(res.rmsMm, 9);
+  });
+
   it('returns null for degenerate input', () => {
     expect(icpAlign([[0, 0, 0]], cloud(10))).toBeNull();
     expect(icpAlign(cloud(10), [])).toBeNull();

@@ -223,7 +223,12 @@ export function icpAlign(source: Vec3[], target: Vec3[], opts: IcpOptions = {}):
   if (source.length < 3 || target.length < 1) return null;
 
   let current = opts.initial ? [...opts.initial] : [...IDENTITY4];
-  let prevRms = Infinity;
+  // Track the best iterate: point-to-point ICP is not monotonic, so the LAST
+  // transform can be worse than one we already had — or worse than the seed.
+  // Returning the best seen means a seeded refinement can never make things worse.
+  let best = [...current];
+  let bestRms = nearestRms(source, target, current);
+  let prevRms = bestRms;
   let iter = 0;
   for (; iter < maxIter; iter++) {
     const moved = source.map((p) => applyMat4(current, p));
@@ -232,12 +237,12 @@ export function icpAlign(source: Vec3[], target: Vec3[], opts: IcpOptions = {}):
     if (!delta) break;
     current = mul4(delta, current);
     const rms = nearestRms(source, target, current);
+    if (rms < bestRms) { bestRms = rms; best = [...current]; }
     const improved = prevRms - rms;
     prevRms = rms;
     if (improved >= 0 && improved < tol) { iter++; break; }
   }
-  const rmsMm = prevRms === Infinity ? nearestRms(source, target, current) : prevRms;
-  return { transform: current, rmsMm, iterations: iter };
+  return { transform: best, rmsMm: bestRms, iterations: iter };
 }
 
 // ── Ray-cast picking against a triangle soup ───────────────────
