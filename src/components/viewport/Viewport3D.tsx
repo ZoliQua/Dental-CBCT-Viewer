@@ -46,6 +46,16 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
   const [ready, setReady] = useState(false); // volume loaded → safe to add actors
   const [layers3D, setLayers3D] = useState<Implant3DLayers>({ implant: true, sleeve: true, axis: true });
   const [sliceAxes, setSliceAxes] = useState<Record<SliceAxis, boolean>>({ AXIAL: true, SAGITTAL: true, CORONAL: true });
+  const [showCrossSection, setShowCrossSection] = useState(true);
+  // In the Panoramic layout this pane is a small companion to the panoramic +
+  // cross-section, so it keeps only the controls that relate to that cut:
+  // the axial + cross-section planes. Colormap / crop / slab stay in 3D view.
+  const compact = state.layoutMode === 'OPG2+1';
+  // Sagittal/coronal are hidden AND not drawn here, without clobbering the
+  // user's choices for the full 3D view.
+  const effectiveAxes: Record<SliceAxis, boolean> = compact
+    ? { ...sliceAxes, SAGITTAL: false, CORONAL: false }
+    : sliceAxes;
   const [cropEnabled, setCropEnabled] = useState(false);
   const [crop, setCrop] = useState<CropBox>(NO_CROP);
   const [presetOpen, setPresetOpen] = useState(false);
@@ -229,8 +239,8 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
       {/* Implant / sleeve / axis 3D meshes (added once the volume is loaded) */}
       {ready && <Implant3DActors layers={layers3D} />}
       {ready && <ScanActors />}
-      {ready && <Slice3DActors axes={sliceAxes} preset={activePreset} rebuildKey={sliceRebuild} />}
-      {ready && <CrossSection3DActor />}
+      {ready && <Slice3DActors axes={effectiveAxes} preset={activePreset} rebuildKey={sliceRebuild} />}
+      {ready && <CrossSection3DActor enabled={showCrossSection} />}
       {ready && <CropController crop={crop} enabled={cropEnabled} />}
 
       {/* 3D label */}
@@ -315,6 +325,7 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
             ))}
           </div>
 
+          {!compact && (<>
           <span className="w-px h-4 bg-slate-700/60" />
 
           {/* Colormap popup */}
@@ -346,12 +357,13 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
             )}
           </div>
 
+          </>)}
           <span className="w-px h-4 bg-slate-700/60" />
 
           {/* Slice-plane toggles */}
           <div className="flex items-center gap-1">
             <span className="text-[10px] text-slate-400 select-none">{t('view3d.slices')}</span>
-            {SLICE_AXES.map((axis) => (
+            {(compact ? (['AXIAL'] as SliceAxis[]) : SLICE_AXES).map((axis) => (
               <button
                 key={axis}
                 onClick={() => setSliceAxes((p) => ({ ...p, [axis]: !p[axis] }))}
@@ -363,8 +375,18 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
                 {axis[0]}
               </button>
             ))}
+            <button
+              onClick={() => setShowCrossSection((v) => !v)}
+              title={t('viewport.crossSection')}
+              className={`px-1.5 py-1 rounded text-[10px] font-semibold transition-colors ${
+                showCrossSection ? 'bg-dental-600 text-white' : 'bg-slate-800/60 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              CS
+            </button>
           </div>
 
+          {!compact && (<>
           <span className="w-px h-4 bg-slate-700/60" />
 
           {/* Crop popover */}
@@ -427,6 +449,7 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
               title={slabThickness === 0 ? t('common.off') : `${slabThickness} mm`}
             />
           </div>
+          </>)}
         </div>
       )}
     </div>

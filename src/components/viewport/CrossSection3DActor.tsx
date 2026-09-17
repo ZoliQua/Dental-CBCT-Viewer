@@ -5,6 +5,8 @@
  *
  * The quad follows the arch curve, the cross-section position and its tilt, so
  * dragging the cut on the panoramic moves this marker live.
+ *
+ * Toggled by the 3D view's "CS" slice-plane button.
  */
 
 import { useEffect } from 'react';
@@ -21,7 +23,7 @@ const UID = 'crossSection3d';
 /** Half-width (mm) of the marker along the buccolingual axis. */
 const HALF_WIDTH_MM = 25;
 
-export function CrossSection3DActor() {
+export function CrossSection3DActor({ enabled = true }: { enabled?: boolean } = {}) {
   const { state } = useViewer();
   const cps = state.archCurveControlPoints;
   const { crossSectionPosition, crossSectionTiltDeg, volumeId } = state;
@@ -36,8 +38,8 @@ export function CrossSection3DActor() {
     };
     remove(); // replace any previous marker
 
-    const vol = volumeId ? getVolumeData(volumeId) : null;
-    if (!cps || !vol) { viewport.render(); return; }
+    const vol = volumeId && enabled ? getVolumeData(volumeId) : null;
+    if (!enabled || !cps || !vol) { viewport.render(); return; }
     const frame = crossSectionFrame(cps, crossSectionPosition, crossSectionTiltDeg, vol.zMin, vol.zMax);
     if (!frame) { viewport.render(); return; }
 
@@ -70,7 +72,7 @@ export function CrossSection3DActor() {
     } catch { /* viewport not ready */ }
 
     return remove;
-  }, [cps, crossSectionPosition, crossSectionTiltDeg, volumeId]);
+  }, [cps, crossSectionPosition, crossSectionTiltDeg, volumeId, enabled]);
 
   return null;
 }
