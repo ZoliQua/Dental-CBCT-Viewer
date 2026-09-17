@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, type ReactNode, type Dispatch } from 'react';
 import type { DicomStudyInfo, ViewportTool, LayoutMode, ViewMode, ProjectionMode, ImplantData, MeasurementLayer, AnatomyMarker, AnatomyType, ScanMesh, GuideParams, PanelConfig } from '@/types/dicom';
-import { GUIDE_DEFAULTS, DEFAULT_PANEL, DEFAULT_IMPLANT_SYSTEM_ID, normalizePanelViews } from '@/types/dicom';
+import { GUIDE_DEFAULTS, DEFAULT_PANEL, DEFAULT_IMPLANT_SYSTEM_ID, normalizePanelViews, normalizeOpgOrder } from '@/types/dicom';
 import type { ParsedPlan } from '@/core/planIO';
 import type { Volume3DQuality, Volume3DColormap } from '@/core/volume3DPreset';
 
@@ -413,7 +413,10 @@ export function viewerReducer(state: ViewerState, action: ViewerAction): ViewerS
     case 'SET_PANEL': {
       const merged = { ...state.panel, ...action.payload };
       const norm = normalizePanelViews(merged.big, merged.small);
-      return { ...state, panel: { ...merged, big: norm.big, small: norm.small } };
+      return {
+        ...state,
+        panel: { ...merged, big: norm.big, small: norm.small, opgOrder: normalizeOpgOrder(merged.opgOrder) },
+      };
     }
     case 'SET_VOLUME_ID':
       return { ...state, volumeId: action.payload };

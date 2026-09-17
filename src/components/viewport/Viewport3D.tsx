@@ -8,6 +8,7 @@ import { ViewportOverlay } from './ViewportOverlay';
 import { Implant3DActors } from './Implant3DActors';
 import { ScanActors } from './ScanActors';
 import { Slice3DActors } from './Slice3DActors';
+import { CrossSection3DActor } from './CrossSection3DActor';
 import { CropController } from './CropController';
 import { OrientationLabel } from './OrientationLabel';
 import { SLICE_AXES, type SliceAxis } from '@/core/slice3D';
@@ -229,6 +230,7 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
       {ready && <Implant3DActors layers={layers3D} />}
       {ready && <ScanActors />}
       {ready && <Slice3DActors axes={sliceAxes} preset={activePreset} rebuildKey={sliceRebuild} />}
+      {ready && <CrossSection3DActor />}
       {ready && <CropController crop={crop} enabled={cropEnabled} />}
 
       {/* 3D label */}

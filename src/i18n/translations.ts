@@ -156,6 +156,7 @@ const en: Dict = {
 
   // View modes
   'view.axial': 'Axial',
+  'view.swapBig': 'Enlarge — swap this view with the main one',
   'view.sagittal': 'Sagittal',
   'view.coronal': 'Coronal',
   'view.3d': '3D',
@@ -610,6 +611,7 @@ const de: Dict = {
   'toolbar.layers': 'Ebenen',
 
   'view.axial': 'Axial',
+  'view.swapBig': 'Vergrößern — diese Ansicht mit der Hauptansicht tauschen',
   'view.sagittal': 'Sagittal',
   'view.coronal': 'Koronal',
   'view.3d': '3D',
@@ -1056,6 +1058,7 @@ const es: Dict = {
   'toolbar.layers': 'Capas',
 
   'view.axial': 'Axial',
+  'view.swapBig': 'Ampliar — intercambiar esta vista con la principal',
   'view.sagittal': 'Sagital',
   'view.coronal': 'Coronal',
   'view.3d': '3D',
@@ -1502,6 +1505,7 @@ const hu: Dict = {
   'toolbar.layers': 'Rétegek',
 
   'view.axial': 'Axiális',
+  'view.swapBig': 'Nagyítás — csere a fő nézettel',
   'view.sagittal': 'Szagittális',
   'view.coronal': 'Koronális',
   'view.3d': '3D',

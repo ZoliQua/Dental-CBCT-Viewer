@@ -159,6 +159,29 @@ export function crossSectionFrame(
 }
 
 /**
+ * Corners of the cross-section plane as a quad, for drawing the cut in 3D:
+ * the plane spanned by eU (buccolingual, ±halfWidth) and eV (vertical,
+ * ±halfHeight) about the frame origin. Returned in vtkPlaneSource order.
+ */
+export function crossSectionPlaneCorners(
+  frame: CrossSectionFrame,
+  halfWidthMm: number,
+  halfHeightMm: number,
+): { origin: [number, number, number]; point1: [number, number, number]; point2: [number, number, number] } {
+  const { origin: o, eU, eV } = frame;
+  const at = (u: number, v: number): [number, number, number] => [
+    o[0] + eU[0] * u + eV[0] * v,
+    o[1] + eU[1] * u + eV[1] * v,
+    o[2] + eU[2] * u + eV[2] * v,
+  ];
+  return {
+    origin: at(-halfWidthMm, -halfHeightMm),
+    point1: at(halfWidthMm, -halfHeightMm),
+    point2: at(-halfWidthMm, halfHeightMm),
+  };
+}
+
+/**
  * Sample a cross-section slice perpendicular to the arch curve.
  *
  * The slice plane is spanned by:

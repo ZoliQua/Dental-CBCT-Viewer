@@ -63,6 +63,10 @@ export type ViewKey = 'AXIAL' | 'SAGITTAL' | 'CORONAL' | '3D';
 export const VIEW_KEYS: ViewKey[] = ['AXIAL', 'SAGITTAL', 'CORONAL', '3D'];
 
 /** Panel assignment for the "3D view" layout: one big slot + three small slots. */
+/** Panes available in the Panoramic (OPG) layout; index 0 of `opgOrder` is big. */
+export type OpgView = 'PANORAMA' | 'AXIAL' | 'CROSS' | '3D';
+export const OPG_VIEWS: OpgView[] = ['PANORAMA', 'AXIAL', 'CROSS', '3D'];
+
 export interface PanelConfig {
   big: ViewKey;
   small: [ViewKey, ViewKey, ViewKey];
@@ -72,6 +76,8 @@ export interface PanelConfig {
   grid: '1+3' | '2x2';
   /** Panoramic view arrangement: 'top' = big panoramic on top, 3 below; 'left' = big left */
   panoArrangement: 'left' | 'top';
+  /** Panoramic layout pane order — index 0 occupies the big slot (swappable). */
+  opgOrder: [OpgView, OpgView, OpgView, OpgView];
 }
 
 export const DEFAULT_PANEL: PanelConfig = {
@@ -80,7 +86,36 @@ export const DEFAULT_PANEL: PanelConfig = {
   arrangement: 'left',
   grid: '1+3',
   panoArrangement: 'top',
+  opgOrder: ['PANORAMA', 'AXIAL', 'CROSS', '3D'],
 };
+
+/**
+ * Keep `opgOrder` a permutation of the four OPG panes: drop duplicates and fill
+ * any gap with the unused views, so a malformed order can never blank a pane.
+ */
+export function normalizeOpgOrder(order: OpgView[] | undefined): [OpgView, OpgView, OpgView, OpgView] {
+  const slots: (OpgView | null)[] = [0, 1, 2, 3].map((i) => order?.[i] ?? null);
+  const seen = new Set<OpgView>();
+  for (let i = 0; i < 4; i++) {
+    const v = slots[i];
+    if (v && (seen.has(v) || !OPG_VIEWS.includes(v))) slots[i] = null;
+    else if (v) seen.add(v);
+  }
+  const unused = OPG_VIEWS.filter((v) => !seen.has(v));
+  let u = 0;
+  for (let i = 0; i < 4; i++) if (slots[i] == null) slots[i] = unused[u++] ?? OPG_VIEWS[0];
+  return slots as [OpgView, OpgView, OpgView, OpgView];
+}
+
+/** Swap the pane at `index` into the big slot (index 0). Reversible. */
+export function swapOpgBig(order: OpgView[], index: number): [OpgView, OpgView, OpgView, OpgView] {
+  const next = normalizeOpgOrder(order);
+  if (index <= 0 || index > 3) return next;
+  const tmp = next[0];
+  next[0] = next[index];
+  next[index] = tmp;
+  return next;
+}
 
 /**
  * Force the four 1+3 panels (big + 3 small) to show four DISTINCT views. Each
