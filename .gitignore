@@ -16,3 +16,8 @@ demo-dist/
 playwright-report/
 test-results/
 .playwright/
+
+# Editor swap / backup files
+*.swp
+*.swo
+*~

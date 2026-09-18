@@ -85,7 +85,7 @@ export const DEFAULT_PANEL: PanelConfig = {
   small: ['AXIAL', 'SAGITTAL', 'CORONAL'],
   arrangement: 'left',
   grid: '1+3',
-  panoArrangement: 'top',
+  panoArrangement: 'left',
   opgOrder: ['PANORAMA', 'AXIAL', 'CROSS', '3D'],
 };
 

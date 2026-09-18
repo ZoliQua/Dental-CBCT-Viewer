@@ -1,16 +1,17 @@
 /**
  * Persistent bottom status bar (viewer only). Left: a "local processing" trust
  * line; right: modality/image count, WW/WL, live zoom, view mode and active
- * tool. Everything but zoom comes from ViewerState; zoom is read live from the
- * Cornerstone viewport that last emitted CAMERA_MODIFIED (and seeded on load).
+ * tool. Everything but zoom comes from ViewerState. Zoom always tracks the BIG
+ * (centre) view of the current layout: Cornerstone fires CAMERA_MODIFIED on the
+ * viewport's own element (not on the global eventTarget), so we attach to that
+ * element. The panoramic / cross-section canvases are fit-to-pane → "Fit".
  */
 import { useEffect, useState } from 'react';
-import { eventTarget, Enums, getRenderingEngine } from '@cornerstonejs/core';
+import { Enums, getRenderingEngine } from '@cornerstonejs/core';
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
-import { RENDERING_ENGINE_ID, VP_AXIAL, VP_3D, VIEWPORT_ID } from '@/core/constants';
-
-const ZOOM_CANDIDATES = [VP_AXIAL, VP_3D, VIEWPORT_ID];
+import { RENDERING_ENGINE_ID } from '@/core/constants';
+import { bigView, bigViewportId } from '@/core/bigView';
 
 function readZoom(vpId: string): number | null {
   const vp = getRenderingEngine(RENDERING_ENGINE_ID)?.getViewport(vpId);
@@ -31,40 +32,36 @@ export function StatusBar() {
 
   const hasStudy = !!state.study;
 
-  // Live zoom from whichever viewport last moved its camera.
+  const bigVp = bigViewportId(state.layoutMode, state.viewMode, state.panel);
+
+  // Live zoom of the big view. The viewport may not exist yet right after a
+  // layout switch, so retry briefly until its element is available.
   useEffect(() => {
-    if (!hasStudy) {
-      setZoom(null);
-      return;
-    }
-    const onCamera = (evt: Event) => {
-      const vpId = (evt as CustomEvent).detail?.viewportId as string | undefined;
-      if (!vpId) return;
-      const z = readZoom(vpId);
+    setZoom(null);
+    if (!hasStudy || !bigVp) return;
+    let el: HTMLElement | null = null;
+    const onCamera = () => {
+      const z = readZoom(bigVp);
       if (z != null) setZoom(z);
     };
-    eventTarget.addEventListener(Enums.Events.CAMERA_MODIFIED, onCamera);
-    return () => eventTarget.removeEventListener(Enums.Events.CAMERA_MODIFIED, onCamera);
-  }, [hasStudy]);
-
-  // Seed an initial zoom once a viewport exists (CAMERA_MODIFIED may fire before
-  // the listener attaches, so the bar would otherwise read "—" until interaction).
-  useEffect(() => {
-    if (!hasStudy) return;
+    const attach = (): boolean => {
+      const vp = getRenderingEngine(RENDERING_ENGINE_ID)?.getViewport(bigVp) as { element?: HTMLElement } | undefined;
+      if (!vp?.element) return false;
+      el = vp.element;
+      el.addEventListener(Enums.Events.CAMERA_MODIFIED, onCamera);
+      onCamera();
+      return true;
+    };
     let tries = 0;
     const id = setInterval(() => {
-      for (const vpId of ZOOM_CANDIDATES) {
-        const z = readZoom(vpId);
-        if (z != null) {
-          setZoom(z);
-          clearInterval(id);
-          return;
-        }
-      }
-      if (++tries > 20) clearInterval(id);
+      if (attach() || ++tries > 40) clearInterval(id);
     }, 250);
-    return () => clearInterval(id);
-  }, [hasStudy, state.layoutMode, state.volumeId]);
+    if (attach()) clearInterval(id);
+    return () => {
+      clearInterval(id);
+      el?.removeEventListener(Enums.Events.CAMERA_MODIFIED, onCamera);
+    };
+  }, [hasStudy, bigVp, state.volumeId]);
 
   if (!state.study) return null;
 
@@ -73,7 +70,14 @@ export function StatusBar() {
   const modality = activeSeries?.modality ?? 'CT';
   const imageCount = activeSeries?.imageCount ?? state.totalSlices;
   const { ww, wc } = state.windowLevel;
-  const zoomPct = zoom != null ? `${Math.round(zoom * 100)}%` : '—';
+  const zoomPct = !bigVp ? t('status.fit') : zoom != null ? `${Math.round(zoom * 100)}%` : '—';
+  // Mode names the layout; only the single-view layout names the view itself.
+  const big = bigView(state.layoutMode, state.viewMode, state.panel);
+  const mode =
+    state.layoutMode === '1+3' ? t('layout.view3d')
+    : state.layoutMode === 'OPG2+1' ? t('layout.panoramic')
+    : state.layoutMode === '2x2' ? t('layout.grid')
+    : t(`view.${String(big).toLowerCase()}`);
 
   const Seg = ({ label, value }: { label: string; value: string }) => (
     <span className="whitespace-nowrap">
@@ -92,7 +96,7 @@ export function StatusBar() {
         <Seg label={modality} value={t('status.images', { n: imageCount })} />
         <Seg label="WW/WL" value={`${Math.round(ww)}/${Math.round(wc)}`} />
         <Seg label={t('status.zoom')} value={zoomPct} />
-        <Seg label={t('status.mode')} value={state.viewMode} />
+        <Seg label={t('status.mode')} value={mode} />
         <Seg label={t('status.tool')} value={t(`tool.${state.activeTool}`)} />
       </div>
     </div>

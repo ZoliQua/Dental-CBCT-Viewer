@@ -240,7 +240,7 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
       {ready && <Implant3DActors layers={layers3D} />}
       {ready && <ScanActors />}
       {ready && <Slice3DActors axes={effectiveAxes} preset={activePreset} rebuildKey={sliceRebuild} />}
-      {ready && <CrossSection3DActor enabled={showCrossSection} />}
+      {ready && <CrossSection3DActor enabled={compact && showCrossSection} />}
       {ready && <CropController crop={crop} enabled={cropEnabled} />}
 
       {/* 3D label */}
@@ -309,21 +309,21 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
 
           <span className="w-px h-4 bg-slate-700/60" />
 
-          {/* Quality: low / medium / high */}
-          <div className="flex items-center gap-1">
-            <span className="text-[10px] text-slate-400 select-none">{t('view3d.quality')}</span>
-            {QUALITIES.map((q) => (
-              <button
-                key={q}
-                onClick={() => handleQualityChange(q)}
-                className={`px-1.5 py-1 rounded text-[10px] font-semibold transition-colors ${
-                  activeQuality === q ? 'bg-dental-600 text-white' : 'bg-slate-800/60 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                {t(`quality.${q}`)}
-              </button>
-            ))}
-          </div>
+          {/* Quality: one button — click cycles low → medium → high */}
+          <button
+            onClick={() => handleQualityChange(QUALITIES[(QUALITIES.indexOf(activeQuality) + 1) % QUALITIES.length])}
+            title={`${t('view3d.quality')}: ${t(`quality.${activeQuality}`)}`}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] text-slate-200 hover:bg-slate-700/60 transition-colors whitespace-nowrap"
+          >
+            <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              {/* signal bars: filled up to the active level */}
+              {[0, 1, 2].map((i) => (
+                <line key={i} x1={6 + i * 6} y1={20} x2={6 + i * 6} y2={14 - i * 5}
+                  opacity={i <= QUALITIES.indexOf(activeQuality) ? 1 : 0.3} />
+              ))}
+            </svg>
+            <span>{t(`quality.${activeQuality}`)}</span>
+          </button>
 
           {!compact && (<>
           <span className="w-px h-4 bg-slate-700/60" />
@@ -375,7 +375,8 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
                 {axis[0]}
               </button>
             ))}
-            <button
+            {/* CS = the cross-section cut; only meaningful beside the panoramic */}
+            {compact && <button
               onClick={() => setShowCrossSection((v) => !v)}
               title={t('viewport.crossSection')}
               className={`px-1.5 py-1 rounded text-[10px] font-semibold transition-colors ${
@@ -383,7 +384,7 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
               }`}
             >
               CS
-            </button>
+            </button>}
           </div>
 
           {!compact && (<>
