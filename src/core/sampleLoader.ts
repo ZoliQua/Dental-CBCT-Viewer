@@ -12,6 +12,7 @@ import { imageLoader, metaData, volumeLoader, type Types } from '@cornerstonejs/
 import { VOLUME_ID_PREFIX } from './constants';
 import { gunzip } from './import/gzip';
 import type { DicomStudyInfo } from '@/types/dicom';
+import { publicUrl } from '@/utils/publicUrl';
 
 const SCHEME_BASE = 'sample';
 const FRAME_OF_REF = 'sample-frame-of-ref';
@@ -193,7 +194,7 @@ async function readVolumeWithProgress(
   return new Int16Array(buf.buffer, buf.byteOffset, buf.byteLength / 2);
 }
 
-export async function loadSample(base = '/sample', onProgress?: (pct: number) => void): Promise<LoadedSample> {
+export async function loadSample(base = publicUrl('sample'), onProgress?: (pct: number) => void): Promise<LoadedSample> {
   onProgress?.(0);
   const meta = (await (await fetchOk(`${base}/meta.json`)).json()) as SampleMeta;
   const gzResp = await fetchOk(`${base}/volume.raw.bin`);

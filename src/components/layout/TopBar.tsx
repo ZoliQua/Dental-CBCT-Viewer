@@ -20,6 +20,7 @@ import { loadSample } from '@/core/sampleLoader';
 import { getVolumeData } from '@/core/cprEngine';
 import { loadScanPolyData, setScanPolyData, polyDataCenter, translation16, IDENTITY16 } from '@/core/scanMesh';
 import { SCAN_DEFAULTS, type LayoutMode } from '@/types/dicom';
+import { publicUrl } from '@/utils/publicUrl';
 
 const LAYOUTS: { id: LayoutMode; labelKey?: string; label?: string }[] = [
   { id: '1x1', labelKey: 'layout.view2d' },
@@ -317,7 +318,7 @@ export function TopBar() {
         title={state.study ? t('topbar.newLoad') : t('app.title')}
         className="flex items-center gap-2 select-none rounded px-1 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
       >
-        <img src="/denct-ikon.png" alt="" aria-hidden className="w-6 h-6 rounded-md object-contain" />
+        <img src={publicUrl('denct-ikon.png')} alt="" aria-hidden className="w-6 h-6 rounded-md object-contain" />
         <span className="text-sm font-semibold text-dental-600 dark:text-dental-400">{t('app.title')}</span>
       </button>
 

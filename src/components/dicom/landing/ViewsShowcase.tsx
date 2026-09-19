@@ -3,11 +3,12 @@
  * our own captures of the running app with the sample volume (public/shots/).
  */
 import { useI18n } from '@/i18n/I18nContext';
+import { publicUrl } from '@/utils/publicUrl';
 
 const VIEWS = [
-  { img: '/shots/view-3d.jpg', tk: 'landing.view3dt', dk: 'landing.view3dd' },
-  { img: '/shots/view-panoramic.jpg', tk: 'landing.viewPanot', dk: 'landing.viewPanod' },
-  { img: '/shots/view-2d.jpg', tk: 'landing.view2dt', dk: 'landing.view2dd' },
+  { img: publicUrl('shots/view-3d.jpg'), tk: 'landing.view3dt', dk: 'landing.view3dd' },
+  { img: publicUrl('shots/view-panoramic.jpg'), tk: 'landing.viewPanot', dk: 'landing.viewPanod' },
+  { img: publicUrl('shots/view-2d.jpg'), tk: 'landing.view2dt', dk: 'landing.view2dd' },
 ];
 
 export function ViewsShowcase() {

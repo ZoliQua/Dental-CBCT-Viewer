@@ -72,8 +72,24 @@ needs the browser once: `npx playwright install chromium`.
 The package follows **Semantic Versioning** from `1.0.0`. Public API changes
 (the `DicomViewer` props, the `DicomViewerHandle` methods, and the `/core`
 exports) must respect semver; keep the `CHANGELOG.md` up to date and bump the
-version in `package.json` (and `APP_VERSION` in `src/core/pdfExport.ts`) with
+version in `package.json` (and `APP_VERSION` in `src/version.ts`) with
 every release.
+
+## Releasing
+
+Each release produces three artifacts:
+
+1. **npm package** — `npm publish` (its `prepublishOnly` runs `npm run release:build`).
+2. **GitHub release** — tag `vX.Y.Z`, notes from the CHANGELOG section.
+3. **Static build for https://dulzoltan.hu/denct** — `npm run build:dulzoltan`
+   writes `dist-dulzoltan/` (gitignored). Upload the folder's **contents,
+   including the hidden `.htaccess`**, into `/denct` on the web host.
+   The `.htaccess` sets the COOP/COEP headers the DICOM decode workers need,
+   the CSP and the `application/wasm` type. It works on Apache or LiteSpeed; on
+   nginx, set the same headers in the server config. `version.txt` records
+   which release and commit is deployed.
+
+`npm run release:build` builds both the library and `dist-dulzoltan/` in one step.
 
 ## Style
 

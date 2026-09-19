@@ -21,3 +21,6 @@ test-results/
 *.swp
 *.swo
 *~
+
+# Static build for https://dulzoltan.hu/denct (npm run build:dulzoltan)
+dist-dulzoltan/

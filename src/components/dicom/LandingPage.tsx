@@ -16,6 +16,7 @@ import { OtherProjects } from '@/components/common/OtherProjects';
 import { useI18n } from '@/i18n/I18nContext';
 import { useViewer } from '@/context/ViewerContext';
 import { loadSample } from '@/core/sampleLoader';
+import { publicUrl } from '@/utils/publicUrl';
 
 const REPO_URL = 'https://github.com/ZoliQua/Dental-CBCT-Viewer';
 
@@ -27,7 +28,7 @@ export function LandingPage() {
   const openSample = async () => {
     setSamplePct(0);
     try {
-      const { study, volumeId, windowLevel } = await loadSample('/sample', (p) => setSamplePct(p));
+      const { study, volumeId, windowLevel } = await loadSample(publicUrl('sample'), (p) => setSamplePct(p));
       dispatch({ type: 'SET_STUDY', payload: study });
       dispatch({ type: 'SET_WINDOW_LEVEL', payload: windowLevel });
       dispatch({ type: 'SET_VOLUME_ID', payload: volumeId });
@@ -87,7 +88,7 @@ export function LandingPage() {
             {[-3, -2, -1, 0, 1, 2, 3].map((i) => (
               <img
                 key={i}
-                src="/cbct-icon.png"
+                src={publicUrl('cbct-icon.png')}
                 alt=""
                 aria-hidden
                 draggable={false}
@@ -103,7 +104,7 @@ export function LandingPage() {
       <div className="relative z-10 max-w-5xl mx-auto px-6 py-8 flex flex-col gap-12">
         {/* ── Hero + loader ─────────────────────────────── */}
         <section id="get-started" className="scroll-mt-24 flex flex-col items-center text-center gap-4 pt-2">
-          <img src="/cbct-icon.png" alt="DenCT" className="w-24 h-24 rounded-2xl shadow-md object-contain" />
+          <img src={publicUrl('cbct-icon.png')} alt="DenCT" className="w-24 h-24 rounded-2xl shadow-md object-contain" />
           <h1 className="text-3xl sm:text-4xl font-bold text-dental-600 dark:text-dental-400">{t('landing.title')}</h1>
           <p className="max-w-2xl text-base text-gray-700 dark:text-gray-300 leading-relaxed">{t('landing.heroSub')}</p>
           <GithubStar />
