@@ -100,12 +100,10 @@ export function setupTools(): void {
     toolGroup3D.setToolActive(PanTool.toolName, {
       bindings: [{ mouseButton: csToolsEnums.MouseBindings.Auxiliary }],
     });
-    // Right click or mouse wheel = zoom (so the 3D view is scrollable/zoomable)
+    // Right-drag = zoom. (Wheel zoom is handled by Viewport3D itself: ZoomTool
+    // has no wheel handler, so a Wheel binding here would do nothing.)
     toolGroup3D.setToolActive(ZoomTool.toolName, {
-      bindings: [
-        { mouseButton: csToolsEnums.MouseBindings.Secondary },
-        { mouseButton: csToolsEnums.MouseBindings.Wheel },
-      ],
+      bindings: [{ mouseButton: csToolsEnums.MouseBindings.Secondary }],
     });
   }
 

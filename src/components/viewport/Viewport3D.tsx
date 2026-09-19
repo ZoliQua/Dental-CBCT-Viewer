@@ -13,6 +13,7 @@ import { CropController } from './CropController';
 import { OrientationLabel } from './OrientationLabel';
 import { SLICE_AXES, type SliceAxis } from '@/core/slice3D';
 import { NO_CROP, type CropBox } from '@/core/cropBox';
+import { nextWheelZoom } from '@/core/wheelZoom';
 import type { Implant3DLayers } from '@/core/implant3D';
 import { VOLUME_3D_PRESETS } from '@/types/dicom';
 import {
@@ -225,6 +226,26 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
     },
     [],
   );
+
+  // Mouse-wheel zoom. Cornerstone's ZoomTool only zooms on drag (it has no
+  // wheel handler), so the 3D view listens for the wheel itself. setZoom fires
+  // CAMERA_MODIFIED, so the status bar's zoom readout follows along.
+  useEffect(() => {
+    if (!ready) return;
+    const vp = getRenderingEngine(RENDERING_ENGINE_ID)?.getViewport(VP_3D) as Types.IVolumeViewport | undefined;
+    const el = vp?.element;
+    if (!vp || !el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (e.deltaY === 0) return;
+      e.preventDefault(); // keep the page from scrolling under the viewer
+      try {
+        vp.setZoom(nextWheelZoom(vp.getZoom(), e.deltaY, e.deltaMode));
+        vp.render();
+      } catch { /* viewport torn down mid-event */ }
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [ready]);
 
   return (
     <div className="relative w-full h-full bg-black" data-vp="3D" data-vp-title="3D">
