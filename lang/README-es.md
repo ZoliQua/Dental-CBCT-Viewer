@@ -4,6 +4,14 @@
 
 Visor **DICOM de CBCT / TC dental** integrable para React + TypeScript: MPR + 3D real, reconstrucción panorámica (OPG), cortes transversales, planificación guiada de implantes, distancias de seguridad, calidad ósea, una guía de fresado imprimible (STL) y un informe PDF multilingüe.
 
+▶ **[Probar la demo en vivo](https://dental-cbct-viewer.vercel.app)** — carga un CBCT de muestra anonimizado y se ejecuta por completo en el navegador.
+
+**Vista panorámica — OPG, corte transversal y 3D con un implante planificado**
+[![DenCT — Vista panorámica — OPG, corte transversal y 3D con un implante planificado](https://raw.githubusercontent.com/ZoliQua/Dental-CBCT-Viewer/main/screenshots/panoramic-view.jpg)](https://dental-cbct-viewer.vercel.app)
+
+**Vista 3D — renderizado de volumen con axial / sagital / coronal enlazados**
+[![DenCT — Vista 3D — renderizado de volumen con axial / sagital / coronal enlazados](https://raw.githubusercontent.com/ZoliQua/Dental-CBCT-Viewer/main/screenshots/3d-view.jpg)](https://dental-cbct-viewer.vercel.app)
+
 ---
 
 ## Instalación

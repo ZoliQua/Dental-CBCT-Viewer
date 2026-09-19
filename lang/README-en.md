@@ -4,6 +4,14 @@
 
 An embeddable **dental CBCT / CT DICOM viewer** for React + TypeScript: MPR + true-3D, panoramic (OPG) reconstruction, cross-sections, guided implant planning, safety clearances, bone quality, a printable drill guide (STL) and a multilingual PDF report.
 
+▶ **[Try the live demo](https://dental-cbct-viewer.vercel.app)** — loads an anonymized sample CBCT, runs entirely in your browser.
+
+**Panoramic view — OPG, cross-section and 3D with a planned implant**
+[![DenCT — Panoramic view — OPG, cross-section and 3D with a planned implant](https://raw.githubusercontent.com/ZoliQua/Dental-CBCT-Viewer/main/screenshots/panoramic-view.jpg)](https://dental-cbct-viewer.vercel.app)
+
+**3D view — volume rendering with linked axial / sagittal / coronal**
+[![DenCT — 3D view — volume rendering with linked axial / sagittal / coronal](https://raw.githubusercontent.com/ZoliQua/Dental-CBCT-Viewer/main/screenshots/3d-view.jpg)](https://dental-cbct-viewer.vercel.app)
+
 ---
 
 ## Installation

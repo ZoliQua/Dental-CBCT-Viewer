@@ -5,6 +5,65 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
 `1.0.0` onward.
 
+## [1.3.0] — 2026-09-19
+
+### Added
+
+- **Auto arch** — estimates the dental-arch curve from the scan at the current
+  axial level (heuristic, no ML); the result stays fully editable.
+- **Prosthetically-driven planning** — "Plan from crown" on a tooth-setup /
+  wax-up scan derives an implant whose axis follows the crown's long axis,
+  detects upper vs lower jaw from bone density, and rejects meshes that are not
+  a single crown. The cross-section shows the **screw-access** channel.
+- **Measurement values** — length, angle, ROI mean ± SD HU (min–max), HU probe
+  and bidirectional values now appear in the Layers list and the PDF report; a
+  length measurement also shows an **HU profile** sparkline along the line.
+- **Metal-sleeve seat** for the drill guide (opt-in, Settings → Guide): a stepped
+  pocket that holds a real sleeve on a shoulder — a repeatable drill stop — over
+  the unchanged working drill channel.
+- **Guide pre-export checks** — warns about thin housing walls, drill channels
+  too narrow for a bur, fragile webs between adjacent bores (seat-aware), and a
+  drill path that reaches a marked nerve / sinus past the implant apex.
+- **Panoramic view: swappable panes** — the ⤢ button swaps any small pane into
+  the big slot and back. The coronal pane is replaced by **3D**, which marks where
+  the cross-section cuts (CS toggle) and keeps only the controls relevant there.
+- **Mouse-wheel zoom** in the 3D view.
+- **API reference** (`API.md`, shipped in the package), a **Next.js embedding
+  example** (`examples/nextjs/`) and **Playwright end-to-end smoke tests**.
+
+### Changed
+
+- Panoramic view defaults to **big-left**.
+- 3D quality is a single button that cycles **Low → Medium → High**.
+- The status bar's **Mode** names the layout ("3D view" / "Panoramic view").
+- The demo bundle is code-split by vendor and the PDF stack (jsPDF,
+  html2canvas, embedded font) is lazy-loaded — the app entry chunk drops from
+  ~2.8 MB to ~0.37 MB.
+- Registered-scan slicing uses a cached **BVH**, so dragging a plane no longer
+  rebuilds and brute-forces the whole mesh on every move.
+
+### Fixed
+
+- The status-bar **zoom** never updated (it listened for camera events on the
+  wrong target); it now follows the big view live, and shows "Fit" for the
+  panoramic / cross-section canvases.
+- An uncaught `voiRange` `TypeError` logged on every MPR volume load.
+- A click without a drag no longer leaves a phantom "0.0 mm" measurement layer.
+- Auto arch reports when it cannot find an arch instead of silently doing
+  nothing.
+
+### Security
+
+- Plan files: the new measurement `profile` samples are validated (finite
+  numbers, capped length) before they reach the SVG sparkline.
+
+### Notes
+
+- The metal-sleeve seat is **off by default**, so plans saved with 1.2.0 export
+  exactly the same guide geometry until the seat is enabled.
+- The exported drill guide remains for verification on a printed model — not
+  for clinical use.
+
 ## [1.2.0] — 2026-09-03
 
 ### Added
@@ -126,6 +185,7 @@ First public release — the viewer is packaged as an embeddable React library.
   `SharedArrayBuffer`).
 - This is research / demonstration software — **not** a certified medical device.
 
+[1.3.0]: https://github.com/ZoliQua/Dental-CBCT-Viewer/releases/tag/v1.3.0
 [1.2.0]: https://github.com/ZoliQua/Dental-CBCT-Viewer/releases/tag/v1.2.0
 [1.1.0]: https://github.com/ZoliQua/Dental-CBCT-Viewer/releases/tag/v1.1.0
 [1.0.1]: https://github.com/ZoliQua/Dental-CBCT-Viewer/releases/tag/v1.0.1

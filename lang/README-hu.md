@@ -4,6 +4,14 @@
 
 Beágyazható **dentális CBCT / CT DICOM-néző** React + TypeScript alá: MPR + valódi 3D, panoráma (OPG) rekonstrukció, keresztmetszetek, vezetett (guided) implantátum-tervezés, biztonsági távolságok, csontminőség, nyomtatható fúrósablon (STL) és többnyelvű PDF-riport.
 
+▶ **[Élő demó kipróbálása](https://dental-cbct-viewer.vercel.app)** — egy anonimizált minta CBCT-t tölt be, és teljesen a böngésződben fut.
+
+**Panoráma nézet — OPG, keresztmetszet és 3D egy tervezett implantátummal**
+[![DenCT — Panoráma nézet — OPG, keresztmetszet és 3D egy tervezett implantátummal](https://raw.githubusercontent.com/ZoliQua/Dental-CBCT-Viewer/main/screenshots/panoramic-view.jpg)](https://dental-cbct-viewer.vercel.app)
+
+**3D nézet — térfogat-renderelés összekötött axiális / szagittális / koronális nézettel**
+[![DenCT — 3D nézet — térfogat-renderelés összekötött axiális / szagittális / koronális nézettel](https://raw.githubusercontent.com/ZoliQua/Dental-CBCT-Viewer/main/screenshots/3d-view.jpg)](https://dental-cbct-viewer.vercel.app)
+
 ---
 
 ## Telepítés

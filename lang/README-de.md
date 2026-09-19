@@ -4,6 +4,14 @@
 
 Einbettbarer **zahnmedizinischer DVT / CT DICOM-Viewer** für React + TypeScript: MPR + echte 3D-Ansicht, Panorama- (OPG-)Rekonstruktion, Querschnitte, geführte Implantatplanung, Sicherheitsabstände, Knochenqualität, eine druckbare Bohrschablone (STL) und ein mehrsprachiger PDF-Bericht.
 
+▶ **[Live-Demo ausprobieren](https://dental-cbct-viewer.vercel.app)** — lädt ein anonymisiertes Beispiel-CBCT und läuft vollständig im Browser.
+
+**Panorama-Ansicht — OPG, Querschnitt und 3D mit geplantem Implantat**
+[![DenCT — Panorama-Ansicht — OPG, Querschnitt und 3D mit geplantem Implantat](https://raw.githubusercontent.com/ZoliQua/Dental-CBCT-Viewer/main/screenshots/panoramic-view.jpg)](https://dental-cbct-viewer.vercel.app)
+
+**3D-Ansicht — Volumen-Rendering mit verknüpftem Axial / Sagittal / Koronal**
+[![DenCT — 3D-Ansicht — Volumen-Rendering mit verknüpftem Axial / Sagittal / Koronal](https://raw.githubusercontent.com/ZoliQua/Dental-CBCT-Viewer/main/screenshots/3d-view.jpg)](https://dental-cbct-viewer.vercel.app)
+
 ---
 
 ## Installation
