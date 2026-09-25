@@ -16,7 +16,7 @@ import { NO_CROP, type CropBox } from '@/core/cropBox';
 import { nextWheelZoom } from '@/core/wheelZoom';
 import { loadViewPrefs, saveViewPrefs } from '@/core/viewPrefs';
 import type { Implant3DLayers } from '@/core/implant3D';
-import { VOLUME_3D_PRESETS } from '@/types/dicom';
+import { VOLUME_3D_PRESETS, isIoScan } from '@/types/dicom';
 import {
   applyXrayPreset,
   applyColormap3D,
@@ -51,15 +51,33 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
   const [sliceAxes, setSliceAxes] = useState<Record<SliceAxis, boolean>>(() => loadViewPrefs().sliceAxes);
   const [showCrossSection, setShowCrossSection] = useState(() => loadViewPrefs().showCrossSection);
   useEffect(() => { saveViewPrefs({ sliceAxes, showCrossSection }); }, [sliceAxes, showCrossSection]);
-  // In the Panoramic layout this pane is a small companion to the panoramic +
-  // cross-section, so it keeps only the controls that relate to that cut:
-  // the axial + cross-section planes. Colormap / crop / slab stay in 3D view.
-  const compact = state.layoutMode === 'OPG2+1';
-  // Sagittal/coronal are hidden AND not drawn here, without clobbering the
-  // user's choices for the full 3D view.
-  const effectiveAxes: Record<SliceAxis, boolean> = compact
-    ? { ...sliceAxes, SAGITTAL: false, CORONAL: false }
-    : sliceAxes;
+  // The same viewport serves three layouts, with progressively fewer controls:
+  //  'full'    — the 3D view: everything.
+  //  'compact' — the Panoramic layout's small companion pane: only what relates
+  //              to that cut (the axial + cross-section planes).
+  //  'io'      — the 3D IO view: the volume with the intraoral scans on it. No
+  //              cutting planes at all (they would slice through the arches);
+  //              the two arch toggles take their place.
+  const mode: 'full' | 'compact' | 'io' =
+    state.layoutMode === 'OPG2+1' ? 'compact' : state.layoutMode === 'IO3D' ? 'io' : 'full';
+  const compact = mode !== 'full';
+  // Hidden planes are also not drawn, without clobbering the user's choices for
+  // the full 3D view.
+  const effectiveAxes: Record<SliceAxis, boolean> = mode === 'io'
+    ? { AXIAL: false, SAGITTAL: false, CORONAL: false }
+    : mode === 'compact'
+      ? { ...sliceAxes, SAGITTAL: false, CORONAL: false }
+      : sliceAxes;
+
+  // The arch toggles drive the scans' own visibility, so the IO view and the
+  // Layers panel never disagree about what is on screen.
+  const ioScans = state.scans.filter((sc) => isIoScan(sc.type));
+  const jawScans = (jaw: 'upperJaw' | 'lowerJaw') => ioScans.filter((sc) => sc.type === jaw);
+  const toggleJaw = (jaw: 'upperJaw' | 'lowerJaw') => {
+    const group = jawScans(jaw);
+    const next = !group.every((sc) => sc.visible);
+    for (const sc of group) dispatch({ type: 'UPDATE_SCAN', payload: { ...sc, visible: next } });
+  };
   const [cropEnabled, setCropEnabled] = useState(false);
   const [crop, setCrop] = useState<CropBox>(NO_CROP);
   const [presetOpen, setPresetOpen] = useState(false);
@@ -264,11 +282,37 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
       {ready && <Implant3DActors layers={layers3D} />}
       {ready && <ScanActors />}
       {ready && <Slice3DActors axes={effectiveAxes} preset={activePreset} rebuildKey={sliceRebuild} />}
-      {ready && <CrossSection3DActor enabled={compact && showCrossSection} />}
+      {ready && <CrossSection3DActor enabled={mode === 'compact' && showCrossSection} />}
       {ready && <CropController crop={crop} enabled={cropEnabled} />}
 
       {/* 3D label */}
-      <OrientationLabel text="3D" viewKey="3D" />
+      <OrientationLabel text={mode === 'io' ? t('layout.viewIo3d') : '3D'} viewKey="3D" />
+
+      {/* IO view: one toggle per arch, in place of the slice-plane buttons.
+          Only the arches that were actually loaded get a button. */}
+      {mode === 'io' && ioScans.length > 0 && (
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 z-10 flex flex-col gap-1.5">
+          {(['upperJaw', 'lowerJaw'] as const).map((jaw) => {
+            const group = jawScans(jaw);
+            if (group.length === 0) return null;
+            const on = group.every((sc) => sc.visible);
+            return (
+              <button
+                key={jaw}
+                onClick={() => toggleJaw(jaw)}
+                title={t(`scan.${jaw}`)}
+                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium border backdrop-blur-sm transition-colors whitespace-nowrap ${
+                  on
+                    ? 'bg-dental-600 text-white border-dental-500'
+                    : 'bg-slate-900/70 text-slate-300 border-slate-700/60 hover:bg-slate-800/80'
+                }`}
+              >
+                {t(`scan.${jaw}`)}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* 3D implant layer toggles (bottom-right, translucent — clear of overlays) */}
       {state.implants.length > 0 && (
@@ -382,6 +426,7 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
           </div>
 
           </>)}
+          {mode !== 'io' && (<>
           <span className="w-px h-4 bg-slate-700/60" />
 
           {/* Slice-plane toggles */}
@@ -410,6 +455,7 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
               CS
             </button>}
           </div>
+          </>)}
 
           {!compact && (<>
           <span className="w-px h-4 bg-slate-700/60" />

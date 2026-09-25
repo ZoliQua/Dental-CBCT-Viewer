@@ -27,6 +27,9 @@ export function bigView(layout: LayoutMode, viewMode: ViewMode, panel: PanelConf
       return normalizePanelViews(panel.big, panel.small).big;
     case 'OPG2+1':
       return normalizeOpgOrder(panel.opgOrder)[0];
+    case 'IO3D':
+      return '3D'; // the IO view is a single 3D pane
+
     case '2x2':
     default:
       return 'AXIAL';

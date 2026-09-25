@@ -9,6 +9,7 @@ import { cache } from '@cornerstonejs/core';
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
 import { useDicomLoader } from '@/hooks/useDicomLoader';
+import { useScanImport } from '@/hooks/useScanImport';
 import type { DicomStudyInfo, DicomSeriesInfo } from '@/types/dicom';
 
 /** "512×512 · 0.3 mm" from a series' in-plane dimensions/spacing, when known. */
@@ -23,8 +24,11 @@ export function StudyTree() {
   const { state, dispatch } = useViewer();
   const { t } = useI18n();
   const { loadFiles } = useDicomLoader();
+  const importScans = useScanImport();
   const folderInputRef = useRef<HTMLInputElement>(null);
+  const scanInputRef = useRef<HTMLInputElement>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [scanBusy, setScanBusy] = useState(false);
 
   if (state.studies.length === 0) return null;
   const activeStudyUid = state.study?.studyInstanceUID ?? null;
@@ -33,6 +37,19 @@ export function StudyTree() {
     const files = e.target.files;
     if (files && files.length) loadFiles(Array.from(files));
     e.target.value = ''; // allow re-selecting the same folder later
+  };
+
+  /** Several meshes can be picked at once — a case usually has both arches. */
+  const onLoadScans = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    e.target.value = '';
+    if (!files?.length) return;
+    setScanBusy(true);
+    try {
+      await importScans(Array.from(files));
+    } finally {
+      setScanBusy(false);
+    }
   };
 
   const selectSeries = (study: DicomStudyInfo, series: DicomSeriesInfo) => {
@@ -56,14 +73,29 @@ export function StudyTree() {
 
   return (
     <div className="flex flex-col gap-0.5 p-2">
-      <div className="flex items-center justify-between px-1 mb-1.5">
-        <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">{t('series.panel')}</h3>
+      <div className="px-1 mb-1.5">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">{t('series.panel')}</h3>
+          <button
+            onClick={() => folderInputRef.current?.click()}
+            className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-dental-500 text-dental-600 dark:text-dental-400 hover:bg-dental-50 dark:hover:bg-dental-900/30 transition-colors"
+          >
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>
+            {t('series.load')}
+          </button>
+        </div>
+        {/* Surface scans (STL / OBJ / PLY) belong to the CT that is open, so
+            they are loaded from here rather than as a separate "study". */}
         <button
-          onClick={() => folderInputRef.current?.click()}
-          className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-dental-500 text-dental-600 dark:text-dental-400 hover:bg-dental-50 dark:hover:bg-dental-900/30 transition-colors"
+          onClick={() => scanInputRef.current?.click()}
+          disabled={scanBusy}
+          title={t('series.loadScanHint')}
+          className="mt-1.5 w-full flex items-center justify-center gap-1.5 text-[11px] px-2 py-1 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700/50 transition-colors disabled:opacity-50"
         >
-          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>
-          {t('series.load')}
+          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+            <path d="M12 2 21 7v10l-9 5-9-5V7l9-5z" /><path d="M3 7l9 5 9-5M12 12v10" />
+          </svg>
+          {scanBusy ? t('series.loadScanBusy') : t('series.loadScan')}
         </button>
         <input
           ref={folderInputRef}
@@ -72,6 +104,14 @@ export function StudyTree() {
           className="hidden"
           multiple
           {...({ webkitdirectory: '', directory: '' } as Record<string, string>)}
+        />
+        <input
+          ref={scanInputRef}
+          type="file"
+          accept=".stl,.obj,.ply,model/stl,model/obj"
+          className="hidden"
+          multiple
+          onChange={onLoadScans}
         />
       </div>
 

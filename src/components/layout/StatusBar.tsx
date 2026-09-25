@@ -75,6 +75,7 @@ export function StatusBar() {
   const big = bigView(state.layoutMode, state.viewMode, state.panel);
   const mode =
     state.layoutMode === '1+3' ? t('layout.view3d')
+    : state.layoutMode === 'IO3D' ? t('layout.viewIo3d')
     : state.layoutMode === 'OPG2+1' ? t('layout.panoramic')
     : state.layoutMode === '2x2' ? t('layout.grid')
     : t(`view.${String(big).toLowerCase()}`);

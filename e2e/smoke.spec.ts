@@ -64,3 +64,33 @@ test('switches to 2D view and cycles axial / sagittal / coronal', async ({ page 
     }
   }
 });
+
+test('loads the CT + IO scan sample into the 3D IO view', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+
+  await page.goto('/');
+  await page.getByTestId('load-sample-io').click();
+
+  // ~19 MB: the volume plus both decimated arch scans.
+  await expect(page.getByText('CBCT + IO scan sample', { exact: false }).first()).toBeVisible({ timeout: 90_000 });
+
+  // Loading arch scans reveals the IO view and opens it.
+  const ioView = page.getByRole('button', { name: '3D IO view' });
+  await expect(ioView).toBeVisible();
+  await expect(page.locator('[data-vp="3D"]')).toBeVisible();
+
+  // One toggle per loaded arch, in place of the slice-plane buttons.
+  await expect(page.getByRole('button', { name: 'Upper jaw', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Lower jaw', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Grayscale' })).toHaveCount(0);
+
+  expect(errors, `unexpected page errors:\n${errors.join('\n')}`).toEqual([]);
+});
+
+test('does not offer the 3D IO view without an intraoral scan', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('load-sample').click();
+  await expect(page.getByText('CBCT sample', { exact: false }).first()).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole('button', { name: '3D IO view' })).toHaveCount(0);
+});

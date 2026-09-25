@@ -9,6 +9,7 @@ import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
 import { setAnnotationVisible, removeAnnotationByUid } from '@/core/annotationLayer';
 import { removeScanPolyData, scanTriangleSoupWorld } from '@/core/scanMesh';
+import { ScanAdjust } from './ScanAdjust';
 import { suggestImplantFromMesh } from '@/core/toothSetup';
 import { getVolumeData } from '@/core/cprEngine';
 import { SCAN_TYPES, SCAN_DEFAULTS, type ScanType, type ImplantData } from '@/types/dicom';
@@ -169,6 +170,8 @@ function LayerRow({ name, visible, active = false, onToggleVisible, onEdit, onDe
 export function LayersContent() {
   const { state, dispatch } = useViewer();
   const { t } = useI18n();
+  // Which scan's manual-correction controls are open (one at a time).
+  const [adjusting, setAdjusting] = useState<string | null>(null);
 
   // Prosthetically-driven planning: derive a suggested implant from a
   // tooth-setup (wax-up) mesh — its long axis is the ideal screw axis.
@@ -300,6 +303,17 @@ export function LayersContent() {
                 >
                   {t('reg.start')}
                 </button>
+                <button
+                  onClick={() => setAdjusting(a => (a === sc.id ? null : sc.id))}
+                  title={t('scanAdjust.hint')}
+                  className={`px-2 py-0.5 text-[11px] rounded transition-colors ${
+                    adjusting === sc.id
+                      ? 'bg-dental-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {t('scanAdjust.button')}
+                </button>
                 {sc.type === 'toothSetup' && (
                   <button
                     onClick={() => planFromCrown(sc)}
@@ -310,6 +324,7 @@ export function LayersContent() {
                   </button>
                 )}
               </div>
+              {adjusting === sc.id && <ScanAdjust scan={sc} />}
             </div>
           ))}
 

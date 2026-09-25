@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useReducer, type ReactNode, type Dispatch } from 'react';
 import type { DicomStudyInfo, ViewportTool, LayoutMode, ViewMode, ProjectionMode, ImplantData, MeasurementLayer, AnatomyMarker, AnatomyType, ScanMesh, GuideParams, PanelConfig } from '@/types/dicom';
-import { GUIDE_DEFAULTS, DEFAULT_PANEL, DEFAULT_IMPLANT_SYSTEM_ID, normalizePanelViews, normalizeOpgOrder } from '@/types/dicom';
+import { GUIDE_DEFAULTS, DEFAULT_PANEL, DEFAULT_IMPLANT_SYSTEM_ID, normalizePanelViews, normalizeOpgOrder, isIoScan } from '@/types/dicom';
 import { loadViewPrefs, saveViewPrefs } from '@/core/viewPrefs';
 import type { ParsedPlan } from '@/core/planIO';
 import type { Volume3DQuality, Volume3DColormap } from '@/core/volume3DPreset';
@@ -496,12 +496,18 @@ export function viewerReducer(state: ViewerState, action: ViewerAction): ViewerS
       return { ...state, scans: [...state.scans, action.payload] };
     case 'UPDATE_SCAN':
       return { ...state, scans: state.scans.map(s => s.id === action.payload.id ? action.payload : s) };
-    case 'REMOVE_SCAN':
+    case 'REMOVE_SCAN': {
+      const scans = state.scans.filter(s => s.id !== action.payload);
       return {
         ...state,
-        scans: state.scans.filter(s => s.id !== action.payload),
+        scans,
+        // The IO view has nothing to show once the last arch scan is gone, and
+        // its switcher button disappears with it — leave it rather than strand
+        // the user in a layout they can no longer navigate back to.
+        layoutMode: state.layoutMode === 'IO3D' && !scans.some(s => isIoScan(s.type)) ? '1+3' : state.layoutMode,
         registration: state.registration?.scanId === action.payload ? null : state.registration,
       };
+    }
     case 'START_REGISTRATION':
       return {
         ...state,

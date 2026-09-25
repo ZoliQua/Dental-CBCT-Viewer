@@ -85,7 +85,8 @@ const ref = useRef<DicomViewerHandle>(null);
 | `getPlan` | `() => PlanData` | Serializar el plan actual. |
 | `loadPlan` | `(plan: PlanData) => void` | Cargar un plan. |
 | `loadStudy` | `(files: File[]) => Promise<void>` | Cargar DICOM desde archivos. |
-| `loadSample` | `() => Promise<void>` | Cargar la muestra anonimizada incluida (el anfitrión debe servir `/sample/*` — ver abajo). |
+| `loadScans` | `(files: File[]) => Promise<void>` | Importa escaneos de superficie (STL / OBJ / PLY) junto al estudio abierto; la arcada se deduce del nombre del archivo. |
+| `loadSample` | `(kind?: 'ct' \| 'ctIo') => Promise<void>` | Carga una muestra anonimizada incluida — `'ct'` solo el CBCT, `'ctIo'` el CBCT con los escaneos intraorales emparejados (el host debe servir `/sample/*` y `/sample-io/*` — ver abajo). |
 | `setLayout` | `(mode: LayoutMode) => void` | Cambiar la disposición. |
 | `setActiveView` | `(view: ViewKey) => void` | Cambiar la vista 1×1. |
 | `exportPdf` | `() => Promise<void>` | Generar + descargar el informe PDF. |
@@ -120,7 +121,7 @@ El kernel CSG booleano (`manifold-3d`, ~1,5 MB WASM) se carga de forma perezosa 
 
 ## La muestra incluida
 
-`loadSample()` y el botón de la pantalla de inicio cargan un CBCT anonimizado de ~16 MB desde `/sample/meta.json` + `/sample/volume.raw.bin`. Estos recursos **no** están en el paquete npm (para mantenerlo pequeño). Para usar la muestra en tu app, copia `public/sample/` del repositorio al directorio público de tu app. En uso normal cargas tu propio DICOM con `loadStudy(files)`.
+`loadSample()` y el botón de la pantalla de inicio cargan un CBCT anonimizado de ~16 MB desde `/sample/meta.json` + `/sample/volume.raw.bin`. Estos recursos **no** están en el paquete npm (para mantenerlo pequeño). Para usar la muestra en tu app, copia `public/sample/` del repositorio al directorio público de tu app. En uso normal cargas tu propio DICOM con `loadStudy(files)`. `loadSample('ctIo')` y el segundo botón de la pantalla de inicio usan `/sample-io/` (~19 MB: el volumen, `scans.json` y las dos mallas de arcada comprimidas) — copia también `public/sample-io/` si lo quieres.
 
 ## Bundlers anfitriones
 

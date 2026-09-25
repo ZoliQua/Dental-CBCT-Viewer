@@ -61,7 +61,7 @@ All props are optional. Import the type with
 | `patientId` | `string` | Patient id shown in the report header. |
 | `patientName` | `string` | Patient name shown in the report header. |
 | `initialPlan` | `PlanData` | A saved plan (implants, anatomy, arch, settings…) loaded on mount. |
-| `initialLayout` | `LayoutMode` | Starting layout: `'1x1'` \| `'1+3'` \| `'2x2'` \| `'OPG2+1'`. |
+| `initialLayout` | `LayoutMode` | Starting layout: `'1x1'` \| `'1+3'` \| `'2x2'` \| `'OPG2+1'` \| `'IO3D'`. `'IO3D'` (the 3D IO view) only renders once an upper/lower intraoral scan is loaded. |
 | `lang` | `string` | UI language: `'en'` \| `'de'` \| `'es'` \| `'hu'`. |
 | `onPlanChange` | `(plan: PlanData) => void` | Called (debounced) whenever the plan changes — persist it host-side. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Called whenever the implant list changes. |
@@ -97,7 +97,8 @@ function App() {
 | `getPlan` | `() => PlanData` | Serialize the current plan. |
 | `loadPlan` | `(plan: PlanData) => void` | Load a plan. |
 | `loadStudy` | `(files: File[]) => Promise<void>` | Load a DICOM study (or GALILEOS / OneVolume folder) from files. |
-| `loadSample` | `() => Promise<void>` | Load the bundled anonymized sample volume. |
+| `loadScans` | `(files: File[]) => Promise<void>` | Import surface scans (STL / OBJ / PLY) alongside the open study. The arch is guessed from each file name; an upper or lower scan enables the 3D IO view. Imported meshes land on the volume centre and still need registering. |
+| `loadSample` | `(kind?: 'ct' \| 'ctIo') => Promise<void>` | Load a bundled anonymized sample: `'ct'` (default) is the CBCT alone, `'ctIo'` is a CBCT plus the patient's upper and lower intraoral scans, already paired to it. |
 | `setLayout` | `(mode: LayoutMode) => void` | Switch layout. |
 | `setActiveView` | `(view: ViewKey) => void` | Set the active MPR/3D view (`'AXIAL'` \| `'SAGITTAL'` \| `'CORONAL'` \| `'3D'`). |
 | `exportPdf` | `() => Promise<void>` | Build + download the multi-view PDF report. |

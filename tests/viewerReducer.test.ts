@@ -231,3 +231,40 @@ describe('RESET', () => {
     expect(s.study).toBeNull();
   });
 });
+
+describe('IO scans and the 3D IO layout', () => {
+  const scan = (id: string, type: 'upperJaw' | 'lowerJaw' | 'bite') => ({
+    id, name: id, type, color: '#fff', opacity: 1, visible: true,
+    transform: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1], fileName: `${id}.stl`,
+  });
+
+  const withScans = (...types: ('upperJaw' | 'lowerJaw' | 'bite')[]): ViewerState =>
+    types.reduce<ViewerState>(
+      (s, ty, i) => viewerReducer(s, { type: 'ADD_SCAN', payload: scan(`s${i}`, ty) }),
+      { ...initialState, layoutMode: 'IO3D' },
+    );
+
+  it('keeps the IO layout while an arch scan is still loaded', () => {
+    const s = withScans('upperJaw', 'lowerJaw');
+    const after = viewerReducer(s, { type: 'REMOVE_SCAN', payload: 's0' });
+    expect(after.layoutMode).toBe('IO3D');
+    expect(after.scans).toHaveLength(1);
+  });
+
+  it('leaves the IO layout when the last arch scan is removed', () => {
+    // The switcher button disappears with the scan, so staying would strand the
+    // user in a layout they can no longer navigate back to.
+    const s = withScans('upperJaw');
+    expect(viewerReducer(s, { type: 'REMOVE_SCAN', payload: 's0' }).layoutMode).toBe('1+3');
+  });
+
+  it('does not count a bite record as an arch scan', () => {
+    const s = withScans('upperJaw', 'bite');
+    expect(viewerReducer(s, { type: 'REMOVE_SCAN', payload: 's0' }).layoutMode).toBe('1+3');
+  });
+
+  it('does not touch other layouts when a scan is removed', () => {
+    const s = { ...withScans('upperJaw'), layoutMode: 'OPG2+1' as const };
+    expect(viewerReducer(s, { type: 'REMOVE_SCAN', payload: 's0' }).layoutMode).toBe('OPG2+1');
+  });
+});

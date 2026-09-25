@@ -14,32 +14,21 @@ import { ViewsShowcase } from './landing/ViewsShowcase';
 import { SectionHeading } from './landing/SectionHeading';
 import { OtherProjects } from '@/components/common/OtherProjects';
 import { useI18n } from '@/i18n/I18nContext';
-import { useViewer } from '@/context/ViewerContext';
-import { ensureCornerstone } from '@/core/ensureCornerstone';
+import { useSampleLoad, type SampleKind } from '@/hooks/useSampleLoad';
 import { publicUrl } from '@/utils/publicUrl';
 
 const REPO_URL = 'https://github.com/ZoliQua/Dental-CBCT-Viewer';
 
 export function LandingPage() {
   const { t } = useI18n();
-  const { dispatch } = useViewer();
+  const loadSample = useSampleLoad();
   const [samplePct, setSamplePct] = useState<number | null>(null); // null = not loading
 
-  const openSample = async () => {
+  const openSample = async (kind: SampleKind) => {
     setSamplePct(0);
-    try {
-      // Cornerstone + the sample loader arrive on demand — see ensureCornerstone.
-      await ensureCornerstone();
-      const { loadSample } = await import('@/core/sampleLoader');
-      const { study, volumeId, windowLevel } = await loadSample(publicUrl('sample'), (p) => setSamplePct(p));
-      dispatch({ type: 'SET_STUDY', payload: study });
-      dispatch({ type: 'SET_WINDOW_LEVEL', payload: windowLevel });
-      dispatch({ type: 'SET_VOLUME_ID', payload: volumeId });
-    } catch (err) {
-      console.error('[sample] load failed', err);
-      window.alert(t('newload.sampleError'));
-      setSamplePct(null);
-    }
+    // On success the viewer replaces this page, so the overlay only has to be
+    // cleared when the load failed.
+    if (!await loadSample(kind, setSamplePct)) setSamplePct(null);
   };
 
   const scrollToStart = () => document.getElementById('get-started')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -112,23 +101,33 @@ export function LandingPage() {
           <p className="max-w-2xl text-base text-gray-700 dark:text-gray-300 leading-relaxed">{t('landing.heroSub')}</p>
           <GithubStar />
 
-          {/* Loader — left: sample · right: upload */}
+          {/* Loader — left: samples · right: upload */}
           <div className="w-full grid md:grid-cols-2 gap-4 mt-3 text-left">
-            <button
-              onClick={openSample}
-              disabled={samplePct !== null}
-              data-testid="load-sample"
-              className="group h-80 flex flex-col items-center justify-center text-center gap-3 rounded-2xl border-2 border-dental-400 bg-dental-50/80 hover:bg-dental-100 dark:bg-dental-900/20 dark:hover:bg-dental-900/40 transition-colors px-6 disabled:opacity-60 backdrop-blur-md"
-            >
+            <div className="h-80 flex flex-col items-center justify-center text-center gap-3 rounded-2xl border-2 border-dental-400 bg-dental-50/80 dark:bg-dental-900/20 px-6 backdrop-blur-md">
               <svg className="w-14 h-14 text-dental-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
               <h3 className="text-lg font-bold text-dental-700 dark:text-dental-300">{t('landing.sampleTitle')}</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 max-w-xs">{t('landing.sampleDesc')}</p>
-              <span className="mt-1 px-4 py-2 text-sm rounded-lg bg-dental-600 text-white group-hover:bg-dental-700 transition-colors">
-                {t('newload.loadSample')} · ~16 MB
-              </span>
-            </button>
+              <button
+                onClick={() => openSample('ct')}
+                disabled={samplePct !== null}
+                data-testid="load-sample"
+                className="mt-1 w-full max-w-xs px-4 py-2 text-sm rounded-lg bg-dental-600 text-white hover:bg-dental-700 transition-colors disabled:opacity-60"
+              >
+                {t('newload.loadCtSample')} · ~16 MB
+              </button>
+              {/* Second data set: the same kind of CBCT plus the patient's upper
+                  and lower intraoral scans, already paired to it. */}
+              <button
+                onClick={() => openSample('ctIo')}
+                disabled={samplePct !== null}
+                data-testid="load-sample-io"
+                className="w-full max-w-xs px-4 py-2 text-sm rounded-lg border border-dental-500 text-dental-700 hover:bg-dental-100 dark:text-dental-300 dark:hover:bg-dental-900/40 transition-colors disabled:opacity-60"
+              >
+                {t('newload.loadCtIoSample')} · ~19 MB
+              </button>
+            </div>
 
             <div className="flex flex-col">
               <FileDropZone />
@@ -186,11 +185,18 @@ export function LandingPage() {
           <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{t('landing.cta.title')}</h3>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <button
-              onClick={openSample}
+              onClick={() => openSample('ct')}
               disabled={samplePct !== null}
               className="px-5 py-2.5 text-sm font-semibold rounded-lg bg-dental-600 text-white hover:bg-dental-700 transition-colors disabled:opacity-60"
             >
-              {t('newload.loadSample')}
+              {t('newload.loadCtSample')}
+            </button>
+            <button
+              onClick={() => openSample('ctIo')}
+              disabled={samplePct !== null}
+              className="px-5 py-2.5 text-sm font-semibold rounded-lg bg-dental-600 text-white hover:bg-dental-700 transition-colors disabled:opacity-60"
+            >
+              {t('newload.loadCtIoSample')}
             </button>
             <button
               onClick={scrollToStart}

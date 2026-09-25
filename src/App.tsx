@@ -9,6 +9,8 @@ import { IntroTour } from '@/components/panels/IntroTour';
 import { HelpPanel } from '@/components/panels/HelpPanel';
 import { TopBar } from '@/components/layout/TopBar';
 import { useDicomLoader } from '@/hooks/useDicomLoader';
+import { useScanImport } from '@/hooks/useScanImport';
+import { useSampleLoad, type SampleKind } from '@/hooks/useSampleLoad';
 import { serializePlan } from '@/core/planIO';
 import type { PlanData } from '@/core/planIO';
 import type { ViewportTool, ImplantData, LayoutMode, ViewKey } from '@/types/dicom';
@@ -78,7 +80,12 @@ export interface DicomViewerHandle {
   getPlan(): PlanData;
   loadPlan(plan: PlanData): void;
   loadStudy(files: File[]): Promise<void>;
-  loadSample(): Promise<void>;
+  /** Import surface scans (STL / OBJ / PLY) alongside the open study. The arch
+   *  is guessed from each file name; upper/lower scans enable the 3D IO view. */
+  loadScans(files: File[]): Promise<void>;
+  /** 'ct' (default) is the CBCT alone; 'ctIo' also loads the paired intraoral
+   *  scans. Both are served from the host's public/ — see the README. */
+  loadSample(kind?: SampleKind): Promise<void>;
   setLayout(mode: LayoutMode): void;
   setActiveView(view: ViewKey): void;
   exportPdf(): Promise<void>;
@@ -108,14 +115,8 @@ function ViewerApp({
     patientId: stateRef.current.study?.patientId ?? null,
   });
 
-  const openSample = useCallback(async () => {
-    await ensureCornerstone();
-    const { loadSample } = await import('@/core/sampleLoader');
-    const { study, volumeId, windowLevel } = await loadSample();
-    dispatch({ type: 'SET_STUDY', payload: study });
-    dispatch({ type: 'SET_WINDOW_LEVEL', payload: windowLevel });
-    dispatch({ type: 'SET_VOLUME_ID', payload: volumeId });
-  }, [dispatch]);
+  const loadSample = useSampleLoad();
+  const importScans = useScanImport();
 
   useImperativeHandle(handleRef, (): DicomViewerHandle => ({
     getImplants: () => stateRef.current.implants,
@@ -125,12 +126,13 @@ function ViewerApp({
     getPlan: () => serializePlan(stateRef.current, planMeta()),
     loadPlan: (plan) => dispatch({ type: 'LOAD_PLAN', payload: plan }),
     loadStudy: (files) => loadFiles(files),
-    loadSample: openSample,
+    loadScans: (files) => importScans(files).then(() => undefined),
+    loadSample: (kind = 'ct') => loadSample(kind).then(() => undefined),
     setLayout: (mode) => dispatch({ type: 'SET_LAYOUT_MODE', payload: mode }),
     setActiveView: (view) => dispatch({ type: 'SET_VIEW_MODE', payload: view }),
     exportPdf: () => import('@/core/viewerExports').then((m) => m.exportPlanPdf(stateRef.current, t, lang)),
     exportGuideStl: () => import('@/core/viewerExports').then((m) => m.exportDrillGuideStl(stateRef.current)).then((r) => r.ok),
-  }), [dispatch, loadFiles, openSample, t, lang]);
+  }), [dispatch, loadFiles, importScans, loadSample, t, lang]);
 
   // ── Prop → state wiring ─────────────────────────────────────
   const appliedInitial = useRef(false);

@@ -85,7 +85,8 @@ const ref = useRef<DicomViewerHandle>(null);
 | `getPlan` | `() => PlanData` | Serialize the current plan. |
 | `loadPlan` | `(plan: PlanData) => void` | Load a plan. |
 | `loadStudy` | `(files: File[]) => Promise<void>` | Load DICOM from files. |
-| `loadSample` | `() => Promise<void>` | Load the bundled anonymized sample (host must serve `/sample/*` — see below). |
+| `loadScans` | `(files: File[]) => Promise<void>` | Import surface scans (STL / OBJ / PLY) next to the open study; the arch is guessed from the file name. |
+| `loadSample` | `(kind?: 'ct' \| 'ctIo') => Promise<void>` | Load a bundled anonymized sample — `'ct'` the CBCT alone, `'ctIo'` the CBCT plus the paired intraoral scans (the host must serve `/sample/*` and `/sample-io/*` — see below). |
 | `setLayout` | `(mode: LayoutMode) => void` | Switch layout. |
 | `setActiveView` | `(view: ViewKey) => void` | Switch the 1×1 view. |
 | `exportPdf` | `() => Promise<void>` | Build + download the PDF report. |
@@ -121,7 +122,7 @@ The CSG Boolean kernel (`manifold-3d`, ~1.5 MB WASM) is loaded lazily inside the
 
 ## The bundled sample
 
-`loadSample()` and the landing-page button fetch a ~16 MB anonymized CBCT from `/sample/meta.json` + `/sample/volume.raw.bin`. These assets are **not** included in the npm package (to keep it small). To use the sample in your app, copy `public/sample/` from the repo into your app's public directory. In normal use you load your own DICOM via `loadStudy(files)`.
+`loadSample()` and the landing-page button fetch a ~16 MB anonymized CBCT from `/sample/meta.json` + `/sample/volume.raw.bin`. These assets are **not** included in the npm package (to keep it small). To use the sample in your app, copy `public/sample/` from the repo into your app's public directory. In normal use you load your own DICOM via `loadStudy(files)`. `loadSample('ctIo')` and the second landing-page button use `/sample-io/` instead (~19 MB: the volume, `scans.json` and the two gzipped arch meshes) — copy `public/sample-io/` too if you want it.
 
 ## Host bundlers
 

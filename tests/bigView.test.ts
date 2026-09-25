@@ -41,3 +41,13 @@ describe('Panoramic default arrangement', () => {
     expect(DEFAULT_PANEL.panoArrangement).toBe('left');
   });
 });
+
+describe('bigView: 3D IO layout', () => {
+  it('reports the 3D pane, whatever the 1+3 panel is set to', () => {
+    expect(bigView('IO3D', 'AXIAL', panel({ big: 'SAGITTAL' }))).toBe('3D');
+  });
+
+  it('backs it with the 3D viewport, so the zoom readout tracks it', () => {
+    expect(bigViewportId('IO3D', 'AXIAL', panel())).toBe(VP_3D);
+  });
+});

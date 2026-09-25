@@ -13,8 +13,9 @@ import { useLayoutSwitch } from '@/hooks/useLayoutSwitch';
 import { LayoutConfigButton } from './LayoutConfigButton';
 import { LandingNav } from '@/components/dicom/landing/LandingNav';
 import { serializePlan, planFromObject } from '@/core/planIO';
-import { SCAN_DEFAULTS, type LayoutMode } from '@/types/dicom';
-import { ensureCornerstone } from '@/core/ensureCornerstone';
+import { useScanImport } from '@/hooks/useScanImport';
+import { useSampleLoad } from '@/hooks/useSampleLoad';
+import { isIoScan, type LayoutMode } from '@/types/dicom';
 import { publicUrl } from '@/utils/publicUrl';
 
 // The export modals and the imaging helpers below pull in Cornerstone / vtk.js
@@ -22,9 +23,12 @@ import { publicUrl } from '@/utils/publicUrl';
 const ImageExportModal = lazy(() => import('@/components/panels/ImageExportModal').then((m) => ({ default: m.ImageExportModal })));
 const PdfExportModal = lazy(() => import('@/components/panels/PdfExportModal').then((m) => ({ default: m.PdfExportModal })));
 
-const LAYOUTS: { id: LayoutMode; labelKey?: string; label?: string }[] = [
+// "3D IO view" sits between the 3D and the panoramic view, and only exists
+// once an intraoral scan has been loaded — see `availableLayouts` below.
+const LAYOUTS: { id: LayoutMode; labelKey: string; needsIoScan?: boolean }[] = [
   { id: '1x1', labelKey: 'layout.view2d' },
   { id: '1+3', labelKey: 'layout.view3d' },
+  { id: 'IO3D', labelKey: 'layout.viewIo3d', needsIoScan: true },
   { id: 'OPG2+1', labelKey: 'layout.panoramic' },
 ];
 
@@ -159,6 +163,13 @@ export function TopBar() {
   const [newLoadOpen, setNewLoadOpen] = useState(false);
   const newLoadRef = useRef<HTMLDivElement>(null);
   const planInputRef = useRef<HTMLInputElement>(null);
+  const importScans = useScanImport();
+  const loadSample = useSampleLoad();
+
+  // The IO view only makes sense with an arch scan loaded, so it appears in the
+  // switcher the moment one is imported and disappears when the last is removed.
+  const hasIoScan = state.scans.some((s) => isIoScan(s.type));
+  const availableLayouts = LAYOUTS.filter((l) => !l.needsIoScan || hasIoScan);
 
   const savePlan = () => {
     const plan = serializePlan(state, {
@@ -211,45 +222,6 @@ export function TopBar() {
     } finally {
       setGuideBusy(false);
     }
-  };
-
-  const importScan = async (file: File) => {
-    const [{ loadScanPolyData, setScanPolyData, polyDataCenter, translation16, IDENTITY16 }, { getVolumeData }] =
-      await Promise.all([import('@/core/scanMesh'), import('@/core/cprEngine')]);
-    const pd = await loadScanPolyData(file);
-    if (!pd) {
-      window.alert(t('scan.invalid'));
-      return;
-    }
-    const id = `scan_${Date.now()}`;
-    setScanPolyData(id, pd);
-    // Rough initial placement: translate the scan's center onto the volume center
-    let transform = IDENTITY16;
-    const vol = state.volumeId ? getVolumeData(state.volumeId) : null;
-    if (vol) {
-      const sc = polyDataCenter(pd);
-      const sp = [1 / vol.invSx, 1 / vol.invSy, 1 / vol.invSz];
-      const vc = [
-        vol.origin[0] + (vol.dims[0] - 1) * sp[0] / 2,
-        vol.origin[1] + (vol.dims[1] - 1) * sp[1] / 2,
-        vol.origin[2] + (vol.dims[2] - 1) * sp[2] / 2,
-      ];
-      transform = translation16(vc[0] - sc[0], vc[1] - sc[1], vc[2] - sc[2]);
-    }
-    const def = SCAN_DEFAULTS.oral;
-    dispatch({
-      type: 'ADD_SCAN',
-      payload: {
-        id,
-        name: file.name.replace(/\.[^.]+$/, ''),
-        type: 'oral',
-        color: def.color,
-        opacity: def.opacity,
-        visible: true,
-        transform,
-        fileName: file.name,
-      },
-    });
   };
 
   const loadPlanFile = async (file: File) => {
@@ -328,7 +300,7 @@ export function TopBar() {
       {/* Center: layout switcher (+ view modes in 1x1) */}
       {state.study && (
         <div className="flex items-center gap-1">
-          {LAYOUTS.map(l => (
+          {availableLayouts.map(l => (
             <button
               key={l.id}
               onClick={() => handleLayoutChange(l.id)}
@@ -338,9 +310,9 @@ export function TopBar() {
                   ? 'bg-dental-600 text-white'
                   : 'bg-slate-100/70 text-slate-600 hover:bg-slate-200 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700'}
               `}
-              title={t('toolbar.layout', { label: l.labelKey ? t(l.labelKey) : l.label! })}
+              title={t('toolbar.layout', { label: t(l.labelKey) })}
             >
-              {l.labelKey ? t(l.labelKey) : l.label}
+              {t(l.labelKey)}
             </button>
           ))}
           {(state.layoutMode === '1+3' || state.layoutMode === 'OPG2+1') && <LayoutConfigButton />}
@@ -372,23 +344,16 @@ export function TopBar() {
                   {t('scan.import')}
                 </button>
                 <button
-                  onClick={async () => {
-                    setNewLoadOpen(false);
-                    try {
-                      await ensureCornerstone();
-                      const { loadSample } = await import('@/core/sampleLoader');
-                      const { study, volumeId, windowLevel } = await loadSample();
-                      dispatch({ type: 'SET_STUDY', payload: study });
-                      dispatch({ type: 'SET_WINDOW_LEVEL', payload: windowLevel });
-                      dispatch({ type: 'SET_VOLUME_ID', payload: volumeId });
-                    } catch (err) {
-                      console.error('[sample] load failed', err);
-                      window.alert(t('newload.sampleError'));
-                    }
-                  }}
+                  onClick={() => { setNewLoadOpen(false); void loadSample('ct'); }}
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
                 >
-                  {t('newload.loadSample')}
+                  {t('newload.loadCtSample')}
+                </button>
+                <button
+                  onClick={() => { setNewLoadOpen(false); void loadSample('ctIo'); }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+                >
+                  {t('newload.loadCtIoSample')}
                 </button>
               </div>
             )}
@@ -397,9 +362,10 @@ export function TopBar() {
               type="file"
               accept=".stl,.obj,.ply,model/stl,model/obj"
               className="hidden"
+              multiple
               onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void importScan(f);
+                const files = e.target.files;
+                if (files?.length) void importScans(Array.from(files));
                 e.target.value = '';
               }}
             />

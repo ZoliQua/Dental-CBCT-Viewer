@@ -9,6 +9,31 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
 
 ### Added
 
+- **3D IO view** — a dedicated layout showing the CBCT with the patient's
+  **intraoral scans** on it, one layer per arch with its own on-image toggle
+  (Upper jaw / Lower jaw). It has no MPR companions and no cutting planes — they
+  would slice through the arches — and it only appears in the view switcher once
+  an upper or lower scan is loaded.
+- **Load scan** in the Series panel — import several surface scans (STL / OBJ /
+  PLY) at once for the open CT. The arch is recognised from the file name
+  (exocad / Medit / 3Shape conventions, EN / DE / HU), so a pair of jaw scans
+  lands in the right layers without any picking.
+- **Manual registration correction** — per-scan nudges (0.1 / 0.25 / 1 mm and
+  0.5 / 1 / 5°, rotating about the scan's own centre) on top of the automatic
+  registration, with a one-click reset back to the placement the scan arrived
+  with.
+- **"Load CT + IO scan sample"** on the landing page and in the New load menu: a
+  second de-identified data set — a CBCT plus that patient's upper and lower
+  intraoral scans, **already paired to it**. The pairing is measured offline by
+  the new `scripts/register-scan-to-cbct.cjs` (coarse pose search + trimmed ICP
+  against the CBCT's dense-tissue surface) and lands at ≈0.25–0.32 mm trimmed
+  RMS, the CBCT's own voxel size. The existing button is now **"Load CT
+  sample"**.
+- `loadScans(files)` on the imperative ref API, and `loadSample('ct' | 'ctIo')`.
+- `scripts/anonymize-dicom.cjs` — de-identifies a DICOM folder without
+  re-encoding it (same-length value overwrites and deterministic pseudonymous
+  UIDs, so pixel data and geometry come through untouched); used to prepare the
+  bundled sample.
 - **View preferences are remembered** — the layout (2D / 3D / Panoramic), the
   1+3 pane arrangement, the panoramic pane order and the 3D slice-plane
   toggles (A / S / C / CS) are restored on the next visit.

@@ -9,7 +9,7 @@
 
 **DenCT is an open-source, embeddable dental CBCT / CT DICOM viewer and guided implant planner for React + TypeScript.** It reconstructs a **panoramic (OPG)** view along the dental arch, renders the jaw in **true 3D**, plans implants with **nerve / sinus / neighbour safety clearances**, and exports a **3D-printable surgical drill guide (STL)** — entirely **in the browser, with no upload**.
 
-**▶ [Try the live demo](https://dental-cbct-viewer.vercel.app)** (loads an anonymized sample CBCT) · 📖 [API reference](API.md) · 🧪 [Next.js example](examples/nextjs/) · 🌐 Docs: 🇬🇧 [English](lang/README-en.md) · 🇩🇪 [Deutsch](lang/README-de.md) · 🇪🇸 [Español](lang/README-es.md) · 🇭🇺 [Magyar](lang/README-hu.md)
+**▶ [Try the live demo](https://dental-cbct-viewer.vercel.app)** (an anonymized sample CBCT, on its own or paired with intraoral scans) · 📖 [API reference](API.md) · 🧪 [Next.js example](examples/nextjs/) · 🌐 Docs: 🇬🇧 [English](lang/README-en.md) · 🇩🇪 [Deutsch](lang/README-de.md) · 🇪🇸 [Español](lang/README-es.md) · 🇭🇺 [Magyar](lang/README-hu.md)
 
 ### Panoramic view — OPG, cross-section and 3D with a planned implant
 [![DenCT panoramic view: panoramic OPG reconstruction of a dental CBCT with a planned implant, the axial arch curve, the perpendicular cross-section and a 3D view showing where the cross-section cuts](https://raw.githubusercontent.com/ZoliQua/Dental-CBCT-Viewer/main/screenshots/panoramic-view.jpg)](https://dental-cbct-viewer.vercel.app)
@@ -26,6 +26,7 @@
 - 🧊 **True-3D volume rendering** — render presets incl. a translucent **X-ray** mode, colormaps, one-click **Low / Medium / High** quality, intersecting slice planes, crop box, mouse-wheel zoom
 - 🦷 **Panoramic (OPG) reconstruction** along a draggable dental-arch curve — or let **Auto arch** estimate the arch from the scan — plus tiltable, perpendicular **cross-sections**
 - 🔀 **Panoramic layout with swappable panes**: blow the cross-section or the 3D view up to the big slot and back; the 3D pane marks **where the cross-section cuts**
+- 😁 **3D IO view** — the CBCT with the patient's **intraoral scans** on it, one layer per arch, each with its own toggle; the view appears in the switcher as soon as an arch scan is loaded
 - 🗂️ **Multi-study** — DICOM folders, `.dcm` files, **GALILEOS** and **OneVolume / Morita** exports in a series tree; each study keeps its own plan
 
 **Implant planning**
@@ -38,7 +39,7 @@
 **Surgical guide & export**
 - 🖨️ **3D-printable drill guide (STL)** built with constructive solid geometry (`manifold-3d`), with an optional **metal-sleeve seat** and shoulder **drill stop**
 - ✅ **Pre-export guide checks** — thin walls, narrow drill channels, fragile webs between bores, and a drill path that reaches the nerve or sinus past the implant apex
-- 🧩 Surface-scan (STL / OBJ / PLY) import with 3-point landmark **registration** to the CBCT
+- 🧩 **Surface-scan import** (STL / OBJ / PLY, several at once) — the arch is recognised from the file name, then paired to the CBCT by 3-point landmark **registration** or corrected by hand with millimetre / degree nudges
 - 🖼️ **Image export** (PNG / JPG) and a configurable **PDF report**; plan save / load as JSON
 
 **Integration & privacy**

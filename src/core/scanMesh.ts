@@ -23,15 +23,22 @@ const registry = new Map<string, any>();
 // this rebuilds the O(n) world soup + tree only when the transform changes.
 const sliceCache = new Map<string, { key: string; soup: Float32Array; bvh: TriangleBVH }>();
 
+// id → the transform the scan arrived with (import placement or the sample's
+// baked registration), so a manual correction can always be undone.
+const baseTransforms = new Map<string, number[]>();
+
 export const getScanPolyData = (id: string): any | null => registry.get(id) ?? null;
 export const setScanPolyData = (id: string, pd: any): void => { registry.set(id, pd); };
-export const removeScanPolyData = (id: string): void => { registry.delete(id); sliceCache.delete(id); };
+export const removeScanPolyData = (id: string): void => { registry.delete(id); sliceCache.delete(id); baseTransforms.delete(id); };
+export const setScanBaseTransform = (id: string, m: number[]): void => { baseTransforms.set(id, m.slice()); };
+export const getScanBaseTransform = (id: string): number[] | null => baseTransforms.get(id) ?? null;
 export const hasScanPolyData = (id: string): boolean => registry.has(id);
 
 /** Empty the whole scan-mesh registry (e.g. when the session is purged). */
 export function clearScanRegistry(): void {
   registry.clear();
   sliceCache.clear();
+  baseTransforms.clear();
 }
 
 /** 4×4 column-major identity. */
@@ -62,37 +69,46 @@ export function meshScaleWarning(pd: any): string | null {
   return null;
 }
 
-/** Read a mesh file into vtkPolyData by extension. Returns null on failure. */
-export async function loadScanPolyData(file: File): Promise<any | null> {
-  const ext = (file.name.split('.').pop() || '').toLowerCase();
+/**
+ * Parse mesh bytes into vtkPolyData, choosing the reader by file extension.
+ * Returns null when the format is unreadable or the mesh comes back empty.
+ */
+export function parseScanMesh(fileName: string, buffer: ArrayBuffer): any | null {
+  const ext = (fileName.split('.').pop() || '').toLowerCase();
   try {
     let pd: any = null;
     if (ext === 'obj') {
       const reader = vtkOBJReader.newInstance();
-      reader.parseAsText(await file.text());
+      reader.parseAsText(new TextDecoder().decode(buffer));
+      pd = reader.getOutputData(0);
+    } else if (ext === 'ply') {
+      const reader = vtkPLYReader.newInstance();
+      reader.parseAsArrayBuffer(buffer);
       pd = reader.getOutputData(0);
     } else {
-      const buf = await file.arrayBuffer();
-      if (ext === 'ply') {
-        const reader = vtkPLYReader.newInstance();
-        reader.parseAsArrayBuffer(buf);
-        pd = reader.getOutputData(0);
-      } else {
-        // Default: STL (binary via ArrayBuffer, fall back to ASCII text)
-        const reader = vtkSTLReader.newInstance();
-        reader.parseAsArrayBuffer(buf);
-        pd = reader.getOutputData(0);
-        if (!pd || pd.getNumberOfPoints() === 0) {
-          const alt = vtkSTLReader.newInstance();
-          alt.parseAsText(new TextDecoder().decode(buf));
-          pd = alt.getOutputData(0);
-        }
+      // Default: STL (binary via ArrayBuffer, fall back to ASCII text)
+      const reader = vtkSTLReader.newInstance();
+      reader.parseAsArrayBuffer(buffer);
+      pd = reader.getOutputData(0);
+      if (!pd || pd.getNumberOfPoints() === 0) {
+        const alt = vtkSTLReader.newInstance();
+        alt.parseAsText(new TextDecoder().decode(buffer));
+        pd = alt.getOutputData(0);
       }
     }
     if (!pd || pd.getNumberOfPoints() === 0) return null;
     const warning = meshScaleWarning(pd);
-    if (warning) console.warn(`[DQ-DICOM] Scan mesh "${file.name}": ${warning}`);
+    if (warning) console.warn(`[DQ-DICOM] Scan mesh "${fileName}": ${warning}`);
     return pd;
+  } catch {
+    return null;
+  }
+}
+
+/** Read a mesh file into vtkPolyData by extension. Returns null on failure. */
+export async function loadScanPolyData(file: File): Promise<any | null> {
+  try {
+    return parseScanMesh(file.name, await file.arrayBuffer());
   } catch {
     return null;
   }

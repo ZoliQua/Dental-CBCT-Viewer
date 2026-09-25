@@ -14,7 +14,7 @@
 import { normalizeOpgOrder, normalizePanelViews, DEFAULT_PANEL, type LayoutMode, type PanelConfig } from '@/types/dicom';
 
 const KEY = 'denct.viewPrefs.v1';
-const LAYOUTS: LayoutMode[] = ['1x1', '2x2', '1+3', 'OPG2+1'];
+const LAYOUTS: LayoutMode[] = ['1x1', '2x2', '1+3', 'OPG2+1', 'IO3D'];
 
 export interface ViewPrefs {
   layoutMode: LayoutMode;

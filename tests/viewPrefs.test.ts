@@ -64,3 +64,10 @@ describe('loadViewPrefs', () => {
     expect(() => saveViewPrefs({ layoutMode: '1x1' })).not.toThrow();
   });
 });
+
+describe('viewPrefs: the 3D IO layout', () => {
+  it('remembers the IO layout across a reload', () => {
+    saveViewPrefs({ layoutMode: 'IO3D' });
+    expect(loadViewPrefs().layoutMode).toBe('IO3D');
+  });
+});

@@ -55,7 +55,8 @@ export type ViewportTool =
   | 'probe'
   | 'crosshairs';
 
-export type LayoutMode = '1x1' | '2x2' | '1+3' | 'OPG2+1';
+/** 'IO3D' is the 3D view dedicated to intraoral scans — see ViewportGrid. */
+export type LayoutMode = '1x1' | '2x2' | '1+3' | 'OPG2+1' | 'IO3D';
 
 /** A view that can occupy a panel slot in the configurable 1+3 layout. */
 export type ViewKey = 'AXIAL' | 'SAGITTAL' | 'CORONAL' | '3D';
@@ -299,7 +300,15 @@ export function defaultGuidedPlan(implant: { length: number }): GuidedPlan {
 
 // ── Multimodal: imported scan meshes (STL/OBJ/PLY) ─────────────
 
-export type ScanType = 'oral' | 'bite' | 'antagonist' | 'toothSetup';
+export type ScanType = 'upperJaw' | 'lowerJaw' | 'oral' | 'bite' | 'antagonist' | 'toothSetup';
+
+/**
+ * The two intraoral-scan arches. They get their own view ("3D IO view") and
+ * their own visibility toggles, so they are distinguished from the generic
+ * scan types (a bite record, an antagonist model, a wax-up).
+ */
+export const IO_SCAN_TYPES = ['upperJaw', 'lowerJaw'] as const;
+export const isIoScan = (type: ScanType): boolean => type === 'upperJaw' || type === 'lowerJaw';
 
 /** An imported surface mesh, aligned to the CBCT by a 4×4 transform. */
 export interface ScanMesh {
@@ -316,13 +325,33 @@ export interface ScanMesh {
 }
 
 export const SCAN_DEFAULTS: Record<ScanType, { color: string; opacity: number }> = {
+  upperJaw: { color: '#e8c0a8', opacity: 1 },
+  lowerJaw: { color: '#d9b49c', opacity: 1 },
   oral: { color: '#e8c0a8', opacity: 1 },
   bite: { color: '#c0c0ff', opacity: 0.85 },
   antagonist: { color: '#b0e0b0', opacity: 0.85 },
   toothSetup: { color: '#ffffff', opacity: 0.9 },
 };
 
-export const SCAN_TYPES: ScanType[] = ['oral', 'bite', 'antagonist', 'toothSetup'];
+export const SCAN_TYPES: ScanType[] = ['upperJaw', 'lowerJaw', 'oral', 'bite', 'antagonist', 'toothSetup'];
+
+/**
+ * Guess which arch a mesh file holds from its name. Intraoral scanners and CAD
+ * exporters name their files consistently enough for this to be right nearly
+ * always (exocad "…-UpperJaw.stl", Medit "…_maxilla", 3Shape "…Mandibular…"),
+ * and the type stays editable in the Layers panel when it is not.
+ */
+export function detectScanType(fileName: string): ScanType {
+  // Strip the extension so "…_u.stl" is still seen as a trailing "u" token.
+  const n = fileName.toLowerCase().replace(/\.[^.]+$/, '');
+  const word = (w: string) => new RegExp(`(^|[^a-z])${w}([^a-z]|$)`).test(n);
+  if (/upper|maxill|oberkiefer/.test(n) || word('fels[oő]') || word('u')) return 'upperJaw';
+  if (/lower|mandib|unterkiefer/.test(n) || word('als[oó]') || word('l')) return 'lowerJaw';
+  if (/bite|occlus|buccal|harap/.test(n)) return 'bite';
+  if (/antagon/.test(n)) return 'antagonist';
+  if (/setup|wax|crown|tooth/.test(n)) return 'toothSetup';
+  return 'oral';
+}
 
 // ── Safety: anatomy markers (nerve canal, sinus floor) ─────────
 

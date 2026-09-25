@@ -85,7 +85,8 @@ const ref = useRef<DicomViewerHandle>(null);
 | `getPlan` | `() => PlanData` | Aktuellen Plan serialisieren. |
 | `loadPlan` | `(plan: PlanData) => void` | Plan laden. |
 | `loadStudy` | `(files: File[]) => Promise<void>` | DICOM aus Dateien laden. |
-| `loadSample` | `() => Promise<void>` | Gebündelte anonymisierte Probe laden (der Host muss `/sample/*` ausliefern — siehe unten). |
+| `loadScans` | `(files: File[]) => Promise<void>` | Oberflächenscans (STL / OBJ / PLY) zur geöffneten Studie importieren; der Kiefer wird am Dateinamen erkannt. |
+| `loadSample` | `(kind?: 'ct' \| 'ctIo') => Promise<void>` | Gebündeltes anonymisiertes Beispiel laden — `'ct'` nur das CBCT, `'ctIo'` CBCT plus die zugeordneten Intraoralscans (der Host muss `/sample/*` und `/sample-io/*` ausliefern — siehe unten). |
 | `setLayout` | `(mode: LayoutMode) => void` | Layout wechseln. |
 | `setActiveView` | `(view: ViewKey) => void` | 1×1-Ansicht wechseln. |
 | `exportPdf` | `() => Promise<void>` | PDF-Bericht erstellen + herunterladen. |
@@ -120,7 +121,7 @@ Der CSG-Boolean-Kernel (`manifold-3d`, ~1,5 MB WASM) wird im Schablonen-Builder 
 
 ## Die gebündelte Probe
 
-`loadSample()` und die Schaltfläche auf der Startseite laden ein ~16 MB großes anonymisiertes DVT aus `/sample/meta.json` + `/sample/volume.raw.bin`. Diese Assets sind **nicht** im npm-Paket enthalten (um es klein zu halten). Um die Probe in Ihrer App zu nutzen, kopieren Sie `public/sample/` aus dem Repo in das public-Verzeichnis Ihrer App. Im Normalbetrieb laden Sie eigenes DICOM per `loadStudy(files)`.
+`loadSample()` und die Schaltfläche auf der Startseite laden ein ~16 MB großes anonymisiertes DVT aus `/sample/meta.json` + `/sample/volume.raw.bin`. Diese Assets sind **nicht** im npm-Paket enthalten (um es klein zu halten). Um die Probe in Ihrer App zu nutzen, kopieren Sie `public/sample/` aus dem Repo in das public-Verzeichnis Ihrer App. Im Normalbetrieb laden Sie eigenes DICOM per `loadStudy(files)`. `loadSample('ctIo')` und die zweite Schaltfläche auf der Startseite nutzen stattdessen `/sample-io/` (~19 MB: Volumen, `scans.json` und die beiden gzip-komprimierten Kiefer-Meshes) — kopieren Sie dafür auch `public/sample-io/`.
 
 ## Host-Bundler
 

@@ -46,6 +46,13 @@ export function ViewportGrid() {
     );
   }
 
+  // "3D IO view" — the volume alone, full width, with the registered intraoral
+  // arches on it. No MPR companions: the point of this view is the scan sitting
+  // on the bone, and the slice planes would cut straight through the arches.
+  if (state.layoutMode === 'IO3D') {
+    return <Viewport3D volumeId={vid} />;
+  }
+
   // "3D view" (1+3 or 2×2 grid), configurable via state.panel
   if (state.layoutMode === '1+3') {
     const renderView = (key: ViewKey) =>

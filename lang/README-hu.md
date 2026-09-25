@@ -85,7 +85,8 @@ const ref = useRef<DicomViewerHandle>(null);
 | `getPlan` | `() => PlanData` | Az aktuális terv sorosítása. |
 | `loadPlan` | `(plan: PlanData) => void` | Terv betöltése. |
 | `loadStudy` | `(files: File[]) => Promise<void>` | DICOM betöltése fájlokból. |
-| `loadSample` | `() => Promise<void>` | A csomagolt anonim minta betöltése (a `/sample/*`-ot a befogadónak ki kell szolgálnia — lásd lentebb). |
+| `loadScans` | `(files: File[]) => Promise<void>` | Felszíni scanek (STL / OBJ / PLY) importálása a megnyitott vizsgálat mellé; az állcsontot a fájlnévből ismeri fel. |
+| `loadSample` | `(kind?: 'ct' \| 'ctIo') => Promise<void>` | A csomagolt anonim minta betöltése — `'ct'` csak a CBCT, `'ctIo'` a CBCT a hozzá párosított intraorális scanekkel (a `/sample/*`-ot és a `/sample-io/*`-ot a befogadónak ki kell szolgálnia — lásd lentebb). |
 | `setLayout` | `(mode: LayoutMode) => void` | Elrendezés váltása. |
 | `setActiveView` | `(view: ViewKey) => void` | Az 1×1 nézet váltása. |
 | `exportPdf` | `() => Promise<void>` | PDF-riport készítése + letöltése. |
@@ -120,7 +121,7 @@ A CSG Boolean-kernel (`manifold-3d`, ~1,5 MB WASM) a sablonépítőn belül lazy
 
 ## A csomagolt minta
 
-A `loadSample()` és a nyitóoldali gomb egy ~16 MB-os anonim CBCT-t tölt be a `/sample/meta.json` + `/sample/volume.raw.bin` alól. Ezek az assetek **nincsenek** az npm-csomagban (hogy kicsi maradjon). Ha az appodban használnád a mintát, másold a repo `public/sample/` mappáját az app public könyvtárába. Normál használatban a saját DICOM-odat töltöd be `loadStudy(files)`-szal.
+A `loadSample()` és a nyitóoldali gomb egy ~16 MB-os anonim CBCT-t tölt be a `/sample/meta.json` + `/sample/volume.raw.bin` alól. Ezek az assetek **nincsenek** az npm-csomagban (hogy kicsi maradjon). Ha az appodban használnád a mintát, másold a repo `public/sample/` mappáját az app public könyvtárába. Normál használatban a saját DICOM-odat töltöd be `loadStudy(files)`-szal. A `loadSample('ctIo')` és a nyitóoldal második gombja helyette a `/sample-io/` mappát használja (~19 MB: a volumen, a `scans.json` és a két gzippelt állcsont-mesh) — ha ezt is szeretnéd, másold át a `public/sample-io/` mappát.
 
 ## Befogadó bundlerek
 
