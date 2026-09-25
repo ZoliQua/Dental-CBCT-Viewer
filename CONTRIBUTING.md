@@ -22,6 +22,25 @@ This is a **React + TypeScript** library built with **Vite**.
 There is no separate linter; the strict TypeScript build (`tsc -b`, run by
 `npm run build`) is the compile-time gate.
 
+### Offline data-prep scripts
+
+`scripts/` holds the Node tools that build the bundled demo data. They are not
+part of the package and never run in the browser:
+
+- `anonymize-dicom.cjs <src-dir> <out-dir>` — de-identify a DICOM folder. Values
+  are overwritten in place at their original byte length and UIDs are replaced
+  with deterministic pseudonyms, so nothing is re-encoded and the pixel data and
+  geometry come through bit-identical. Run this **before** anything else touches
+  patient data.
+- `register-scan-to-cbct.cjs <dicom-dir> <mesh.stl> upper|lower [out.json]` —
+  pair an intraoral scan to a CBCT: it finds the jaw's crown band in the volume
+  automatically, searches for a coarse pose and refines it with trimmed ICP
+  against the CBCT's dense-tissue surface. It prints the 4×4 (the app's
+  `ScanMesh.transform` convention) and the trimmed RMS it achieved.
+- `make-sample.cjs` / `make-io-sample.cjs <anonymized-src-dir> [reg-dir]` —
+  build `public/sample/` and `public/sample-io/` (downsampled volume, and for
+  the IO sample the decimated arch meshes plus their transforms).
+
 ## Project layout
 
 - `src/App.tsx` — the `DicomViewer` component (forwardRef + imperative handle).
