@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "scans": [
+    {
+      "file": "upper-jaw.ply.gz",
+      "type": "upperJaw",
+      "nameKey": "scan.upperJaw",
+      "transform": [
+        0.977855,
+        -0.205702,
+        -0.038553,
+        0,
+        0.209229,
+        0.95665,
+        0.202592,
+        0,
+        -0.004792,
+        -0.206172,
+        0.978504,
+        0,
+        -8.043676,
+        -10.26267,
+        34.299694,
+        1
+      ],
+      "triangles": 61142,
+      "fileBytes": 952251,
+      "registration": {
+        "trimmedRmsMm": 0.3229,
+        "within03mmPct": 18.9
+      }
+    },
+    {
+      "file": "lower-jaw.ply.gz",
+      "type": "lowerJaw",
+      "nameKey": "scan.lowerJaw",
+      "transform": [
+        0.999999,
+        0.00123,
+        -0.000627,
+        0,
+        -0.001103,
+        0.984926,
+        0.172974,
+        0,
+        0.00083,
+        -0.172973,
+        0.984926,
+        0,
+        -6.070902,
+        -11.534581,
+        18.138113,
+        1
+      ],
+      "triangles": 58119,
+      "fileBytes": 908714,
+      "registration": {
+        "trimmedRmsMm": 0.2537,
+        "within03mmPct": 25.2
+      }
+    }
+  ]
+}
