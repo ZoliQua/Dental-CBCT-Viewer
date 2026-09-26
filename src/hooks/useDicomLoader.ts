@@ -1,8 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
-import { parseDicomFiles } from '@/core/dicomLoader';
-import { importNativeVolume } from '@/core/import';
+import { ensureCornerstone } from '@/core/ensureCornerstone';
 
 export function useDicomLoader() {
   const { state, dispatch } = useViewer();
@@ -18,6 +17,14 @@ export function useDicomLoader() {
       dispatch({ type: 'SET_LOADING', payload: true });
 
       try {
+        // Cornerstone + the DICOM/native parsers load on demand (see
+        // ensureCornerstone) so the landing page stays light.
+        await ensureCornerstone();
+        const [{ parseDicomFiles }, { importNativeVolume }] = await Promise.all([
+          import('@/core/dicomLoader'),
+          import('@/core/import'),
+        ]);
+        if (stale()) return;
         // Native (non-DICOM) CT exports first — GALILEOS / OneVolume folders.
         const native = await importNativeVolume(files, (pct) => {
           if (!stale()) dispatch({ type: 'SET_LOAD_PROGRESS', payload: { loaded: pct, total: 100 } });

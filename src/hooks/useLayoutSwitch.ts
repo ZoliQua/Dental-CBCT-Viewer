@@ -4,21 +4,22 @@
  */
 
 import { useCallback } from 'react';
-import { cache } from '@cornerstonejs/core';
 import { useViewer } from '@/context/ViewerContext';
-import { setActiveTool } from '@/core/toolManager';
 import { generateDefaultArchCurve } from '@/core/archCurve';
 import type { LayoutMode } from '@/types/dicom';
 
 export function useLayoutSwitch() {
   const { state, dispatch } = useViewer();
 
-  return useCallback((layout: LayoutMode) => {
+  // Cornerstone and the tool manager are imported on demand: switching layout
+  // only happens with a study open, and the landing page must stay light.
+  return useCallback(async (layout: LayoutMode) => {
     dispatch({ type: 'SET_LAYOUT_MODE', payload: layout });
 
     if (layout === 'OPG2+1') {
       // Initialize default arch curve if not yet drawn
       if (!state.archCurveControlPoints && state.volumeId) {
+        const { cache } = await import('@cornerstonejs/core');
         const volume = cache.getVolume(state.volumeId);
         if (volume) {
           const o = volume.origin as [number, number, number];
@@ -33,17 +34,18 @@ export function useLayoutSwitch() {
         }
       }
       // W/L is the default tool in OPG mode
-      setActiveTool('windowLevel');
+      (await import('@/core/toolManager')).setActiveTool('windowLevel');
       dispatch({ type: 'SET_ACTIVE_TOOL', payload: 'windowLevel' });
     } else if (layout === '2x2' || layout === '1+3') {
       // Auto-activate crosshairs in multi-view mode (slight delay for viewports to mount)
+      const { setActiveTool } = await import('@/core/toolManager');
       setTimeout(() => {
         setActiveTool('crosshairs');
         dispatch({ type: 'SET_ACTIVE_TOOL', payload: 'crosshairs' });
       }, 150);
     } else if (state.activeTool === 'crosshairs') {
       // Switch back to W/L when going to 1x1
-      setActiveTool('windowLevel');
+      (await import('@/core/toolManager')).setActiveTool('windowLevel');
       dispatch({ type: 'SET_ACTIVE_TOOL', payload: 'windowLevel' });
     }
   }, [state.archCurveControlPoints, state.volumeId, state.activeTool, dispatch]);

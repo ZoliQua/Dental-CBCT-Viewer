@@ -1,23 +1,34 @@
-import { useEffect, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
+import { useEffect, useCallback, useRef, useImperativeHandle, forwardRef, lazy, Suspense } from 'react';
 import { ViewerProvider, useViewer } from '@/context/ViewerContext';
 import { I18nProvider, useI18n } from '@/i18n/I18nContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
-import { initCornerstone } from '@/core/init';
-import { setActiveTool } from '@/core/toolManager';
+import { ensureCornerstone } from '@/core/ensureCornerstone';
 import { LandingPage } from '@/components/dicom/LandingPage';
 import { DisclaimerBanner } from '@/components/dicom/DisclaimerBanner';
-import { ViewerShell } from '@/components/layout/ViewerShell';
-import { TopBar } from '@/components/layout/TopBar';
-import { StatusBar } from '@/components/layout/StatusBar';
-import { SettingsPanel } from '@/components/panels/SettingsPanel';
 import { IntroTour } from '@/components/panels/IntroTour';
 import { HelpPanel } from '@/components/panels/HelpPanel';
+import { TopBar } from '@/components/layout/TopBar';
 import { useDicomLoader } from '@/hooks/useDicomLoader';
 import { serializePlan } from '@/core/planIO';
-import { loadSample } from '@/core/sampleLoader';
-import { exportPlanPdf, exportDrillGuideStl } from '@/core/viewerExports';
 import type { PlanData } from '@/core/planIO';
 import type { ViewportTool, ImplantData, LayoutMode, ViewKey } from '@/types/dicom';
+
+// Everything below only matters once a study is open — keeping it out of the
+// initial chunk means the landing page does not download Cornerstone / vtk.js.
+const ViewerShell = lazy(() => import('@/components/layout/ViewerShell').then((m) => ({ default: m.ViewerShell })));
+const StatusBar = lazy(() => import('@/components/layout/StatusBar').then((m) => ({ default: m.StatusBar })));
+const SettingsPanel = lazy(() => import('@/components/panels/SettingsPanel').then((m) => ({ default: m.SettingsPanel })));
+
+function Spinner({ label }: { label: string }) {
+  return (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-center">
+        <div className="w-12 h-12 border-4 border-dental-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-gray-600 dark:text-gray-400">{label}</p>
+      </div>
+    </div>
+  );
+}
 
 const SHORTCUT_MAP: Record<string, ViewportTool> = {
   w: 'windowLevel',
@@ -98,6 +109,8 @@ function ViewerApp({
   });
 
   const openSample = useCallback(async () => {
+    await ensureCornerstone();
+    const { loadSample } = await import('@/core/sampleLoader');
     const { study, volumeId, windowLevel } = await loadSample();
     dispatch({ type: 'SET_STUDY', payload: study });
     dispatch({ type: 'SET_WINDOW_LEVEL', payload: windowLevel });
@@ -115,8 +128,8 @@ function ViewerApp({
     loadSample: openSample,
     setLayout: (mode) => dispatch({ type: 'SET_LAYOUT_MODE', payload: mode }),
     setActiveView: (view) => dispatch({ type: 'SET_VIEW_MODE', payload: view }),
-    exportPdf: () => exportPlanPdf(stateRef.current, t, lang),
-    exportGuideStl: () => exportDrillGuideStl(stateRef.current).then((r) => r.ok),
+    exportPdf: () => import('@/core/viewerExports').then((m) => m.exportPlanPdf(stateRef.current, t, lang)),
+    exportGuideStl: () => import('@/core/viewerExports').then((m) => m.exportDrillGuideStl(stateRef.current)).then((r) => r.ok),
   }), [dispatch, loadFiles, openSample, t, lang]);
 
   // ── Prop → state wiring ─────────────────────────────────────
@@ -155,7 +168,7 @@ function ViewerApp({
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       const tool = SHORTCUT_MAP[e.key.toLowerCase()];
       if (tool) {
-        setActiveTool(tool);
+        void import('@/core/toolManager').then((m) => m.setActiveTool(tool));
         dispatch({ type: 'SET_ACTIVE_TOOL', payload: tool });
       }
     },
@@ -167,8 +180,11 @@ function ViewerApp({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  // Initialise Cornerstone when a study appears. The loaders already awaited
+  // ensureCornerstone(), so this resolves from the memoised promise.
   useEffect(() => {
-    initCornerstone()
+    if (!state.study || state.isInitialized) return;
+    ensureCornerstone()
       .then(() => {
         dispatch({ type: 'SET_INITIALIZED' });
       })
@@ -178,19 +194,10 @@ function ViewerApp({
           payload: t('app.initError', { msg: err instanceof Error ? err.message : String(err) }),
         });
       });
-  }, [dispatch, t]);
+  }, [state.study, state.isInitialized, dispatch, t]);
 
   let content;
-  if (!state.isInitialized) {
-    content = (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-dental-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">{t('app.initializing')}</p>
-        </div>
-      </div>
-    );
-  } else if (state.error && !state.study) {
+  if (state.error && !state.study) {
     content = (
       <div className="flex items-center justify-center h-full">
         <div className="text-center max-w-md">
@@ -206,8 +213,14 @@ function ViewerApp({
     );
   } else if (!state.study) {
     content = <LandingPage />;
+  } else if (!state.isInitialized) {
+    content = <Spinner label={t('app.initializing')} />;
   } else {
-    content = <ViewerShell />;
+    content = (
+      <Suspense fallback={<Spinner label={t('app.initializing')} />}>
+        <ViewerShell />
+      </Suspense>
+    );
   }
 
   // The `dark` class lives on the viewer's own root (dcv-root) — never on
@@ -217,8 +230,10 @@ function ViewerApp({
       <div className="flex flex-col h-full w-full overflow-hidden bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
         <TopBar />
         <div className="flex-1 overflow-hidden">{content}</div>
-        <StatusBar />
-        <SettingsPanel />
+        <Suspense fallback={null}>
+          {state.study && <StatusBar />}
+          {state.activePanel === 'settings' && <SettingsPanel />}
+        </Suspense>
         <IntroTour />
         <HelpPanel />
         {!props.embedded && <DisclaimerBanner />}

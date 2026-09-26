@@ -43,6 +43,16 @@ export default defineConfig({
         // of one ~2.8 MB monolith. (The npm library build externalises these, so
         // this only shapes the demo/deployed app bundle.)
         manualChunks(id) {
+          // Vite's own runtime helpers (the dynamic-import preload helper) are
+          // shared by the entry AND every lazy chunk. Left to Rollup they get
+          // hoisted into whichever chunk it likes — landing in the cornerstone
+          // chunk made the entry import it statically, so the browser
+          // preloaded ~1.8 MB of imaging code on the landing page. Pin them to
+          // their own tiny chunk instead.
+          if (id.includes('vite/preload-helper') || id.includes('vite/modulepreload-polyfill')
+              || id.includes('commonjsHelpers') || id.includes('vite/dynamic-import-helper')) {
+            return 'vite-runtime';
+          }
           if (!id.includes('node_modules')) return undefined;
           if (id.includes('@cornerstonejs') || id.includes('dicom-parser')) return 'cornerstone';
           if (id.includes('@kitware') || id.includes('/vtk.js/')) return 'vtk';

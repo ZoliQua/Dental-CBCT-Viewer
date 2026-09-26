@@ -15,7 +15,7 @@ import { SectionHeading } from './landing/SectionHeading';
 import { OtherProjects } from '@/components/common/OtherProjects';
 import { useI18n } from '@/i18n/I18nContext';
 import { useViewer } from '@/context/ViewerContext';
-import { loadSample } from '@/core/sampleLoader';
+import { ensureCornerstone } from '@/core/ensureCornerstone';
 import { publicUrl } from '@/utils/publicUrl';
 
 const REPO_URL = 'https://github.com/ZoliQua/Dental-CBCT-Viewer';
@@ -28,6 +28,9 @@ export function LandingPage() {
   const openSample = async () => {
     setSamplePct(0);
     try {
+      // Cornerstone + the sample loader arrive on demand — see ensureCornerstone.
+      await ensureCornerstone();
+      const { loadSample } = await import('@/core/sampleLoader');
       const { study, volumeId, windowLevel } = await loadSample(publicUrl('sample'), (p) => setSamplePct(p));
       dispatch({ type: 'SET_STUDY', payload: study });
       dispatch({ type: 'SET_WINDOW_LEVEL', payload: windowLevel });

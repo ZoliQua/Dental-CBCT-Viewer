@@ -4,7 +4,7 @@
  * help panels slide in from the right.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -12,15 +12,15 @@ import { LANGUAGES } from '@/i18n/translations';
 import { useLayoutSwitch } from '@/hooks/useLayoutSwitch';
 import { LayoutConfigButton } from './LayoutConfigButton';
 import { LandingNav } from '@/components/dicom/landing/LandingNav';
-import { ImageExportModal } from '@/components/panels/ImageExportModal';
-import { PdfExportModal } from '@/components/panels/PdfExportModal';
-import { exportDrillGuideStl, checkGuide } from '@/core/viewerExports';
 import { serializePlan, planFromObject } from '@/core/planIO';
-import { loadSample } from '@/core/sampleLoader';
-import { getVolumeData } from '@/core/cprEngine';
-import { loadScanPolyData, setScanPolyData, polyDataCenter, translation16, IDENTITY16 } from '@/core/scanMesh';
 import { SCAN_DEFAULTS, type LayoutMode } from '@/types/dicom';
+import { ensureCornerstone } from '@/core/ensureCornerstone';
 import { publicUrl } from '@/utils/publicUrl';
+
+// The export modals and the imaging helpers below pull in Cornerstone / vtk.js
+// and the PDF stack; they load when first used so the landing page stays light.
+const ImageExportModal = lazy(() => import('@/components/panels/ImageExportModal').then((m) => ({ default: m.ImageExportModal })));
+const PdfExportModal = lazy(() => import('@/components/panels/PdfExportModal').then((m) => ({ default: m.PdfExportModal })));
 
 const LAYOUTS: { id: LayoutMode; labelKey?: string; label?: string }[] = [
   { id: '1x1', labelKey: 'layout.view2d' },
@@ -188,6 +188,7 @@ export function TopBar() {
     // tissue-fitting surface — require an explicit acknowledgment before export.
     if (!state.scans.some(s => s.visible) && !window.confirm(t('guide.confirmNoScan'))) return;
     // Printability / safety pre-check (pure, cheap) before the heavy CSG build.
+    const { checkGuide, exportDrillGuideStl } = await import('@/core/viewerExports');
     const issues = checkGuide(state);
     if (issues.length > 0) {
       const lines = issues.map((i) => {
@@ -213,6 +214,8 @@ export function TopBar() {
   };
 
   const importScan = async (file: File) => {
+    const [{ loadScanPolyData, setScanPolyData, polyDataCenter, translation16, IDENTITY16 }, { getVolumeData }] =
+      await Promise.all([import('@/core/scanMesh'), import('@/core/cprEngine')]);
     const pd = await loadScanPolyData(file);
     if (!pd) {
       window.alert(t('scan.invalid'));
@@ -372,6 +375,8 @@ export function TopBar() {
                   onClick={async () => {
                     setNewLoadOpen(false);
                     try {
+                      await ensureCornerstone();
+                      const { loadSample } = await import('@/core/sampleLoader');
                       const { study, volumeId, windowLevel } = await loadSample();
                       dispatch({ type: 'SET_STUDY', payload: study });
                       dispatch({ type: 'SET_WINDOW_LEVEL', payload: windowLevel });
@@ -529,8 +534,10 @@ export function TopBar() {
         )}
       </div>
 
-      <ImageExportModal open={imageExportOpen} onClose={() => setImageExportOpen(false)} />
-      <PdfExportModal open={pdfExportOpen} onClose={() => setPdfExportOpen(false)} />
+      <Suspense fallback={null}>
+        {imageExportOpen && <ImageExportModal open onClose={() => setImageExportOpen(false)} />}
+        {pdfExportOpen && <PdfExportModal open onClose={() => setPdfExportOpen(false)} />}
+      </Suspense>
     </div>
   );
 }
