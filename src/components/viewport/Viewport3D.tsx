@@ -14,6 +14,7 @@ import { OrientationLabel } from './OrientationLabel';
 import { SLICE_AXES, type SliceAxis } from '@/core/slice3D';
 import { NO_CROP, type CropBox } from '@/core/cropBox';
 import { nextWheelZoom } from '@/core/wheelZoom';
+import { loadViewPrefs, saveViewPrefs } from '@/core/viewPrefs';
 import type { Implant3DLayers } from '@/core/implant3D';
 import { VOLUME_3D_PRESETS } from '@/types/dicom';
 import {
@@ -46,8 +47,10 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
   const [slabThickness, setSlabThickness] = useState<number>(0); // 0 = no clipping
   const [ready, setReady] = useState(false); // volume loaded → safe to add actors
   const [layers3D, setLayers3D] = useState<Implant3DLayers>({ implant: true, sleeve: true, axis: true });
-  const [sliceAxes, setSliceAxes] = useState<Record<SliceAxis, boolean>>({ AXIAL: true, SAGITTAL: true, CORONAL: true });
-  const [showCrossSection, setShowCrossSection] = useState(true);
+  // Slice planes + the CS marker are remembered across reloads (core/viewPrefs).
+  const [sliceAxes, setSliceAxes] = useState<Record<SliceAxis, boolean>>(() => loadViewPrefs().sliceAxes);
+  const [showCrossSection, setShowCrossSection] = useState(() => loadViewPrefs().showCrossSection);
+  useEffect(() => { saveViewPrefs({ sliceAxes, showCrossSection }); }, [sliceAxes, showCrossSection]);
   // In the Panoramic layout this pane is a small companion to the panoramic +
   // cross-section, so it keeps only the controls that relate to that cut:
   // the axial + cross-section planes. Colormap / crop / slab stay in 3D view.

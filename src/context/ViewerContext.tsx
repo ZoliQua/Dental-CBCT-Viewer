@@ -1,6 +1,7 @@
-import { createContext, useContext, useReducer, type ReactNode, type Dispatch } from 'react';
+import { createContext, useContext, useEffect, useReducer, type ReactNode, type Dispatch } from 'react';
 import type { DicomStudyInfo, ViewportTool, LayoutMode, ViewMode, ProjectionMode, ImplantData, MeasurementLayer, AnatomyMarker, AnatomyType, ScanMesh, GuideParams, PanelConfig } from '@/types/dicom';
 import { GUIDE_DEFAULTS, DEFAULT_PANEL, DEFAULT_IMPLANT_SYSTEM_ID, normalizePanelViews, normalizeOpgOrder } from '@/types/dicom';
+import { loadViewPrefs, saveViewPrefs } from '@/core/viewPrefs';
 import type { ParsedPlan } from '@/core/planIO';
 import type { Volume3DQuality, Volume3DColormap } from '@/core/volume3DPreset';
 
@@ -565,7 +566,18 @@ const ViewerContext = createContext<{
 } | null>(null);
 
 export function ViewerProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(viewerReducer, initialState);
+  // Start from the user's remembered layout (see core/viewPrefs). A host that
+  // passes `initialLayout` still wins: App applies it once after mount.
+  const [state, dispatch] = useReducer(viewerReducer, initialState, (init) => {
+    const prefs = loadViewPrefs();
+    return { ...init, layoutMode: prefs.layoutMode, panel: prefs.panel };
+  });
+
+  // Remember the arrangement whenever it changes.
+  useEffect(() => {
+    saveViewPrefs({ layoutMode: state.layoutMode, panel: state.panel });
+  }, [state.layoutMode, state.panel]);
+
   return (
     <ViewerContext.Provider value={{ state, dispatch }}>
       {children}
