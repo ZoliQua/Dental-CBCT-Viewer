@@ -13,7 +13,7 @@ import { CropController } from './CropController';
 import { OrientationLabel } from './OrientationLabel';
 import { SLICE_AXES, type SliceAxis } from '@/core/slice3D';
 import { NO_CROP, type CropBox } from '@/core/cropBox';
-import { jawSplitFor, jawClipPlane, canSplitJaws, JAW_SIDES, NO_JAW_SPLIT } from '@/core/jawSplit';
+import { jawSplitFor, jawClipPlane, canSplitJaws, JAW_SIDES, NO_JAW_SPLIT, type JawSide } from '@/core/jawSplit';
 import { nextWheelZoom } from '@/core/wheelZoom';
 import { loadViewPrefs, saveViewPrefs } from '@/core/viewPrefs';
 import type { Implant3DLayers } from '@/core/implant3D';
@@ -52,23 +52,35 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
   const [sliceAxes, setSliceAxes] = useState<Record<SliceAxis, boolean>>(() => loadViewPrefs().sliceAxes);
   const [showCrossSection, setShowCrossSection] = useState(() => loadViewPrefs().showCrossSection);
   useEffect(() => { saveViewPrefs({ sliceAxes, showCrossSection }); }, [sliceAxes, showCrossSection]);
+  // 3D IO view: a single sagittal cut through the CT, scrubbed by hand. It is
+  // the check that matters when positioning a scan — the scan's surface has to
+  // land on the enamel where the slice cuts it — and there is no sagittal MPR
+  // pane in this layout for the plane to follow, so it gets its own slider.
+  const [ioSagittal, setIoSagittal] = useState(false);
+  const [ioSagittalIndex, setIoSagittalIndex] = useState<number | null>(null);
+  const [sagittalCount, setSagittalCount] = useState(0);
+
   // The same viewport serves three layouts, with progressively fewer controls:
   //  'full'    — the 3D view: everything.
   //  'compact' — the Panoramic layout's small companion pane: only what relates
   //              to that cut (the axial + cross-section planes).
-  //  'io'      — the 3D IO view: the volume with the intraoral scans on it. No
-  //              cutting planes at all (they would slice through the arches);
-  //              the two arch toggles take their place.
+  //  'io'      — the 3D IO view: the volume with the intraoral scans on it.
+  //              The arch toggles replace the slice buttons, and the only cut
+  //              on offer is a sagittal one, for checking a scan against the
+  //              enamel it should be sitting on.
   const mode: 'full' | 'compact' | 'io' =
     state.layoutMode === 'OPG2+1' ? 'compact' : state.layoutMode === 'IO3D' ? 'io' : 'full';
   const compact = mode !== 'full';
   // Hidden planes are also not drawn, without clobbering the user's choices for
   // the full 3D view.
   const effectiveAxes: Record<SliceAxis, boolean> = mode === 'io'
-    ? { AXIAL: false, SAGITTAL: false, CORONAL: false }
+    ? { AXIAL: false, SAGITTAL: ioSagittal, CORONAL: false }
     : mode === 'compact'
       ? { ...sliceAxes, SAGITTAL: false, CORONAL: false }
       : sliceAxes;
+  const sliceIndexOverride = mode === 'io' && ioSagittalIndex != null
+    ? { SAGITTAL: ioSagittalIndex }
+    : undefined;
 
   // The arch toggles drive the scans' own visibility, so the IO view and the
   // Layers panel never disagree about what is on screen.
@@ -79,6 +91,16 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
     const next = !group.every((sc) => sc.visible);
     for (const sc of group) dispatch({ type: 'UPDATE_SCAN', payload: { ...sc, visible: next } });
   };
+
+  /** Switch the whole scene to one jaw: clip the CT and match the arch scans. */
+  const selectJaw = (side: JawSide) => {
+    dispatch({ type: 'SET_JAW_SIDE', payload: side });
+    for (const sc of ioScans) {
+      const wanted = side === 'both' || sc.type === (side === 'upper' ? 'upperJaw' : 'lowerJaw');
+      if (sc.visible !== wanted) dispatch({ type: 'UPDATE_SCAN', payload: { ...sc, visible: wanted } });
+    }
+  };
+
   // Jaw filter: cut the volume at the occlusal plane so one arch can be turned
   // around on its own. Detection runs once per volume (it sweeps the whole
   // scan) and also reports whether there are two arches to choose between —
@@ -92,7 +114,12 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
     const id = window.setTimeout(async () => {
       const { getVolumeData } = await import('@/core/cprEngine');
       if (cancelled) return;
-      setJawSplit(jawSplitFor(volumeId, getVolumeData(volumeId)));
+      const vd = getVolumeData(volumeId);
+      setJawSplit(jawSplitFor(volumeId, vd));
+      // Sagittal runs along x; start the scrubber in the middle of the arch.
+      const n = vd?.dims[0] ?? 0;
+      setSagittalCount(n);
+      setIoSagittalIndex((prev) => (prev != null && prev < n ? prev : Math.floor(n / 2)));
     }, 0);
     return () => { cancelled = true; window.clearTimeout(id); };
   }, [ready, volumeId]);
@@ -307,7 +334,7 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
       {/* Implant / sleeve / axis 3D meshes (added once the volume is loaded) */}
       {ready && <Implant3DActors layers={layers3D} />}
       {ready && <ScanActors />}
-      {ready && <Slice3DActors axes={effectiveAxes} preset={activePreset} rebuildKey={sliceRebuild} />}
+      {ready && <Slice3DActors axes={effectiveAxes} preset={activePreset} rebuildKey={sliceRebuild} indexOverride={sliceIndexOverride} />}
       {ready && <CrossSection3DActor enabled={mode === 'compact' && showCrossSection} />}
       {ready && <CropController crop={crop} enabled={cropEnabled} jawPlane={jawPlane} />}
 
@@ -419,12 +446,43 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
             <span>{t(`quality.${activeQuality}`)}</span>
           </button>
 
+          {mode === 'io' && sagittalCount > 0 && (<>
+          <span className="w-px h-4 bg-slate-700/60" />
+
+          {/* Sagittal cut + its own scrubber: no MPR pane here to follow. */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setIoSagittal((v) => !v)}
+              title={t('view3d.ioSagittal')}
+              className={`px-1.5 py-1 rounded text-[10px] font-semibold transition-colors ${
+                ioSagittal ? 'bg-dental-600 text-white' : 'bg-slate-800/60 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              S
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={Math.max(0, sagittalCount - 1)}
+              step={1}
+              value={ioSagittalIndex ?? 0}
+              disabled={!ioSagittal}
+              onChange={(e) => setIoSagittalIndex(Number(e.target.value))}
+              className="w-24 h-1 accent-dental-400 disabled:opacity-40"
+              title={`${(ioSagittalIndex ?? 0) + 1} / ${sagittalCount}`}
+            />
+          </div>
+          </>)}
+
           {canSplit && (<>
           <span className="w-px h-4 bg-slate-700/60" />
 
-          {/* Jaw filter: both → upper → lower */}
+          {/* Jaw filter: both → upper → lower. It sets the scene to that jaw —
+              the CT is cut at the occlusal plane and the arch scans follow, so
+              "lower jaw" means the lower jaw and nothing else. The per-arch
+              toggles stay free afterwards for anyone who wants one back. */}
           <button
-            onClick={() => dispatch({ type: 'SET_JAW_SIDE', payload: JAW_SIDES[(JAW_SIDES.indexOf(jawSide) + 1) % JAW_SIDES.length] })}
+            onClick={() => selectJaw(JAW_SIDES[(JAW_SIDES.indexOf(jawSide) + 1) % JAW_SIDES.length])}
             title={t('jaw.hint')}
             className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] transition-colors whitespace-nowrap ${
               jawSide === 'both' ? 'text-slate-200 hover:bg-slate-700/60' : 'bg-dental-600 text-white'

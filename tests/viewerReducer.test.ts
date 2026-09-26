@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { viewerReducer, initialState, type ViewerState } from '../src/context/ViewerContext';
+import { viewerReducer, initialState, MIN_REG_PAIRS, MAX_REG_PAIRS, type ViewerState } from '../src/context/ViewerContext';
 import { planFromObject, type PlanData } from '../src/core/planIO';
 import type { DicomStudyInfo, ImplantData } from '../src/types/dicom';
 
@@ -266,5 +266,44 @@ describe('IO scans and the 3D IO layout', () => {
   it('does not touch other layouts when a scan is removed', () => {
     const s = { ...withScans('upperJaw'), layoutMode: 'OPG2+1' as const };
     expect(viewerReducer(s, { type: 'REMOVE_SCAN', payload: 's0' }).layoutMode).toBe('OPG2+1');
+  });
+});
+
+describe('registration landmark pairs', () => {
+  const start = (): ViewerState =>
+    viewerReducer({ ...initialState }, { type: 'START_REGISTRATION', payload: 'scan1' });
+
+  it('starts at the minimum a rigid fit needs', () => {
+    expect(start().registration?.pairs).toHaveLength(MIN_REG_PAIRS);
+  });
+
+  it('adds pairs up to the cap and no further', () => {
+    let s = start();
+    for (let i = 0; i < 20; i++) s = viewerReducer(s, { type: 'ADD_REG_PAIR' });
+    expect(s.registration?.pairs).toHaveLength(MAX_REG_PAIRS);
+  });
+
+  it('removes the pair asked for, keeping the others', () => {
+    let s = viewerReducer(start(), { type: 'ADD_REG_PAIR' });
+    s = viewerReducer(s, { type: 'SET_REG_POINT', payload: { slot: 3, kind: 'cbct', point: [1, 2, 3] } });
+    s = viewerReducer(s, { type: 'REMOVE_REG_PAIR', payload: 0 });
+    expect(s.registration?.pairs).toHaveLength(MIN_REG_PAIRS);
+    expect(s.registration?.pairs[2].cbct).toEqual([1, 2, 3]);
+  });
+
+  it('never drops below the minimum', () => {
+    const s = viewerReducer(start(), { type: 'REMOVE_REG_PAIR', payload: 0 });
+    expect(s.registration?.pairs).toHaveLength(MIN_REG_PAIRS);
+  });
+
+  it('clears the picking slot on removal — the indices just moved', () => {
+    let s = viewerReducer(start(), { type: 'ADD_REG_PAIR' });
+    s = viewerReducer(s, { type: 'SET_REG_PICKING', payload: { slot: 3, kind: 'scan' } });
+    s = viewerReducer(s, { type: 'REMOVE_REG_PAIR', payload: 0 });
+    expect(s.registration?.picking).toBeNull();
+  });
+
+  it('ignores pair edits when no registration is running', () => {
+    expect(viewerReducer({ ...initialState }, { type: 'ADD_REG_PAIR' }).registration).toBeNull();
   });
 });

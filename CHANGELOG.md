@@ -16,23 +16,29 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
   at the first bone/enamel it meets, honouring whatever the view is clipped to,
   and the scan being registered steps out of the way while you aim at the CT
   underneath it.
-- **"Refine to CT"** — a surface fit that takes over where the landmarks leave
-  off, pulling the dense tissue out of the volume around the scan and running a
-  trimmed ICP onto it. Offered in the Layers → Adjust panel and straight after
-  a landmark alignment, and reported in millimetres so it is clear whether it
-  helped. On the bundled sample it recovers a 1.4 mm + 2° displacement back to
-  the same fit every time.
+- **Landmark registration takes as many pairs as you want** (three to eight),
+  with each pair's residual shown live and the worst one flagged. Three is what
+  a rigid fit needs, not what it wants: every pair carries the operator's click
+  error and a least-squares fit averages it down. A landmark that is
+  millimetres out is a mis-click, and now it is visible — re-pick that one pair
+  instead of starting the registration over.
 - **Jaw filter in the 3D view** — show the upper or the lower jaw alone, cut at
   the occlusal plane, so one arch can be turned around without the other in the
   way. The split is found from the scan itself (the two enamel peaks along the
   patient axis with the gap between them), and a volume holding only one arch
   is recognised as such: it gets no button rather than an option that would
-  blank the view.
+  blank the view. Choosing a jaw also shows that arch's intraoral scan and
+  hides the other, so "lower jaw" means the lower jaw and nothing else.
+- **Sagittal slice in the 3D IO view**, with its own scrubber — drag it along
+  the arch to see whether the scan's surface really sits on the enamel. This
+  layout has no MPR pane for the plane to follow, so it gets a slider.
+- **Imported scans appear in the Series tree** under the CT they belong to,
+  with their arch, triangle count and extent, and their own visibility and
+  remove controls.
 - **3D IO view** — a dedicated layout showing the CBCT with the patient's
   **intraoral scans** on it, one layer per arch with its own on-image toggle
-  (Upper jaw / Lower jaw). It has no MPR companions and no cutting planes — they
-  would slice through the arches — and it only appears in the view switcher once
-  an upper or lower scan is loaded.
+  (Upper jaw / Lower jaw). It has no MPR companions, and it only appears in the
+  view switcher once an upper or lower scan is loaded.
 - **Load scan** in the Series panel — import several surface scans (STL / OBJ /
   PLY) at once for the open CT. The arch is recognised from the file name
   (exocad / Medit / 3Shape conventions, EN / DE / HU), so a pair of jaw scans
@@ -43,11 +49,12 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
   with.
 - **"Load CT + IO scan sample"** on the landing page and in the New load menu: a
   second de-identified data set — a CBCT plus that patient's upper and lower
-  intraoral scans, **already paired to it**. The pairing is measured offline by
+  intraoral scans, **already paired to it**. The pairing is computed offline by
   the new `scripts/register-scan-to-cbct.cjs` (coarse pose search + trimmed ICP
-  against the CBCT's dense-tissue surface) and lands at ≈0.25–0.32 mm trimmed
-  RMS, the CBCT's own voxel size. The existing button is now **"Load CT
-  sample"**.
+  against the CBCT's dense-tissue surface). Its 0.25–0.32 mm trimmed RMS is the
+  fit's own score and **not an accuracy**: the objective turns out to be shallow
+  at the millimetre scale (see *Not shipped*), so treat the pairing as visually
+  correct rather than measured. The existing button is now **"Load CT sample"**.
 - `loadScans(files)` on the imperative ref API, and `loadSample('ct' | 'ctIo')`.
 - `scripts/anonymize-dicom.cjs` — de-identifies a DICOM folder without
   re-encoding it (same-length value overwrites and deterministic pseudonymous
@@ -59,11 +66,26 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
 
 ### Changed
 
-- **ICP is usable on real surfaces.** It was only ever reachable with a handful
-  of landmark points, because nearest-neighbour was brute force; it now carries
-  an exact uniform-grid index and an optional trimmed objective, which is what
-  makes fitting a scan's thousands of points to a CBCT surface practical in the
-  browser.
+- **ICP is usable on real surfaces.** Nearest-neighbour was brute force, which
+  is fine for a handful of landmarks and hopeless for thousands of points; it
+  now carries an exact uniform-grid index and an optional trimmed objective.
+
+### Not shipped
+
+- **Automatic surface refinement of a scan's registration.** It was built,
+  measured against a known-good registration, and removed: no local objective
+  tried — trimmed point-to-point ICP against an extracted surface, nor
+  Gauss–Newton on the image's own intensity edge, with or without a
+  surface-normal gate — has its minimum at the correct pose. Measured on the
+  bundled sample, a pose 1 mm from the truth scores *better* than the truth on
+  every one of them, and a fit seeded 1 mm out converges further away rather
+  than back. This is not a resolution limit: the same result comes back from
+  the full 0.15 mm series. The cause is that most of an arch scan is gingiva,
+  which a CBCT does not image, so the correspondences that remain do not
+  constrain the pose at the millimetre scale. A button that degrades a
+  registration is worse than no button, so the effort went into the manual
+  path instead: landmarks on the 3D rendering, more pairs, per-pair residuals,
+  and a sagittal slice to check the result against.
 - **Much faster first load** — the landing page no longer ships the imaging
   stack. Cornerstone, vtk.js, jsPDF and the viewer shell are code-split and
   fetched only when a scan is opened, cutting the landing payload from

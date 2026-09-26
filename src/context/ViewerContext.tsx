@@ -223,12 +223,22 @@ export type ViewerAction =
   | { type: 'START_REGISTRATION'; payload: string }
   | { type: 'SET_REG_PICKING'; payload: { slot: number; kind: 'scan' | 'cbct' } | null }
   | { type: 'SET_REG_POINT'; payload: { slot: number; kind: 'scan' | 'cbct'; point: [number, number, number] } }
+  | { type: 'ADD_REG_PAIR' }
+  | { type: 'REMOVE_REG_PAIR'; payload: number }
   | { type: 'END_REGISTRATION' }
   | { type: 'LOAD_PLAN'; payload: ParsedPlan }
   | { type: 'ADD_MEASUREMENT'; payload: MeasurementLayer }
   | { type: 'UPDATE_MEASUREMENT'; payload: MeasurementLayer }
   | { type: 'REMOVE_MEASUREMENT'; payload: string }
   | { type: 'RESET' };
+
+/**
+ * Landmark pairs a registration may use. Three is the minimum a rigid transform
+ * needs; more is better, because each pair carries the operator's click error
+ * and a least-squares fit averages it down.
+ */
+export const MIN_REG_PAIRS = 3;
+export const MAX_REG_PAIRS = 8;
 
 /** Exported for unit tests. */
 export const initialState: ViewerState = {
@@ -517,12 +527,35 @@ export function viewerReducer(state: ViewerState, action: ViewerAction): ViewerS
         registration: state.registration?.scanId === action.payload ? null : state.registration,
       };
     }
+    case 'ADD_REG_PAIR': {
+      // More pairs, better fit: a rigid Kabsch solve averages out the operator's
+      // click error, which falls roughly as 1/√N. Capped so the panel stays a
+      // panel.
+      if (!state.registration || state.registration.pairs.length >= MAX_REG_PAIRS) return state;
+      return {
+        ...state,
+        registration: { ...state.registration, pairs: [...state.registration.pairs, { scan: null, cbct: null }] },
+      };
+    }
+    case 'REMOVE_REG_PAIR': {
+      const reg = state.registration;
+      if (!reg || reg.pairs.length <= MIN_REG_PAIRS) return state;
+      return {
+        ...state,
+        registration: {
+          ...reg,
+          pairs: reg.pairs.filter((_, i) => i !== action.payload),
+          // The picking slot indexes into the array that just changed.
+          picking: null,
+        },
+      };
+    }
     case 'START_REGISTRATION':
       return {
         ...state,
         registration: {
           scanId: action.payload,
-          pairs: [{ scan: null, cbct: null }, { scan: null, cbct: null }, { scan: null, cbct: null }],
+          pairs: Array.from({ length: MIN_REG_PAIRS }, () => ({ scan: null, cbct: null })),
           picking: null,
         },
       };

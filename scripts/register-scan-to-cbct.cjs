@@ -19,10 +19,14 @@
  *
  *   node scripts/register-scan-to-cbct.cjs <dicom-dir> <mesh.stl> upper|lower [out.json]
  *
- * Accuracy is reported as the trimmed RMS over the kept correspondences; on the
- * bundled sample both jaws land at ≈0.3 mm, which is the CBCT's own voxel size.
- * Always check the result visually — this is a starting alignment, not a
- * certified registration, and the viewer's manual nudge exists for that reason.
+ * The trimmed RMS it reports is the fit's own score, NOT an accuracy. Measured
+ * against a result from this tool, the objective is shallow at the millimetre
+ * scale: seed it 1 mm away and it converges somewhere else that scores as well
+ * or better, on the full 0.15 mm series as much as on a downsampled one. Most
+ * of an arch scan is gingiva, which a CBCT does not image, and what is left
+ * does not pin the pose down that finely. So: use this to get a scan into
+ * place, then CHECK IT VISUALLY against the slices, and expect to finish the
+ * job with landmarks and the viewer's manual nudge.
  */
 const fs = require('fs');
 const path = require('path');

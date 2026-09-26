@@ -25,7 +25,18 @@ const AXIS_VP: Record<SliceAxis, string> = {
   CORONAL: VP_CORONAL,
 };
 
-export function Slice3DActors({ axes, preset, rebuildKey }: { axes: Record<SliceAxis, boolean>; preset?: string; rebuildKey?: number }) {
+export function Slice3DActors({
+  axes, preset, rebuildKey, indexOverride,
+}: {
+  axes: Record<SliceAxis, boolean>;
+  preset?: string;
+  rebuildKey?: number;
+  /**
+   * Fixed slice index per axis, for layouts that show no MPR pane to follow
+   * (the 3D IO view scrubs its sagittal plane from a slider instead).
+   */
+  indexOverride?: Partial<Record<SliceAxis, number>>;
+}) {
   const { state } = useViewer();
   const addedRef = useRef<string[]>([]);
 
@@ -65,6 +76,8 @@ export function Slice3DActors({ axes, preset, rebuildKey }: { axes: Record<Slice
     const indexByAxis: Partial<Record<SliceAxis, number>> = {};
 
     const targetIndex = (axis: SliceAxis): number => {
+      const forced = indexOverride?.[axis];
+      if (forced != null) return forced;
       const mpr = engine?.getViewport(AXIS_VP[axis]) as Types.IVolumeViewport | undefined;
       const fp = mpr?.getCamera()?.focalPoint as [number, number, number] | undefined;
       return fp ? sliceIndexAtWorld(vi!, axis, fp) : centerSliceIndex(vi!, axis);
@@ -128,7 +141,7 @@ export function Slice3DActors({ axes, preset, rebuildKey }: { axes: Record<Slice
         addedRef.current = [];
       }
     };
-  }, [axes, state.windowLevel, state.volumeId, state.layoutMode, state.panel, state.display.sliceOpacity, preset, rebuildKey]);
+  }, [axes, indexOverride, state.windowLevel, state.volumeId, state.layoutMode, state.panel, state.display.sliceOpacity, preset, rebuildKey]);
 
   return null;
 }

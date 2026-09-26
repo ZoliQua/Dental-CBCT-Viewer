@@ -10,7 +10,8 @@ import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
 import { useDicomLoader } from '@/hooks/useDicomLoader';
 import { useScanImport } from '@/hooks/useScanImport';
-import type { DicomStudyInfo, DicomSeriesInfo } from '@/types/dicom';
+import { scanMeshInfo, removeScanPolyData } from '@/core/scanMesh';
+import type { DicomStudyInfo, DicomSeriesInfo, ScanMesh } from '@/types/dicom';
 
 /** "512×512 · 0.3 mm" from a series' in-plane dimensions/spacing, when known. */
 function seriesGeometry(s: DicomSeriesInfo): string | null {
@@ -177,9 +178,77 @@ export function StudyTree() {
                 </button>
               );
             })}
+
+            {/* Imported surface scans belong to the CT they were loaded for, so
+                they hang under it like its series rather than in a list of
+                their own. Visibility and removal are here too — the Layers
+                panel is about what is drawn, this is about what is loaded. */}
+            {!isCollapsed && isActiveStudy && state.scans.length > 0 && (
+              <div className="ml-4 mt-1 flex flex-col gap-0.5">
+                <div className="px-1 text-[10px] uppercase tracking-wide text-gray-500 select-none">
+                  {t('layers.scans')}
+                </div>
+                {state.scans.map((scan) => (
+                  <ScanRow key={scan.id} scan={scan} />
+                ))}
+              </div>
+            )}
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** One imported mesh under its study: what it is, how big, and whether it is shown. */
+function ScanRow({ scan }: { scan: ScanMesh }) {
+  const { dispatch } = useViewer();
+  const { t } = useI18n();
+  const info = scanMeshInfo(scan.id);
+  const extent = info && info.extentMm.some((v) => v > 0)
+    ? info.extentMm.map((v) => Math.round(v)).join(' × ') + ' mm'
+    : null;
+
+  return (
+    <div className="group flex items-start gap-1 rounded-lg px-2 py-1 hover:bg-gray-200/70 dark:hover:bg-gray-700/50 transition-colors">
+      <span
+        className="mt-0.5 w-2.5 h-2.5 shrink-0 rounded-sm border border-black/20 dark:border-white/20"
+        style={{ backgroundColor: scan.color }}
+        aria-hidden
+      />
+      <div className="flex-1 min-w-0">
+        <div className={`text-sm truncate ${scan.visible ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500 line-through'}`}>
+          {scan.name}
+        </div>
+        <div className="text-[11px] text-gray-500 truncate">
+          {t(`scan.${scan.type}`)}
+          {info ? ` · ${t('series.triangles', { n: info.triangles.toLocaleString() })}` : ` · ${t('scan.notLoaded')}`}
+        </div>
+        {extent && <div className="text-[10px] text-gray-400 dark:text-gray-500">{extent}</div>}
+      </div>
+      <button
+        onClick={() => dispatch({ type: 'UPDATE_SCAN', payload: { ...scan, visible: !scan.visible } })}
+        title={scan.visible ? t('layers.hide') : t('layers.show')}
+        className="shrink-0 w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+      >
+        {scan.visible ? (
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" /><circle cx="12" cy="12" r="3" />
+          </svg>
+        ) : (
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
+            <line x1="1" y1="1" x2="23" y2="23" />
+          </svg>
+        )}
+      </button>
+      <button
+        onClick={() => { removeScanPolyData(scan.id); dispatch({ type: 'REMOVE_SCAN', payload: scan.id }); }}
+        title={t('series.remove')}
+        className="shrink-0 w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-red-500 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+      >
+        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" /></svg>
+      </button>
     </div>
   );
 }

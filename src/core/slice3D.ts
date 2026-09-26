@@ -37,6 +37,11 @@ export function centerSliceIndex(vi: VolumeInfo, axis: SliceAxis): number {
   return Math.floor(n / 2);
 }
 
+/** Number of slices along an axis. */
+export function sliceCount(vi: VolumeInfo, axis: SliceAxis): number {
+  return axis === 'AXIAL' ? vi.dims[2] : axis === 'SAGITTAL' ? vi.dims[0] : vi.dims[1];
+}
+
 /** Slice index nearest a world point along an axis (clamped to the volume). */
 export function sliceIndexAtWorld(vi: VolumeInfo, axis: SliceAxis, p: [number, number, number]): number {
   const a = axis === 'AXIAL' ? 2 : axis === 'SAGITTAL' ? 0 : 1;

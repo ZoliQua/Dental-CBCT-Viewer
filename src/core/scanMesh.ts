@@ -190,6 +190,29 @@ export function sliceScanWorld(
   return slicePlaneBVH(entry.soup, entry.bvh, planePoint, planeNormal);
 }
 
+/** Point/triangle counts and mm extent of a loaded mesh, for the series tree. */
+export function scanMeshInfo(id: string): { points: number; triangles: number; extentMm: [number, number, number] } | null {
+  const pd = registry.get(id);
+  if (!pd) return null;
+  const points = pd.getPoints?.()?.getNumberOfPoints?.() ?? 0;
+  // vtk stores polys as [n, i0, i1, …] runs; a triangle soup is 4 entries each.
+  const polys = pd.getPolys?.()?.getData?.();
+  let triangles = 0;
+  if (polys) {
+    for (let i = 0; i < polys.length;) {
+      const n = polys[i];
+      if (n < 3) break;
+      triangles += n - 2; // fan-triangulated
+      i += n + 1;
+    }
+  }
+  const b = pd.getBounds?.();
+  const extentMm: [number, number, number] = b && b.length >= 6
+    ? [b[1] - b[0], b[3] - b[2], b[5] - b[4]]
+    : [0, 0, 0];
+  return { points, triangles, extentMm };
+}
+
 /**
  * Subsampled mesh vertices in the scan's OWN coordinates, for ICP refinement.
  * ICP is seeded with the scan's current transform, so the source has to stay
