@@ -5,6 +5,22 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
 `1.0.0` onward.
 
+## [Unreleased]
+
+### Added
+
+- **View preferences are remembered** — the layout (2D / 3D / Panoramic), the
+  1+3 pane arrangement, the panoramic pane order and the 3D slice-plane
+  toggles (A / S / C / CS) are restored on the next visit.
+
+### Changed
+
+- **Much faster first load** — the landing page no longer ships the imaging
+  stack. Cornerstone, vtk.js, jsPDF and the viewer shell are code-split and
+  fetched only when a scan is opened, cutting the landing payload from
+  ~2.4 MB to ~350 kB.
+- Refreshed the landing-page screenshots to the current interface.
+
 ## [1.3.0] — 2026-09-19
 
 ### Added
