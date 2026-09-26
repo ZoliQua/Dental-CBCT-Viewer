@@ -12,6 +12,7 @@
  */
 
 import { normalizeOpgOrder, normalizePanelViews, DEFAULT_PANEL, type LayoutMode, type PanelConfig } from '@/types/dicom';
+import { JAW_SIDES, type JawSide } from './jawSplit';
 
 const KEY = 'denct.viewPrefs.v1';
 const LAYOUTS: LayoutMode[] = ['1x1', '2x2', '1+3', 'OPG2+1', 'IO3D'];
@@ -23,6 +24,8 @@ export interface ViewPrefs {
   sliceAxes: { AXIAL: boolean; SAGITTAL: boolean; CORONAL: boolean };
   /** The 3D "CS" marker showing where the cross-section cuts. */
   showCrossSection: boolean;
+  /** Which jaw the 3D view is cut down to. */
+  jawSide: JawSide;
 }
 
 export const DEFAULT_VIEW_PREFS: ViewPrefs = {
@@ -30,6 +33,7 @@ export const DEFAULT_VIEW_PREFS: ViewPrefs = {
   panel: DEFAULT_PANEL,
   sliceAxes: { AXIAL: true, SAGITTAL: true, CORONAL: true },
   showCrossSection: true,
+  jawSide: 'both',
 };
 
 const bool = (v: unknown, d: boolean) => (typeof v === 'boolean' ? v : d);
@@ -63,6 +67,7 @@ export function loadViewPrefs(): ViewPrefs {
       AXIAL: bool(a.AXIAL, true), SAGITTAL: bool(a.SAGITTAL, true), CORONAL: bool(a.CORONAL, true),
     },
     showCrossSection: bool(o.showCrossSection, true),
+    jawSide: JAW_SIDES.includes(o.jawSide) ? o.jawSide : 'both',
   };
 }
 

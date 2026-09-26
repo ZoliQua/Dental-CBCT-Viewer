@@ -12,6 +12,7 @@
 import { useState } from 'react';
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
+import { useScanRefine } from '@/hooks/useScanRefine';
 import { nudgeScan, rotateScan, scanCenterWorld, NUDGE_MM, NUDGE_DEG, type NudgeAxis } from '@/core/scanAdjust';
 import { getScanPolyData, getScanBaseTransform } from '@/core/scanMesh';
 import type { ScanMesh } from '@/types/dicom';
@@ -37,6 +38,21 @@ export function ScanAdjust({ scan }: { scan: ScanMesh }) {
   const { t } = useI18n();
   const [mm, setMm] = useState(NUDGE_MM);
   const [deg, setDeg] = useState(NUDGE_DEG);
+  const refine = useScanRefine();
+  const [refining, setRefining] = useState(false);
+  const [surfaceRms, setSurfaceRms] = useState<number | null>(null);
+
+  const runRefine = async () => {
+    setRefining(true);
+    setSurfaceRms(null);
+    try {
+      const outcome = await refine(scan);
+      if (outcome.ok) setSurfaceRms(outcome.result.rmsMm);
+      else window.alert(t(`reg.refine.${outcome.reason}`));
+    } finally {
+      setRefining(false);
+    }
+  };
 
   const apply = (transform: number[]) => dispatch({ type: 'UPDATE_SCAN', payload: { ...scan, transform } });
 
@@ -53,6 +69,21 @@ export function ScanAdjust({ scan }: { scan: ScanMesh }) {
 
   return (
     <div className="mt-1 ml-2 mr-1 rounded-md border border-gray-200 dark:border-gray-700 p-1.5 space-y-1.5">
+      {/* Let the CT do the work first — hand nudges are for what it cannot see. */}
+      <button
+        onClick={runRefine}
+        disabled={refining}
+        title={t('reg.refine.hint')}
+        className="w-full py-1 text-[11px] rounded bg-dental-600 text-white hover:bg-dental-700 transition-colors disabled:opacity-50"
+      >
+        {refining ? t('reg.refine.busy') : t('reg.refine.button')}
+      </button>
+      {surfaceRms !== null && (
+        <p className="text-[10px] font-mono text-gray-600 dark:text-gray-300 text-center">
+          {t('reg.refine.result', { rms: surfaceRms.toFixed(2) })}
+        </p>
+      )}
+
       <div className="flex items-center justify-between gap-2">
         <span className="text-[10px] uppercase tracking-wide text-gray-500 select-none">{t('scanAdjust.move')}</span>
         <select

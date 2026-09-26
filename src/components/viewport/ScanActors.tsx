@@ -14,6 +14,12 @@ import { getScanPolyData, buildScanActor } from '@/core/scanMesh';
 export function ScanActors() {
   const { state } = useViewer();
   const addedRef = useRef<string[]>([]);
+  // While a CBCT landmark is being picked in 3D, the scan being registered is
+  // sitting on top of the very teeth the user has to click. The ray only ever
+  // queries the volume, so the pick would still work — but you cannot aim at
+  // what you cannot see, so the scan steps out of the way until the click lands.
+  const pickingCbct = state.registration?.picking?.kind === 'cbct';
+  const hiddenId = pickingCbct ? state.registration?.scanId : null;
 
   useEffect(() => {
     const engine = getRenderingEngine(RENDERING_ENGINE_ID);
@@ -26,7 +32,7 @@ export function ScanActors() {
     }
 
     for (const scan of state.scans) {
-      if (!scan.visible) continue;
+      if (!scan.visible || scan.id === hiddenId) continue;
       const pd = getScanPolyData(scan.id);
       if (!pd) continue; // geometry not loaded this session (needs re-import)
       const actor = buildScanActor(pd, scan.color, scan.opacity, scan.transform);
@@ -45,7 +51,7 @@ export function ScanActors() {
         addedRef.current = [];
       }
     };
-  }, [state.scans]);
+  }, [state.scans, hiddenId]);
 
   return null;
 }

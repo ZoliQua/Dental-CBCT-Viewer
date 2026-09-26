@@ -23,7 +23,7 @@
 
 **Viewing**
 - 🩻 **MPR** (axial / sagittal / coronal) with linked crosshairs and window/level synced across every view
-- 🧊 **True-3D volume rendering** — render presets incl. a translucent **X-ray** mode, colormaps, one-click **Low / Medium / High** quality, intersecting slice planes, crop box, mouse-wheel zoom
+- 🧊 **True-3D volume rendering** — render presets incl. a translucent **X-ray** mode, colormaps, one-click **Low / Medium / High** quality, intersecting slice planes, crop box, mouse-wheel zoom, and an **upper / lower jaw filter** that cuts the volume at the occlusal plane (detected from the scan, and not offered when only one arch is in the field of view)
 - 🦷 **Panoramic (OPG) reconstruction** along a draggable dental-arch curve — or let **Auto arch** estimate the arch from the scan — plus tiltable, perpendicular **cross-sections**
 - 🔀 **Panoramic layout with swappable panes**: blow the cross-section or the 3D view up to the big slot and back; the 3D pane marks **where the cross-section cuts**
 - 😁 **3D IO view** — the CBCT with the patient's **intraoral scans** on it, one layer per arch, each with its own toggle; the view appears in the switcher as soon as an arch scan is loaded
@@ -39,7 +39,7 @@
 **Surgical guide & export**
 - 🖨️ **3D-printable drill guide (STL)** built with constructive solid geometry (`manifold-3d`), with an optional **metal-sleeve seat** and shoulder **drill stop**
 - ✅ **Pre-export guide checks** — thin walls, narrow drill channels, fragile webs between bores, and a drill path that reaches the nerve or sinus past the implant apex
-- 🧩 **Surface-scan import** (STL / OBJ / PLY, several at once) — the arch is recognised from the file name, then paired to the CBCT by 3-point landmark **registration** or corrected by hand with millimetre / degree nudges
+- 🧩 **Surface-scan import** (STL / OBJ / PLY, several at once) — the arch is recognised from the file name, then paired to the CBCT: pick 3 landmarks on the axial slice **or straight on the 3D rendering**, let **Refine to CT** fit the scan onto the bone surface (trimmed ICP), and correct anything left by hand with millimetre / degree nudges
 - 🖼️ **Image export** (PNG / JPG) and a configurable **PDF report**; plan save / load as JSON
 
 **Integration & privacy**

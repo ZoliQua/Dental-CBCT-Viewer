@@ -13,6 +13,7 @@ import { CropController } from './CropController';
 import { OrientationLabel } from './OrientationLabel';
 import { SLICE_AXES, type SliceAxis } from '@/core/slice3D';
 import { NO_CROP, type CropBox } from '@/core/cropBox';
+import { jawSplitFor, jawClipPlane, canSplitJaws, JAW_SIDES, NO_JAW_SPLIT } from '@/core/jawSplit';
 import { nextWheelZoom } from '@/core/wheelZoom';
 import { loadViewPrefs, saveViewPrefs } from '@/core/viewPrefs';
 import type { Implant3DLayers } from '@/core/implant3D';
@@ -78,6 +79,31 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
     const next = !group.every((sc) => sc.visible);
     for (const sc of group) dispatch({ type: 'UPDATE_SCAN', payload: { ...sc, visible: next } });
   };
+  // Jaw filter: cut the volume at the occlusal plane so one arch can be turned
+  // around on its own. Detection runs once per volume (it sweeps the whole
+  // scan) and also reports whether there are two arches to choose between —
+  // a mandible-only field of view gets no button, since hiding "the other
+  // half" of it would just blank the view.
+  const [jawSplit, setJawSplit] = useState(NO_JAW_SPLIT);
+  useEffect(() => {
+    if (!ready || !volumeId) { setJawSplit(NO_JAW_SPLIT); return; }
+    let cancelled = false;
+    // Off the render path: the sweep is cheap but not free.
+    const id = window.setTimeout(async () => {
+      const { getVolumeData } = await import('@/core/cprEngine');
+      if (cancelled) return;
+      setJawSplit(jawSplitFor(volumeId, getVolumeData(volumeId)));
+    }, 0);
+    return () => { cancelled = true; window.clearTimeout(id); };
+  }, [ready, volumeId]);
+  const jawSide = state.jawSide;
+  const jawPlane = jawClipPlane(jawSplit, jawSide);
+  const canSplit = canSplitJaws(jawSplit);
+  // A scan whose arches cannot be told apart must not stay clipped.
+  useEffect(() => {
+    if (!canSplit && jawSide !== 'both') dispatch({ type: 'SET_JAW_SIDE', payload: 'both' });
+  }, [canSplit, jawSide, dispatch]);
+
   const [cropEnabled, setCropEnabled] = useState(false);
   const [crop, setCrop] = useState<CropBox>(NO_CROP);
   const [presetOpen, setPresetOpen] = useState(false);
@@ -283,7 +309,7 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
       {ready && <ScanActors />}
       {ready && <Slice3DActors axes={effectiveAxes} preset={activePreset} rebuildKey={sliceRebuild} />}
       {ready && <CrossSection3DActor enabled={mode === 'compact' && showCrossSection} />}
-      {ready && <CropController crop={crop} enabled={cropEnabled} />}
+      {ready && <CropController crop={crop} enabled={cropEnabled} jawPlane={jawPlane} />}
 
       {/* 3D label */}
       <OrientationLabel text={mode === 'io' ? t('layout.viewIo3d') : '3D'} viewKey="3D" />
@@ -392,6 +418,27 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
             </svg>
             <span>{t(`quality.${activeQuality}`)}</span>
           </button>
+
+          {canSplit && (<>
+          <span className="w-px h-4 bg-slate-700/60" />
+
+          {/* Jaw filter: both → upper → lower */}
+          <button
+            onClick={() => dispatch({ type: 'SET_JAW_SIDE', payload: JAW_SIDES[(JAW_SIDES.indexOf(jawSide) + 1) % JAW_SIDES.length] })}
+            title={t('jaw.hint')}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] transition-colors whitespace-nowrap ${
+              jawSide === 'both' ? 'text-slate-200 hover:bg-slate-700/60' : 'bg-dental-600 text-white'
+            }`}
+          >
+            <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              {/* two arches with the occlusal cut between them */}
+              <path d="M5 7c2-2.5 12-2.5 14 0" opacity={jawSide === 'lower' ? 0.3 : 1} />
+              <path d="M5 17c2 2.5 12 2.5 14 0" opacity={jawSide === 'upper' ? 0.3 : 1} />
+              <line x1="3" y1="12" x2="21" y2="12" strokeDasharray="2 2" />
+            </svg>
+            <span>{t(`jaw.${jawSide}`)}</span>
+          </button>
+          </>)}
 
           {!compact && (<>
           <span className="w-px h-4 bg-slate-700/60" />

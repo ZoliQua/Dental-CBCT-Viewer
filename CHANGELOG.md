@@ -9,6 +9,25 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
 
 ### Added
 
+- **Landmarks can be picked on the 3D rendering**, not just the axial slice.
+  Registration landmarks are cusp tips, and finding a tip on a slice means
+  scrubbing until it happens to lie in the plane; on the 3D view it is simply
+  the point you can see. A click walks the camera ray into the volume and stops
+  at the first bone/enamel it meets, honouring whatever the view is clipped to,
+  and the scan being registered steps out of the way while you aim at the CT
+  underneath it.
+- **"Refine to CT"** — a surface fit that takes over where the landmarks leave
+  off, pulling the dense tissue out of the volume around the scan and running a
+  trimmed ICP onto it. Offered in the Layers → Adjust panel and straight after
+  a landmark alignment, and reported in millimetres so it is clear whether it
+  helped. On the bundled sample it recovers a 1.4 mm + 2° displacement back to
+  the same fit every time.
+- **Jaw filter in the 3D view** — show the upper or the lower jaw alone, cut at
+  the occlusal plane, so one arch can be turned around without the other in the
+  way. The split is found from the scan itself (the two enamel peaks along the
+  patient axis with the gap between them), and a volume holding only one arch
+  is recognised as such: it gets no button rather than an option that would
+  blank the view.
 - **3D IO view** — a dedicated layout showing the CBCT with the patient's
   **intraoral scans** on it, one layer per arch with its own on-image toggle
   (Upper jaw / Lower jaw). It has no MPR companions and no cutting planes — they
@@ -40,6 +59,11 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
 
 ### Changed
 
+- **ICP is usable on real surfaces.** It was only ever reachable with a handful
+  of landmark points, because nearest-neighbour was brute force; it now carries
+  an exact uniform-grid index and an optional trimmed objective, which is what
+  makes fitting a scan's thousands of points to a CBCT surface practical in the
+  browser.
 - **Much faster first load** — the landing page no longer ships the imaging
   stack. Cornerstone, vtk.js, jsPDF and the viewer shell are code-split and
   fetched only when a scan is opened, cutting the landing payload from

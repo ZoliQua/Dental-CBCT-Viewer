@@ -1,7 +1,8 @@
 /**
- * Applies the crop box to the 3D volume as vtk clipping planes, so the volume
- * can be cut away to reveal internal structures and the slice planes. Renders
- * nothing. Clipping planes live on the volume mapper (getDefaultActor).
+ * Applies the volume's clipping to the 3D view as vtk clipping planes: the crop
+ * box (to cut away structures and reveal the slice planes) and the jaw filter
+ * (to show one arch at a time so it can be turned around on its own). Both feed
+ * the same mapper, so they are set together. Renders nothing.
  */
 
 import { useEffect } from 'react';
@@ -9,10 +10,12 @@ import { getRenderingEngine, type Types } from '@cornerstonejs/core';
 import vtkPlane from '@kitware/vtk.js/Common/DataModel/Plane';
 import { useViewer } from '@/context/ViewerContext';
 import { RENDERING_ENGINE_ID, VP_3D } from '@/core/constants';
-import { clipPlanes, type CropBox } from '@/core/cropBox';
+import { clipPlanes, type ClipPlaneParam, type CropBox } from '@/core/cropBox';
 import type { Vec3 } from '@/core/implantGeometry';
 
-export function CropController({ crop, enabled }: { crop: CropBox; enabled: boolean }) {
+export function CropController({
+  crop, enabled, jawPlane,
+}: { crop: CropBox; enabled: boolean; jawPlane?: ClipPlaneParam | null }) {
   const { state } = useViewer();
 
   useEffect(() => {
@@ -25,6 +28,10 @@ export function CropController({ crop, enabled }: { crop: CropBox; enabled: bool
 
     try {
       mapper.removeAllClippingPlanes();
+      // The jaw cut is independent of the crop box — either can be on alone.
+      if (jawPlane) {
+        mapper.addClippingPlane(vtkPlane.newInstance({ origin: jawPlane.origin, normal: jawPlane.normal }));
+      }
       if (enabled) {
         // Use the actor's real world AABB — the exact space the clipping planes
         // operate in — so the crop maps correctly regardless of the volume's
@@ -47,7 +54,7 @@ export function CropController({ crop, enabled }: { crop: CropBox; enabled: bool
     return () => {
       try { mapper.removeAllClippingPlanes(); vp.render(); } catch { /* viewport gone */ }
     };
-  }, [crop, enabled, state.volumeId]);
+  }, [crop, enabled, jawPlane, state.volumeId]);
 
   return null;
 }

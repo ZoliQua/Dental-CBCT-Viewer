@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useReducer, type ReactNode, type 
 import type { DicomStudyInfo, ViewportTool, LayoutMode, ViewMode, ProjectionMode, ImplantData, MeasurementLayer, AnatomyMarker, AnatomyType, ScanMesh, GuideParams, PanelConfig } from '@/types/dicom';
 import { GUIDE_DEFAULTS, DEFAULT_PANEL, DEFAULT_IMPLANT_SYSTEM_ID, normalizePanelViews, normalizeOpgOrder, isIoScan } from '@/types/dicom';
 import { loadViewPrefs, saveViewPrefs } from '@/core/viewPrefs';
+import type { JawSide } from '@/core/jawSplit';
 import type { ParsedPlan } from '@/core/planIO';
 import type { Volume3DQuality, Volume3DColormap } from '@/core/volume3DPreset';
 
@@ -67,6 +68,12 @@ export interface ViewerState {
   report: ReportFields;
   // On-image display + overlay styling preferences
   display: DisplayConfig;
+  /**
+   * Which jaw the 3D view shows. Lives in shared state rather than in the
+   * viewport because landmark picking has to respect the same cut — clicking a
+   * jaw that has been clipped away must not return a point on it.
+   */
+  jawSide: JawSide;
   // Individual measurement layers (Cornerstone annotations + canvas drawings)
   measurements: MeasurementLayer[];
   /** Set when a plan file recorded for a different study was ignored (UI may warn) */
@@ -204,6 +211,7 @@ export type ViewerAction =
   | { type: 'SET_DEFAULT_SYSTEM'; payload: string }
   | { type: 'SET_REPORT'; payload: Partial<ReportFields> }
   | { type: 'SET_DISPLAY'; payload: Partial<DisplayConfig> }
+  | { type: 'SET_JAW_SIDE'; payload: JawSide }
   | { type: 'ADD_ANATOMY'; payload: AnatomyMarker }
   | { type: 'UPDATE_ANATOMY'; payload: AnatomyMarker }
   | { type: 'REMOVE_ANATOMY'; payload: string }
@@ -258,6 +266,7 @@ export const initialState: ViewerState = {
   safety: { marginMm: 1, color: '#ff3c3c', nerveMm: 2, sinusMm: 1, neighborMm: 3 },
   guide: { ...GUIDE_DEFAULTS },
   defaultSystemId: DEFAULT_IMPLANT_SYSTEM_ID,
+  jawSide: 'both' as JawSide,
   anatomy: [],
   anatomyDrawMode: null,
   activeAnatomyId: null,
@@ -551,6 +560,8 @@ export function viewerReducer(state: ViewerState, action: ViewerAction): ViewerS
     }
     case 'SET_REPORT':
       return { ...state, report: { ...state.report, ...action.payload } };
+    case 'SET_JAW_SIDE':
+      return { ...state, jawSide: action.payload };
     case 'SET_DISPLAY':
       return { ...state, display: { ...state.display, ...action.payload } };
     case 'ADD_MEASUREMENT':
@@ -576,13 +587,13 @@ export function ViewerProvider({ children }: { children: ReactNode }) {
   // passes `initialLayout` still wins: App applies it once after mount.
   const [state, dispatch] = useReducer(viewerReducer, initialState, (init) => {
     const prefs = loadViewPrefs();
-    return { ...init, layoutMode: prefs.layoutMode, panel: prefs.panel };
+    return { ...init, layoutMode: prefs.layoutMode, panel: prefs.panel, jawSide: prefs.jawSide };
   });
 
   // Remember the arrangement whenever it changes.
   useEffect(() => {
-    saveViewPrefs({ layoutMode: state.layoutMode, panel: state.panel });
-  }, [state.layoutMode, state.panel]);
+    saveViewPrefs({ layoutMode: state.layoutMode, panel: state.panel, jawSide: state.jawSide });
+  }, [state.layoutMode, state.panel, state.jawSide]);
 
   return (
     <ViewerContext.Provider value={{ state, dispatch }}>
