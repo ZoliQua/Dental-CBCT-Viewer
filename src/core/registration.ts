@@ -176,6 +176,16 @@ export interface IcpOptions {
   tolerance?: number;
   /** Initial source→target transform (default identity — pass the 3-point Kabsch result). */
   initial?: number[];
+  /**
+   * Fraction of correspondences to keep, closest first (default 1 = all).
+   *
+   * Registering an intraoral scan to a CBCT is the case that needs this: most
+   * of an arch scan is gingiva, which the CBCT does not image at all. Those
+   * points have no true counterpart, and letting them vote drags the fit off
+   * the teeth — a full-set objective plateaus around 1–2 mm where a trimmed one
+   * reaches the voxel size. 0.3–0.5 is the useful range.
+   */
+  keep?: number;
 }
 
 export interface IcpResult {
@@ -186,26 +196,105 @@ export interface IcpResult {
   iterations: number;
 }
 
-/** Nearest target point to `q` (brute force). */
-function nearestPoint(target: Vec3[], q: Vec3): Vec3 {
-  let bd = Infinity, bj = 0;
-  for (let j = 0; j < target.length; j++) {
-    const t = target[j];
-    const d = (q[0] - t[0]) ** 2 + (q[1] - t[1]) ** 2 + (q[2] - t[2]) ** 2;
-    if (d < bd) { bd = d; bj = j; }
+/**
+ * Uniform-grid nearest-neighbour index over a static point cloud.
+ *
+ * Brute force is O(n·m) per ICP iteration, which is fine for a handful of
+ * landmarks and hopeless for the thousands of surface points a scan-to-CBCT
+ * refinement needs. The grid answers in roughly constant time and stays
+ * *exact*: rings of cells are scanned outwards and the search only stops once
+ * the best distance found is closer than anything the next ring could hold.
+ */
+class PointGrid {
+  private readonly cell: number;
+  private readonly buckets = new Map<string, number[]>();
+
+  constructor(private readonly points: Vec3[]) {
+    // Aim for a handful of points per cell, from the cloud's own density.
+    let lo = [Infinity, Infinity, Infinity];
+    let hi = [-Infinity, -Infinity, -Infinity];
+    for (const p of points) {
+      for (let a = 0; a < 3; a++) {
+        if (p[a] < lo[a]) lo[a] = p[a];
+        if (p[a] > hi[a]) hi[a] = p[a];
+      }
+    }
+    const span = Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2], 1e-6);
+    this.cell = Math.max(span / Math.max(1, Math.cbrt(points.length)), 1e-6);
+    for (let i = 0; i < points.length; i++) {
+      const k = this.key(points[i]);
+      const b = this.buckets.get(k);
+      if (b) b.push(i); else this.buckets.set(k, [i]);
+    }
   }
-  return target[bj];
+
+  private key(p: Vec3): string {
+    const c = this.cell;
+    return `${Math.floor(p[0] / c)},${Math.floor(p[1] / c)},${Math.floor(p[2] / c)}`;
+  }
+
+  /** [point, distance] of the nearest target to `q`. */
+  nearest(q: Vec3): [Vec3, number] {
+    const c = this.cell;
+    const bx = Math.floor(q[0] / c), by = Math.floor(q[1] / c), bz = Math.floor(q[2] / c);
+    let best = -1;
+    let bestSq = Infinity;
+    // Cap the expansion so a query far outside the cloud still terminates.
+    const maxRing = 512;
+    const scan = (dx: number, dy: number, dz: number) => {
+      const b = this.buckets.get(`${bx + dx},${by + dy},${bz + dz}`);
+      if (!b) return;
+      for (const i of b) {
+        const t = this.points[i];
+        const d = (q[0] - t[0]) ** 2 + (q[1] - t[1]) ** 2 + (q[2] - t[2]) ** 2;
+        if (d < bestSq) { bestSq = d; best = i; }
+      }
+    };
+    for (let r = 0; r <= maxRing; r++) {
+      // Walk only the SHELL of ring r (the interior was covered by r−1).
+      // Scanning the whole cube and skipping the inside makes each ring O(r³)
+      // and the search O(r⁴), which a point far outside the cloud feels badly.
+      if (r === 0) {
+        scan(0, 0, 0);
+      } else {
+        for (let dz = -r; dz <= r; dz++) {
+          const faceZ = Math.abs(dz) === r;
+          for (let dy = -r; dy <= r; dy++) {
+            const faceY = Math.abs(dy) === r;
+            if (faceZ || faceY) {
+              for (let dx = -r; dx <= r; dx++) scan(dx, dy, dz);
+            } else {
+              scan(-r, dy, dz);
+              scan(r, dy, dz);
+            }
+          }
+        }
+      }
+      // A cell in ring r+1 can hold points as close as r·cell to q, so the
+      // answer is only certain once the best beats that bound.
+      if (best >= 0 && Math.sqrt(bestSq) <= r * c) break;
+    }
+    if (best < 0) return [this.points[0], Math.hypot(q[0] - this.points[0][0], q[1] - this.points[0][1], q[2] - this.points[0][2])];
+    return [this.points[best], Math.sqrt(bestSq)];
+  }
 }
 
-/** RMS of source (under transform `m`) to its nearest target point, mm. */
-function nearestRms(source: Vec3[], target: Vec3[], m: number[]): number {
+/** Source points under `m`, each with its nearest target and distance. */
+function correspond(source: Vec3[], grid: PointGrid, m: number[]): { moved: Vec3; target: Vec3; dist: number }[] {
+  return source.map((p) => {
+    const moved = applyMat4(m, p);
+    const [target, dist] = grid.nearest(moved);
+    return { moved, target, dist };
+  });
+}
+
+/** RMS over the closest `keep` fraction of the correspondences, mm. */
+function trimmedRms(pairs: { dist: number }[], keep: number): number {
+  const d = pairs.map((p) => p.dist).sort((a, b) => a - b);
+  const n = Math.max(1, Math.min(d.length, Math.round(d.length * keep)));
   let sum = 0;
-  for (const p of source) {
-    const q = applyMat4(m, p);
-    const t = nearestPoint(target, q);
-    sum += (q[0] - t[0]) ** 2 + (q[1] - t[1]) ** 2 + (q[2] - t[2]) ** 2;
-  }
-  return Math.sqrt(sum / source.length);
+  for (let i = 0; i < n; i++) sum += d[i] * d[i];
+  return Math.sqrt(sum / n);
 }
 
 /**
@@ -220,26 +309,35 @@ function nearestRms(source: Vec3[], target: Vec3[], m: number[]): number {
 export function icpAlign(source: Vec3[], target: Vec3[], opts: IcpOptions = {}): IcpResult | null {
   const maxIter = opts.maxIterations ?? 40;
   const tol = opts.tolerance ?? 1e-4;
+  const keep = Math.max(0.05, Math.min(1, opts.keep ?? 1));
   if (source.length < 3 || target.length < 1) return null;
 
+  const grid = new PointGrid(target);
   let current = opts.initial ? [...opts.initial] : [...IDENTITY4];
   // Track the best iterate: point-to-point ICP is not monotonic, so the LAST
   // transform can be worse than one we already had — or worse than the seed.
   // Returning the best seen means a seeded refinement can never make things worse.
+  let pairs = correspond(source, grid, current);
+  let rms = trimmedRms(pairs, keep);
   let best = [...current];
-  let bestRms = nearestRms(source, target, current);
-  let prevRms = bestRms;
+  let bestRms = rms;
   let iter = 0;
   for (; iter < maxIter; iter++) {
-    const moved = source.map((p) => applyMat4(current, p));
-    const matched = moved.map((m) => nearestPoint(target, m));
-    const delta = kabschTransform(moved, matched);
+    // With trimming, only the closest `keep` share of the correspondences get
+    // to define the step — the rest are points the target does not contain.
+    const used = keep < 1
+      ? [...pairs].sort((a, b) => a.dist - b.dist).slice(0, Math.max(3, Math.round(pairs.length * keep)))
+      : pairs;
+    const delta = kabschTransform(used.map((p) => p.moved), used.map((p) => p.target));
     if (!delta) break;
-    current = mul4(delta, current);
-    const rms = nearestRms(source, target, current);
-    if (rms < bestRms) { bestRms = rms; best = [...current]; }
-    const improved = prevRms - rms;
-    prevRms = rms;
+    const next = mul4(delta, current);
+    // One correspondence pass per iteration: it both scores `next` and feeds
+    // the following step.
+    const nextPairs = correspond(source, grid, next);
+    const nextRms = trimmedRms(nextPairs, keep);
+    if (nextRms < bestRms) { bestRms = nextRms; best = [...next]; }
+    const improved = rms - nextRms;
+    current = next; pairs = nextPairs; rms = nextRms;
     if (improved >= 0 && improved < tol) { iter++; break; }
   }
   return { transform: best, rmsMm: bestRms, iterations: iter };

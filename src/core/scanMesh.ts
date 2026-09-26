@@ -190,6 +190,23 @@ export function sliceScanWorld(
   return slicePlaneBVH(entry.soup, entry.bvh, planePoint, planeNormal);
 }
 
+/**
+ * Subsampled mesh vertices in the scan's OWN coordinates, for ICP refinement.
+ * ICP is seeded with the scan's current transform, so the source has to stay
+ * untransformed; `max` caps the cost (a few thousand points is plenty to fit a
+ * rigid transform, and the arch's shape survives even thinning).
+ */
+export function scanLocalPoints(id: string, max = 2500): Vec3[] {
+  const pd = registry.get(id);
+  const pts = pd?.getPoints?.()?.getData?.();
+  if (!pts || pts.length < 9) return [];
+  const n = pts.length / 3;
+  const stride = Math.max(1, Math.ceil(n / max));
+  const out: Vec3[] = [];
+  for (let i = 0; i < n; i += stride) out.push([pts[3 * i], pts[3 * i + 1], pts[3 * i + 2]]);
+  return out;
+}
+
 /** Build a vtk actor for a scan mesh with color / opacity / transform. */
 export function buildScanActor(pd: any, colorHex: string, opacity: number, transform: number[]): any {
   const mapper = vtkMapper.newInstance();
