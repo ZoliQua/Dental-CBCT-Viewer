@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useMemo, useRef, useCallback, useState } from 'react';
 import { getRenderingEngine, Enums, setVolumesForViewports, type Types } from '@cornerstonejs/core';
 import { setupTools, addViewportTo3DToolGroup } from '@/core/toolManager';
 import { RENDERING_ENGINE_ID, VP_3D } from '@/core/constants';
@@ -51,14 +51,14 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
   // Slice planes + the CS marker are remembered across reloads (core/viewPrefs).
   const [sliceAxes, setSliceAxes] = useState<Record<SliceAxis, boolean>>(() => loadViewPrefs().sliceAxes);
   const [showCrossSection, setShowCrossSection] = useState(() => loadViewPrefs().showCrossSection);
-  useEffect(() => { saveViewPrefs({ sliceAxes, showCrossSection }); }, [sliceAxes, showCrossSection]);
   // 3D IO view: a single sagittal cut through the CT, scrubbed by hand. It is
   // the check that matters when positioning a scan — the scan's surface has to
   // land on the enamel where the slice cuts it — and there is no sagittal MPR
   // pane in this layout for the plane to follow, so it gets its own slider.
-  const [ioSagittal, setIoSagittal] = useState(false);
+  const [ioSagittal, setIoSagittal] = useState(() => loadViewPrefs().ioSagittal);
   const [ioSagittalIndex, setIoSagittalIndex] = useState<number | null>(null);
   const [sagittalCount, setSagittalCount] = useState(0);
+  useEffect(() => { saveViewPrefs({ sliceAxes, showCrossSection, ioSagittal }); }, [sliceAxes, showCrossSection, ioSagittal]);
 
   // The same viewport serves three layouts, with progressively fewer controls:
   //  'full'    — the 3D view: everything.
@@ -73,14 +73,19 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
   const compact = mode !== 'full';
   // Hidden planes are also not drawn, without clobbering the user's choices for
   // the full 3D view.
-  const effectiveAxes: Record<SliceAxis, boolean> = mode === 'io'
-    ? { AXIAL: false, SAGITTAL: ioSagittal, CORONAL: false }
-    : mode === 'compact'
-      ? { ...sliceAxes, SAGITTAL: false, CORONAL: false }
-      : sliceAxes;
-  const sliceIndexOverride = mode === 'io' && ioSagittalIndex != null
-    ? { SAGITTAL: ioSagittalIndex }
-    : undefined;
+  // Memoized, not merely derived: these feed effects that rebuild slice
+  // textures and vtk clipping planes. A fresh object every render meant that
+  // work happened on every render — including every frame of a slider drag.
+  const effectiveAxes: Record<SliceAxis, boolean> = useMemo(() => (
+    mode === 'io'
+      ? { AXIAL: false, SAGITTAL: ioSagittal, CORONAL: false }
+      : mode === 'compact'
+        ? { ...sliceAxes, SAGITTAL: false, CORONAL: false }
+        : sliceAxes
+  ), [mode, ioSagittal, sliceAxes]);
+  const sliceIndexOverride = useMemo(() => (
+    mode === 'io' && ioSagittalIndex != null ? { SAGITTAL: ioSagittalIndex } : undefined
+  ), [mode, ioSagittalIndex]);
 
   // The arch toggles drive the scans' own visibility, so the IO view and the
   // Layers panel never disagree about what is on screen.
@@ -107,8 +112,12 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
   // a mandible-only field of view gets no button, since hiding "the other
   // half" of it would just blank the view.
   const [jawSplit, setJawSplit] = useState(NO_JAW_SPLIT);
+  // Detection is asynchronous, and until it has run this volume looks like one
+  // with nothing to split — which must NOT be taken as "reset the jaw filter",
+  // or a remembered "Upper jaw" is thrown away on every load.
+  const [jawDetected, setJawDetected] = useState(false);
   useEffect(() => {
-    if (!ready || !volumeId) { setJawSplit(NO_JAW_SPLIT); return; }
+    if (!ready || !volumeId) { setJawSplit(NO_JAW_SPLIT); setJawDetected(false); return; }
     let cancelled = false;
     // Off the render path: the sweep is cheap but not free.
     const id = window.setTimeout(async () => {
@@ -120,16 +129,30 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
       const n = vd?.dims[0] ?? 0;
       setSagittalCount(n);
       setIoSagittalIndex((prev) => (prev != null && prev < n ? prev : Math.floor(n / 2)));
+      setJawDetected(true);
     }, 0);
     return () => { cancelled = true; window.clearTimeout(id); };
   }, [ready, volumeId]);
   const jawSide = state.jawSide;
-  const jawPlane = jawClipPlane(jawSplit, jawSide);
   const canSplit = canSplitJaws(jawSplit);
+  const jawPlane = useMemo(() => jawClipPlane(jawSplit, jawSide), [jawSplit, jawSide]);
   // A scan whose arches cannot be told apart must not stay clipped.
   useEffect(() => {
-    if (!canSplit && jawSide !== 'both') dispatch({ type: 'SET_JAW_SIDE', payload: 'both' });
-  }, [canSplit, jawSide, dispatch]);
+    if (jawDetected && !canSplit && jawSide !== 'both') dispatch({ type: 'SET_JAW_SIDE', payload: 'both' });
+  }, [jawDetected, canSplit, jawSide, dispatch]);
+
+  // A remembered jaw filter has to arrive with its scans already matching it.
+  // Restoring only the CT's clip left one arch of bone under two floating
+  // arches of scan — the state was half-applied, which reads as a bug. Runs
+  // once, after detection and once there are scans to match, so a deliberate
+  // "show the other arch too" afterwards is left alone.
+  const jawSyncedRef = useRef(false);
+  useEffect(() => {
+    if (jawSyncedRef.current || !jawDetected || ioScans.length === 0) return;
+    jawSyncedRef.current = true;
+    if (canSplit && jawSide !== 'both') selectJaw(jawSide);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot on restore
+  }, [jawDetected, canSplit, jawSide, ioScans.length]);
 
   const [cropEnabled, setCropEnabled] = useState(false);
   const [crop, setCrop] = useState<CropBox>(NO_CROP);

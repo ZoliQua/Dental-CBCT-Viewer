@@ -26,6 +26,8 @@ export interface ViewPrefs {
   showCrossSection: boolean;
   /** Which jaw the 3D view is cut down to. */
   jawSide: JawSide;
+  /** The 3D IO view's sagittal check slice. */
+  ioSagittal: boolean;
 }
 
 export const DEFAULT_VIEW_PREFS: ViewPrefs = {
@@ -34,6 +36,7 @@ export const DEFAULT_VIEW_PREFS: ViewPrefs = {
   sliceAxes: { AXIAL: true, SAGITTAL: true, CORONAL: true },
   showCrossSection: true,
   jawSide: 'both',
+  ioSagittal: false,
 };
 
 const bool = (v: unknown, d: boolean) => (typeof v === 'boolean' ? v : d);
@@ -68,6 +71,7 @@ export function loadViewPrefs(): ViewPrefs {
     },
     showCrossSection: bool(o.showCrossSection, true),
     jawSide: JAW_SIDES.includes(o.jawSide) ? o.jawSide : 'both',
+    ioSagittal: bool(o.ioSagittal, false),
   };
 }
 
