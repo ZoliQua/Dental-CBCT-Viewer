@@ -39,7 +39,8 @@
 **Surgical guide & export**
 - 🖨️ **3D-printable drill guide (STL)** built with constructive solid geometry (`manifold-3d`), with an optional **metal-sleeve seat** and shoulder **drill stop**
 - ✅ **Pre-export guide checks** — thin walls, narrow drill channels, fragile webs between bores, and a drill path that reaches the nerve or sinus past the implant apex
-- 🧩 **Surface-scan import** (STL / OBJ / PLY, several at once) — the arch is recognised from the file name, then paired to the CBCT by **landmark registration**: pick 3–8 pairs on the axial slice **or straight on the 3D rendering**, with each pair's residual shown so a mis-click is obvious, then correct anything left by hand with millimetre / degree nudges and check it against a **sagittal slice**
+- 🧩 **Surface-scan import** (STL / OBJ / PLY, several at once) — the arch is recognised from the file name, then paired to the CBCT by **landmark registration**: 3–8 pairs picked on the axial slice **or straight on the 3D rendering**, each pair's residual shown so a mis-click is obvious
+- 🎯 **Radiopaque marker (fiducial) registration** — auto-detects marker beads in the CT and draws them to click, snaps a scan-side click to the bead's fitted centre, and catches mis-paired markers by their constellation. This is what makes a scan-to-CBCT pairing trustworthy; markerless surface matching does not resolve it (see the CHANGELOG)
 - 🖼️ **Image export** (PNG / JPG) and a configurable **PDF report**; plan save / load as JSON
 
 **Integration & privacy**

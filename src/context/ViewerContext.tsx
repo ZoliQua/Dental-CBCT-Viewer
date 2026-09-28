@@ -3,6 +3,7 @@ import type { DicomStudyInfo, ViewportTool, LayoutMode, ViewMode, ProjectionMode
 import { GUIDE_DEFAULTS, DEFAULT_PANEL, DEFAULT_IMPLANT_SYSTEM_ID, normalizePanelViews, normalizeOpgOrder, isIoScan } from '@/types/dicom';
 import { loadViewPrefs, saveViewPrefs } from '@/core/viewPrefs';
 import type { JawSide } from '@/core/jawSplit';
+import type { Fiducial } from '@/core/fiducials';
 import type { ParsedPlan } from '@/core/planIO';
 import type { Volume3DQuality, Volume3DColormap } from '@/core/volume3DPreset';
 
@@ -169,6 +170,12 @@ export interface RegistrationSession {
   pairs: RegPair[];
   /** Which slot/side is currently awaiting a click, if any */
   picking: { slot: number; kind: 'scan' | 'cbct' } | null;
+  /**
+   * Radiopaque marker candidates found in the CT. They are proposals, not
+   * answers — a restoration can look just like a bead — so they are drawn for
+   * the operator to click, and a CBCT pick near one snaps to its centre.
+   */
+  fiducials: Fiducial[];
 }
 
 export type ViewerAction =
@@ -223,6 +230,7 @@ export type ViewerAction =
   | { type: 'START_REGISTRATION'; payload: string }
   | { type: 'SET_REG_PICKING'; payload: { slot: number; kind: 'scan' | 'cbct' } | null }
   | { type: 'SET_REG_POINT'; payload: { slot: number; kind: 'scan' | 'cbct'; point: [number, number, number] } }
+  | { type: 'SET_REG_FIDUCIALS'; payload: Fiducial[] }
   | { type: 'ADD_REG_PAIR' }
   | { type: 'REMOVE_REG_PAIR'; payload: number }
   | { type: 'END_REGISTRATION' }
@@ -527,6 +535,9 @@ export function viewerReducer(state: ViewerState, action: ViewerAction): ViewerS
         registration: state.registration?.scanId === action.payload ? null : state.registration,
       };
     }
+    case 'SET_REG_FIDUCIALS':
+      if (!state.registration) return state;
+      return { ...state, registration: { ...state.registration, fiducials: action.payload } };
     case 'ADD_REG_PAIR': {
       // More pairs, better fit: a rigid Kabsch solve averages out the operator's
       // click error, which falls roughly as 1/√N. Capped so the panel stays a
@@ -556,6 +567,7 @@ export function viewerReducer(state: ViewerState, action: ViewerAction): ViewerS
         registration: {
           scanId: action.payload,
           pairs: Array.from({ length: MIN_REG_PAIRS }, () => ({ scan: null, cbct: null })),
+          fiducials: [],
           picking: null,
         },
       };

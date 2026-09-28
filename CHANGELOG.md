@@ -9,6 +9,27 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
 
 ### Added
 
+- **Radiopaque marker (fiducial) registration.** The answer to the problem the
+  previous release could only describe: surface matching cannot pin a scan down
+  at the millimetre scale, because most of an arch scan is gingiva the CBCT
+  never imaged. A marker can, because a bead is a *point* rather than a surface
+  — its centre is unambiguous in both the volume and the scan, so the
+  correspondence is exact instead of a best guess between two similar edges.
+  **Detect markers** sweeps the CT for bead-shaped blobs (coarse pass to find
+  them, fine pass to measure each one's size, shape and centre) and draws the
+  candidates in the 3D view. They are proposals, not answers — a restoration can
+  be just as small, bright and round — so the operator confirms each by clicking
+  it, which is the point: picking the CBCT side stops being "hit the right voxel
+  of a translucent volume" and becomes "click the bead you can see". A click
+  near a candidate takes its centre; a click on the scan is fitted to the sphere
+  around it, because the centre of a sphere is fixed by its surface and the fit
+  beats any single point on it. The scan being registered steps aside while a
+  CBCT marker is picked.
+- **Mis-paired markers are caught.** Pairing marker 2 with marker 3 is the
+  classic fiducial blunder and it does not announce itself — the fit simply
+  comes out wrong. The beads form a rigid constellation, so the correct
+  assignment is the one whose inter-point distances agree; when a different
+  assignment fits markedly better, the panel offers to apply it.
 - **Landmarks can be picked on the 3D rendering**, not just the axial slice.
   Registration landmarks are cusp tips, and finding a tip on a slice means
   scrubbing until it happens to lie in the plane; on the 3D view it is simply
@@ -85,7 +106,8 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
   constrain the pose at the millimetre scale. A button that degrades a
   registration is worse than no button, so the effort went into the manual
   path instead: landmarks on the 3D rendering, more pairs, per-pair residuals,
-  and a sagittal slice to check the result against.
+  and a sagittal slice to check the result against — and, above, markers, which
+  is how the problem is actually solved rather than worked around.
 - **Much faster first load** — the landing page no longer ships the imaging
   stack. Cornerstone, vtk.js, jsPDF and the viewer shell are code-split and
   fetched only when a scan is opened, cutting the landing payload from

@@ -22,6 +22,7 @@ import { RENDERING_ENGINE_ID, VP_AXIAL, VP_3D } from '@/core/constants';
 import { kabschTransformWithRms, mul4, applyMat4, pickTriangleSoup } from '@/core/registration';
 import { scanTriangleSoupWorld } from '@/core/scanMesh';
 import { pickVolumeSurface } from '@/core/volumePick';
+import { detectFiducials, nearestFiducialToRay, snapToSphere, matchConstellations } from '@/core/fiducials';
 import { jawSplitFor, jawClipPlane } from '@/core/jawSplit';
 import { getVolumeData } from '@/core/cprEngine';
 import type { Vec3 } from '@/core/implantGeometry';
@@ -34,8 +35,32 @@ export function RegistrationPanel() {
   // Fit error (RMS mm) of the last completed registration, shown once the
   // panel closes. > 1 mm is highlighted as a likely mis-picked landmark pair.
   const [lastRms, setLastRms] = useState<number | null>(null);
+  const [detecting, setDetecting] = useState(false);
+  const [detectMsg, setDetectMsg] = useState<string | null>(null);
   const regActive = !!reg;
-  useEffect(() => { if (regActive) setLastRms(null); }, [regActive]);
+  useEffect(() => { if (regActive) { setLastRms(null); setDetectMsg(null); } }, [regActive]);
+
+  /**
+   * Look for radiopaque markers in the CT. A sweep of the whole field of view
+   * takes a second or two and runs on the main thread, so the button shows it
+   * is working — and it is one click, not something that happens while typing.
+   */
+  const detect = async () => {
+    if (!state.volumeId) return;
+    setDetecting(true);
+    setDetectMsg(null);
+    try {
+      // Yield first, so the busy state paints before the sweep blocks.
+      await new Promise((r) => setTimeout(r, 30));
+      const vol = getVolumeData(state.volumeId);
+      if (!vol) return;
+      const found = detectFiducials(vol);
+      dispatch({ type: 'SET_REG_FIDUCIALS', payload: found });
+      setDetectMsg(found.length ? t('reg.fid.found', { n: found.length }) : t('reg.fid.none'));
+    } finally {
+      setDetecting(false);
+    }
+  };
 
   // Attach a click listener to every viewport this slot can be picked in: the
   // scan side is the 3D surface, the CBCT side is the Axial slice *or* the 3D
@@ -72,18 +97,33 @@ export function RegistrationPanel() {
           const w = vp.canvasToWorld(cp);
           if (w) point = [w[0], w[1], w[2]];
         } else if (kind === 'cbct') {
-          // 3D: walk the camera ray until the volume turns to bone, stopping at
-          // the same cut the view is drawing.
           const ray = cameraRay(vp, cp);
           const vol = state.volumeId ? getVolumeData(state.volumeId) : null;
-          if (ray && vol) {
-            const plane = jawClipPlane(jawSplitFor(state.volumeId!, vol), state.jawSide);
-            point = pickVolumeSurface(vol, ray.origin, ray.dir, { clipPlanes: plane ? [plane] : undefined });
+          if (ray) {
+            // A detected bead wins over the surface under the cursor: its
+            // centre is known to sub-voxel accuracy, which is the entire
+            // reason for detecting it.
+            const bead = nearestFiducialToRay(reg.fiducials, ray.origin, ray.dir);
+            if (bead) point = bead.center;
+            else if (vol) {
+              // Otherwise walk the camera ray until the volume turns to bone,
+              // stopping at the same cut the view is drawing.
+              const plane = jawClipPlane(jawSplitFor(state.volumeId!, vol), state.jawSide);
+              point = pickVolumeSurface(vol, ray.origin, ray.dir, { clipPlanes: plane ? [plane] : undefined });
+            }
           }
         } else {
           const ray = cameraRay(vp, cp);
           const soup = ray && scanTriangleSoupWorld(scan.id, scan.transform);
-          if (ray && soup) point = pickTriangleSoup(ray.origin, ray.dir, soup);
+          const hit = ray && soup ? pickTriangleSoup(ray.origin, ray.dir, soup) : null;
+          if (hit && soup) {
+            // A marker on the scan is a bump, and the centre of a sphere is
+            // fixed by its surface — so fitting the geometry around the click
+            // beats the click. Flat surface leaves it where it landed.
+            const verts: Vec3[] = [];
+            for (let i = 0; i < soup.length; i += 3) verts.push([soup[i], soup[i + 1], soup[i + 2]]);
+            point = snapToSphere(verts, hit).point;
+          }
         }
 
         if (point) {
@@ -155,6 +195,36 @@ export function RegistrationPanel() {
   }
   const worst = residuals.size ? Math.max(...residuals.values()) : 0;
 
+  /**
+   * Pairing marker 2 with marker 3 is the classic fiducial blunder, and it does
+   * not announce itself — the fit just comes out wrong. The markers form a
+   * rigid constellation, so the right assignment is the one whose inter-point
+   * distances agree, and that can be found. Offered, not applied: the operator
+   * decides.
+   */
+  const reorder = (() => {
+    if (filled.length < MIN_REG_PAIRS || !fit || fit.rmsMm < 0.5) return null;
+    const perm = matchConstellations(
+      filled.map((p) => p.scan!) as Vec3[],
+      filled.map((p) => p.cbct!) as Vec3[],
+    );
+    if (!perm || perm.every((v, i) => v === i)) return null;
+    const better = kabschTransformWithRms(
+      filled.map((p) => p.scan!) as Vec3[],
+      perm.map((j) => filled[j].cbct!) as Vec3[],
+    );
+    return better && better.rmsMm < fit.rmsMm * 0.6 ? perm : null;
+  })();
+
+  const applyReorder = (perm: number[]) => {
+    // Rewrite the CBCT side into the order the constellation says it belongs in.
+    const cbct = perm.map((j) => filled[j].cbct!);
+    filled.forEach((p, i) => {
+      dispatch({ type: 'SET_REG_POINT', payload: { slot: p.i, kind: 'cbct', point: cbct[i] } });
+    });
+    dispatch({ type: 'SET_REG_PICKING', payload: null });
+  };
+
   const align = () => {
     const res = solve();
     if (!res) return;
@@ -218,6 +288,30 @@ export function RegistrationPanel() {
           </div>
         );
       })}
+
+      {/* Marker detection: turns CBCT picking from "find the right voxel" into
+          "click the bead", and is the only route to a registration that can be
+          trusted at the sub-millimetre scale. */}
+      <div className="flex items-center gap-2 pt-0.5">
+        <button
+          onClick={detect}
+          disabled={detecting || !state.volumeId}
+          title={t('reg.fid.hint')}
+          className="px-2 py-1 text-[11px] rounded bg-dental-600 text-white hover:bg-dental-700 transition-colors disabled:opacity-50"
+        >
+          {detecting ? t('reg.fid.busy') : t('reg.fid.detect')}
+        </button>
+        {detectMsg && <span className="text-[10px] text-gray-500 dark:text-gray-400">{detectMsg}</span>}
+      </div>
+
+      {reorder && (
+        <button
+          onClick={() => applyReorder(reorder)}
+          className="w-full px-2 py-1 text-[11px] rounded bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+        >
+          {t('reg.fixOrder')}
+        </button>
+      )}
 
       <div className="flex items-center justify-between gap-2">
         <button

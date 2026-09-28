@@ -9,6 +9,7 @@ import { Implant3DActors } from './Implant3DActors';
 import { ScanActors } from './ScanActors';
 import { Slice3DActors } from './Slice3DActors';
 import { CrossSection3DActor } from './CrossSection3DActor';
+import { FiducialActors } from './FiducialActors';
 import { CropController } from './CropController';
 import { OrientationLabel } from './OrientationLabel';
 import { SLICE_AXES, type SliceAxis } from '@/core/slice3D';
@@ -357,6 +358,7 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
       {/* Implant / sleeve / axis 3D meshes (added once the volume is loaded) */}
       {ready && <Implant3DActors layers={layers3D} />}
       {ready && <ScanActors />}
+      {ready && state.registration && <FiducialActors />}
       {ready && <Slice3DActors axes={effectiveAxes} preset={activePreset} rebuildKey={sliceRebuild} indexOverride={sliceIndexOverride} />}
       {ready && <CrossSection3DActor enabled={mode === 'compact' && showCrossSection} />}
       {ready && <CropController crop={crop} enabled={cropEnabled} jawPlane={jawPlane} />}
