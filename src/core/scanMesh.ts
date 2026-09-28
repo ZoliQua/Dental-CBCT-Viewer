@@ -29,7 +29,7 @@ const baseTransforms = new Map<string, number[]>();
 
 export const getScanPolyData = (id: string): any | null => registry.get(id) ?? null;
 export const setScanPolyData = (id: string, pd: any): void => { registry.set(id, pd); };
-export const removeScanPolyData = (id: string): void => { registry.delete(id); sliceCache.delete(id); baseTransforms.delete(id); };
+export const removeScanPolyData = (id: string): void => { registry.delete(id); sliceCache.delete(id); baseTransforms.delete(id); meshInfo.delete(id); };
 export const setScanBaseTransform = (id: string, m: number[]): void => { baseTransforms.set(id, m.slice()); };
 export const getScanBaseTransform = (id: string): number[] | null => baseTransforms.get(id) ?? null;
 export const hasScanPolyData = (id: string): boolean => registry.has(id);
@@ -39,6 +39,7 @@ export function clearScanRegistry(): void {
   registry.clear();
   sliceCache.clear();
   baseTransforms.clear();
+  meshInfo.clear();
 }
 
 /** 4×4 column-major identity. */
@@ -190,44 +191,41 @@ export function sliceScanWorld(
   return slicePlaneBVH(entry.soup, entry.bvh, planePoint, planeNormal);
 }
 
+export interface ScanMeshInfo { points: number; triangles: number; extentMm: [number, number, number] }
+
+// Counting triangles means walking the whole poly array — hundreds of thousands
+// of entries for an arch scan. The geometry never changes once registered, so
+// the answer is computed once instead of on every render of the series tree.
+const meshInfo = new Map<string, ScanMeshInfo>();
+
 /** Point/triangle counts and mm extent of a loaded mesh, for the series tree. */
-export function scanMeshInfo(id: string): { points: number; triangles: number; extentMm: [number, number, number] } | null {
+export function scanMeshInfo(id: string): ScanMeshInfo | null {
+  const cached = meshInfo.get(id);
+  if (cached) return cached;
   const pd = registry.get(id);
   if (!pd) return null;
   const points = pd.getPoints?.()?.getNumberOfPoints?.() ?? 0;
-  // vtk stores polys as [n, i0, i1, …] runs; a triangle soup is 4 entries each.
+  // vtk stores polys as [n, i0, i1, …] runs; each run of n is a fan of n − 2.
   const polys = pd.getPolys?.()?.getData?.();
   let triangles = 0;
   if (polys) {
     for (let i = 0; i < polys.length;) {
       const n = polys[i];
-      if (n < 3) break;
-      triangles += n - 2; // fan-triangulated
+      // A malformed run has no trustworthy length to skip by; stop rather than
+      // walk off into the indices and report a nonsense count.
+      if (!Number.isFinite(n) || n < 3) break;
+      triangles += n - 2;
       i += n + 1;
     }
   }
   const b = pd.getBounds?.();
-  const extentMm: [number, number, number] = b && b.length >= 6
-    ? [b[1] - b[0], b[3] - b[2], b[5] - b[4]]
-    : [0, 0, 0];
-  return { points, triangles, extentMm };
-}
-
-/**
- * Subsampled mesh vertices in the scan's OWN coordinates, for ICP refinement.
- * ICP is seeded with the scan's current transform, so the source has to stay
- * untransformed; `max` caps the cost (a few thousand points is plenty to fit a
- * rigid transform, and the arch's shape survives even thinning).
- */
-export function scanLocalPoints(id: string, max = 2500): Vec3[] {
-  const pd = registry.get(id);
-  const pts = pd?.getPoints?.()?.getData?.();
-  if (!pts || pts.length < 9) return [];
-  const n = pts.length / 3;
-  const stride = Math.max(1, Math.ceil(n / max));
-  const out: Vec3[] = [];
-  for (let i = 0; i < n; i += stride) out.push([pts[3 * i], pts[3 * i + 1], pts[3 * i + 2]]);
-  return out;
+  const info: ScanMeshInfo = {
+    points,
+    triangles,
+    extentMm: b && b.length >= 6 ? [b[1] - b[0], b[3] - b[2], b[5] - b[4]] : [0, 0, 0],
+  };
+  meshInfo.set(id, info);
+  return info;
 }
 
 /** Build a vtk actor for a scan mesh with color / opacity / transform. */

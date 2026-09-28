@@ -207,6 +207,8 @@ export interface IcpResult {
  */
 class PointGrid {
   private readonly cell: number;
+  /** Rings beyond this cannot contain anything — the cloud has ended. */
+  private readonly maxRing: number;
   private readonly buckets = new Map<string, number[]>();
 
   constructor(private readonly points: Vec3[]) {
@@ -221,6 +223,9 @@ class PointGrid {
     }
     const span = Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2], 1e-6);
     this.cell = Math.max(span / Math.max(1, Math.cbrt(points.length)), 1e-6);
+    // A query far outside the cloud would otherwise expand ring after ring over
+    // empty space; one extent's worth of cells is all it can ever need.
+    this.maxRing = Math.ceil(span / this.cell) + 2;
     for (let i = 0; i < points.length; i++) {
       const k = this.key(points[i]);
       const b = this.buckets.get(k);
@@ -239,8 +244,6 @@ class PointGrid {
     const bx = Math.floor(q[0] / c), by = Math.floor(q[1] / c), bz = Math.floor(q[2] / c);
     let best = -1;
     let bestSq = Infinity;
-    // Cap the expansion so a query far outside the cloud still terminates.
-    const maxRing = 512;
     const scan = (dx: number, dy: number, dz: number) => {
       const b = this.buckets.get(`${bx + dx},${by + dy},${bz + dz}`);
       if (!b) return;
@@ -250,7 +253,7 @@ class PointGrid {
         if (d < bestSq) { bestSq = d; best = i; }
       }
     };
-    for (let r = 0; r <= maxRing; r++) {
+    for (let r = 0; r <= this.maxRing; r++) {
       // Walk only the SHELL of ring r (the interior was covered by r−1).
       // Scanning the whole cube and skipping the inside makes each ring O(r³)
       // and the search O(r⁴), which a point far outside the cloud feels badly.

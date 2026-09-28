@@ -12,7 +12,7 @@
  * Matrices are 4×4 column-major, the ScanMesh.transform / vtk userMatrix order.
  */
 
-import { mul4, applyMat4, IDENTITY4 } from './registration';
+import { mul4, applyMat4 } from './registration';
 import type { Vec3 } from './implantGeometry';
 
 /** Step sizes offered in the UI. */
@@ -69,7 +69,3 @@ export function scanCenterWorld(transform: number[], bounds: number[] | null | u
   ]);
 }
 
-/** A transform is "unregistered" when it is still the identity. */
-export function isIdentityTransform(transform: number[]): boolean {
-  return transform.length === 16 && transform.every((v, i) => Math.abs(v - IDENTITY4[i]) < 1e-9);
-}

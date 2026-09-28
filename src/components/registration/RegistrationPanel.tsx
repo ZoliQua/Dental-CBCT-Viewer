@@ -37,7 +37,6 @@ export function RegistrationPanel() {
   const regActive = !!reg;
   useEffect(() => { if (regActive) setLastRms(null); }, [regActive]);
 
-
   // Attach a click listener to every viewport this slot can be picked in: the
   // scan side is the 3D surface, the CBCT side is the Axial slice *or* the 3D
   // rendering.

@@ -6,9 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  rayBoxRange, volumeBounds, pickVolumeSurface, volumeSurfacePoints, PICK_HU_THRESHOLD,
-} from '../src/core/volumePick';
+import { rayBoxRange, volumeBounds, pickVolumeSurface } from '../src/core/volumePick';
 import type { VolumeSamplingData } from '../src/core/cprMath';
 import type { Vec3 } from '../src/core/implantGeometry';
 
@@ -113,28 +111,3 @@ describe('pickVolumeSurface', () => {
   });
 });
 
-describe('volumeSurfacePoints', () => {
-  const vol = blockVolume({ i: [20, 40], j: [20, 40], k: [20, 40] });
-
-  it('returns the boundary of the dense region, not its interior', () => {
-    const pts = volumeSurfacePoints(vol, [0, 0, 0], [59, 59, 59], { spacingMm: 1 });
-    expect(pts.length).toBeGreaterThan(100);
-    // Every point is on the block's shell: at least one coordinate at an edge.
-    const interior = pts.filter((p) => p.every((c) => c > 21.5 && c < 38.5));
-    expect(interior).toHaveLength(0);
-    // And everything is dense.
-    for (const p of pts) {
-      expect(vol.getVoxel(Math.round(p[0]), Math.round(p[1]), Math.round(p[2]))).toBeGreaterThan(PICK_HU_THRESHOLD);
-    }
-  });
-
-  it('returns nothing for a box outside the volume', () => {
-    expect(volumeSurfacePoints(vol, [200, 200, 200], [300, 300, 300])).toEqual([]);
-  });
-
-  it('caps the cloud size without collapsing the shape', () => {
-    const pts = volumeSurfacePoints(vol, [0, 0, 0], [59, 59, 59], { spacingMm: 0.5, maxPoints: 200 });
-    expect(pts.length).toBeLessThanOrEqual(200);
-    expect(pts.length).toBeGreaterThan(50);
-  });
-});

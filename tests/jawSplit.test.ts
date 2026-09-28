@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { detectJawSplit, jawClipPlane, canSplitJaws, jawZRange, NO_JAW_SPLIT } from '../src/core/jawSplit';
+import { detectJawSplit, jawClipPlane, canSplitJaws, NO_JAW_SPLIT } from '../src/core/jawSplit';
 import type { VolumeSamplingData } from '../src/core/cprMath';
 
 /**
@@ -88,7 +88,7 @@ describe('detectJawSplit', () => {
   });
 });
 
-describe('jawClipPlane / jawZRange', () => {
+describe('jawClipPlane', () => {
   const split = { splitZ: 33, hasUpper: true, hasLower: true };
 
   it('keeps everything above the split for the upper jaw', () => {
@@ -104,11 +104,5 @@ describe('jawClipPlane / jawZRange', () => {
   it('clips nothing for "both", or when there is no split', () => {
     expect(jawClipPlane(split, 'both')).toBeNull();
     expect(jawClipPlane(NO_JAW_SPLIT, 'upper')).toBeNull();
-  });
-
-  it('reports the surviving z range so picking matches what is drawn', () => {
-    expect(jawZRange(split, 'upper')).toEqual([33, Infinity]);
-    expect(jawZRange(split, 'lower')).toEqual([-Infinity, 33]);
-    expect(jawZRange(split, 'both')).toEqual([-Infinity, Infinity]);
   });
 });

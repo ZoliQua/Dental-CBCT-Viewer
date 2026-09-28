@@ -17,7 +17,7 @@
  * loader in this app produces — see the identity-direction note in cprEngine.
  */
 
-import { trilinear, type VolumeSamplingData } from './cprMath';
+import type { VolumeSamplingData } from './cprMath';
 import type { ClipPlaneParam } from './cropBox';
 import type { Vec3 } from './implantGeometry';
 
@@ -140,51 +140,15 @@ export function jawClipPlane(split: JawSplit, side: JawSide): ClipPlaneParam | n
 export const canSplitJaws = (split: JawSplit): boolean =>
   split.splitZ != null && split.hasUpper && split.hasLower;
 
-/**
- * World z range that survives a jaw selection — used to keep 3D picking
- * consistent with what is actually on screen.
- */
-export function jawZRange(split: JawSplit, side: JawSide): [number, number] {
-  if (side === 'both' || split.splitZ == null) return [-Infinity, Infinity];
-  return side === 'upper' ? [split.splitZ, Infinity] : [-Infinity, split.splitZ];
-}
-
-/**
- * Enamel-weighted z histogram, exposed for tests and for anyone who wants to
- * check the detection against a real scan. Uses the same sampling as detection.
- */
-export function enamelProfile(vol: VolumeSamplingData): { z: number; count: number }[] {
-  const [nx, ny, nz] = vol.dims;
-  const sz = 1 / vol.invSz;
-  const z0 = vol.origin[2];
-  const nBins = Math.max(1, Math.ceil((nz * sz) / BIN_MM));
-  const bins = new Array<number>(nBins).fill(0);
-  const stride = Math.max(1, Math.ceil(Math.cbrt((nx * ny * nz) / MAX_SAMPLES)));
-  for (let k = 0; k < nz; k += stride) {
-    const bin = Math.min(nBins - 1, Math.floor((k * sz) / BIN_MM));
-    for (let j = 0; j < ny; j += stride) {
-      for (let i = 0; i < nx; i += stride) if (vol.getVoxel(i, j, k) > ENAMEL_HU) bins[bin]++;
-    }
-  }
-  return bins.map((count, i) => ({ z: z0 + (i + 0.5) * BIN_MM, count }));
-}
-
-/** Sample the volume at a world point (trilinear), for pick refinement. */
-export function sampleWorld(vol: VolumeSamplingData, p: Vec3): number {
-  return trilinear(
-    vol.getVoxel, vol.dims,
-    (p[0] - vol.origin[0]) * vol.invSx,
-    (p[1] - vol.origin[1]) * vol.invSy,
-    (p[2] - vol.origin[2]) * vol.invSz,
-  );
-}
-
 // ── Per-volume cache ───────────────────────────────────────────
 
 // Detection sweeps the whole volume, so it runs once per volume and is then
 // read by both the 3D view (to clip) and landmark picking (to stay consistent
-// with what is drawn). Keyed by volume id; cleared when a study is dropped.
+// with what is drawn). Keyed by volume id, with the oldest evicted — a stale
+// entry costs one recomputation, an unbounded map costs memory forever.
 const splitCache = new Map<string, JawSplit>();
+/** Only a handful of studies are ever open at once; the rest can be recomputed. */
+const MAX_CACHED = 8;
 
 /** Memoized detectJawSplit for a loaded volume. */
 export function jawSplitFor(volumeId: string, vol: VolumeSamplingData | null | undefined): JawSplit {
@@ -192,11 +156,7 @@ export function jawSplitFor(volumeId: string, vol: VolumeSamplingData | null | u
   const cached = splitCache.get(volumeId);
   if (cached) return cached;
   const split = detectJawSplit(vol);
+  if (splitCache.size >= MAX_CACHED) splitCache.delete(splitCache.keys().next().value as string);
   splitCache.set(volumeId, split);
   return split;
-}
-
-export function clearJawSplitCache(volumeId?: string): void {
-  if (volumeId) splitCache.delete(volumeId);
-  else splitCache.clear();
 }

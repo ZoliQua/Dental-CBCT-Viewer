@@ -5,9 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  nudgeScan, rotateScan, scanCenterWorld, translation4, rotation4, isIdentityTransform,
-} from '../src/core/scanAdjust';
+import { nudgeScan, rotateScan, scanCenterWorld, translation4, rotation4 } from '../src/core/scanAdjust';
 import { applyMat4, IDENTITY4 } from '../src/core/registration';
 
 const near = (a: number[], b: number[], eps = 1e-9) => {
@@ -60,11 +58,5 @@ describe('scanAdjust', () => {
 
   it('falls back to the transform origin when the mesh has no bounds', () => {
     near(scanCenterWorld(translation4([7, 8, 9]), null), [7, 8, 9], 1e-9);
-  });
-
-  it('recognises an untouched (identity) placement', () => {
-    expect(isIdentityTransform(IDENTITY4)).toBe(true);
-    expect(isIdentityTransform(translation4([0, 0, 0.001]))).toBe(false);
-    expect(isIdentityTransform([1, 2, 3])).toBe(false);
   });
 });
