@@ -4,6 +4,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/dental-cbct-viewer?style=for-the-badge&color=CB3837)](https://www.npmjs.com/package/dental-cbct-viewer)
 [![Live demo](https://img.shields.io/badge/live_demo-open-0EA5E9?style=for-the-badge&logo=vercel)](https://dental-cbct-viewer.vercel.app)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)](https://github.com/ZoliQua/Dental-CBCT-Viewer/blob/main/LICENSE)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.23458076-1682D4?style=for-the-badge)](https://doi.org/10.5281/zenodo.23458076)
 [![React](https://img.shields.io/badge/React-18%20%7C%2019-61DAFB?style=for-the-badge&logo=react)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 
@@ -156,7 +157,15 @@ Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 If DenCT contributes to work you publish, please cite it. The repository carries a
 [`CITATION.cff`](CITATION.cff), so GitHub's **Cite this repository** button renders
-BibTeX or APA for you, and each release is archived on **Zenodo** with its own DOI.
+BibTeX or APA for you, and every release is archived on Zenodo.
+
+> Dul, Z. *DenCT — Dental CBCT & DICOM Viewer with Guided Implant Planning.*
+> Zenodo. https://doi.org/10.5281/zenodo.23458076
+
+Cite the **concept DOI** [`10.5281/zenodo.23458076`](https://doi.org/10.5281/zenodo.23458076)
+for the software in general — it always resolves to the latest archived release. To pin the
+exact version you used, cite that release's own DOI
+([`10.5281/zenodo.23458077`](https://doi.org/10.5281/zenodo.23458077) for v1.4.0).
 
 ## 📄 License & disclaimer
 

@@ -18,8 +18,17 @@ repository-code: "https://github.com/ZoliQua/Dental-CBCT-Viewer"
 license: MIT
 # Zenodo concept (all-versions) DOI — auto-resolves to the latest archived
 # release. Recommended for citing the software in general. A version-specific
-# DOI is minted per release when it is archived on Zenodo. Both are filled in
-# once the first release has been archived.
+# DOI is minted per release when it is archived on Zenodo; the last archived
+# version-specific DOI (v1.4.0) is kept under `identifiers:` below until a
+# newer release is archived.
+doi: "10.5281/zenodo.23458076"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.23458076"
+    description: "Zenodo concept DOI (all versions) — recommended for citing the software"
+  - type: doi
+    value: "10.5281/zenodo.23458077"
+    description: "Zenodo DOI for the last archived version (v1.4.0)"
 authors:
   - family-names: Dul
     given-names: Zoltán

@@ -132,7 +132,12 @@ El kernel CSG booleano (`manifold-3d`, ~1,5 MB WASM) se carga de forma perezosa 
 
 Si DenCT contribuye a un trabajo que publiques, cítalo: el repositorio incluye un
 [`CITATION.cff`](../CITATION.cff) (el botón **Cite this repository** de GitHub genera
-BibTeX o APA), y cada versión se archiva en **Zenodo** con su propio DOI.
+BibTeX o APA), y cada versión se archiva en Zenodo.
+
+Cita el DOI de concepto [`10.5281/zenodo.23458076`](https://doi.org/10.5281/zenodo.23458076)
+para el software en general — siempre resuelve a la última versión archivada — o el DOI
+propio de una versión para fijarla exactamente
+([`10.5281/zenodo.23458077`](https://doi.org/10.5281/zenodo.23458077) para v1.4.0).
 
 ## Licencia y aviso
 

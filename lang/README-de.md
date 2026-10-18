@@ -132,8 +132,12 @@ Der CSG-Boolean-Kernel (`manifold-3d`, ~1,5 MB WASM) wird im Schablonen-Builder 
 
 Wenn DenCT zu einer Veröffentlichung beiträgt, zitieren Sie es bitte: Das Repository
 enthält eine [`CITATION.cff`](../CITATION.cff) (GitHubs Schaltfläche **Cite this
-repository** erzeugt daraus BibTeX oder APA), und jedes Release wird mit eigenem DOI
-auf **Zenodo** archiviert.
+repository** erzeugt daraus BibTeX oder APA), und jedes Release wird auf Zenodo archiviert.
+
+Für die Software im Allgemeinen zitieren Sie die Konzept-DOI
+[`10.5281/zenodo.23458076`](https://doi.org/10.5281/zenodo.23458076) — sie verweist stets
+auf das zuletzt archivierte Release —, für eine bestimmte Version deren eigene DOI
+([`10.5281/zenodo.23458077`](https://doi.org/10.5281/zenodo.23458077) für v1.4.0).
 
 ## Lizenz & Haftungsausschluss
 

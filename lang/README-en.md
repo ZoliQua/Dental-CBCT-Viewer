@@ -133,7 +133,12 @@ The CSG Boolean kernel (`manifold-3d`, ~1.5 MB WASM) is loaded lazily inside the
 
 If DenCT contributes to work you publish, please cite it: the repository carries a
 [`CITATION.cff`](../CITATION.cff) (GitHub's **Cite this repository** button renders
-BibTeX or APA), and every release is archived on **Zenodo** with its own DOI.
+BibTeX or APA), and every release is archived on Zenodo.
+
+Cite the concept DOI [`10.5281/zenodo.23458076`](https://doi.org/10.5281/zenodo.23458076)
+for the software in general — it always resolves to the latest archived release — or a
+release's own DOI to pin the exact version ([`10.5281/zenodo.23458077`](https://doi.org/10.5281/zenodo.23458077)
+for v1.4.0).
 
 ## License & disclaimer
 
