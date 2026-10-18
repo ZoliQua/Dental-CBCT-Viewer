@@ -24,6 +24,7 @@ import { scanTriangleSoupWorld } from '@/core/scanMesh';
 import { pickVolumeSurface } from '@/core/volumePick';
 import { detectFiducials, nearestFiducialToRay, snapToSphere, matchConstellations } from '@/core/fiducials';
 import { jawSplitFor, jawClipPlane } from '@/core/jawSplit';
+import { assessMetal, type MetalReport } from '@/core/metalArtifact';
 import { getVolumeData } from '@/core/cprEngine';
 import type { Vec3 } from '@/core/implantGeometry';
 
@@ -37,8 +38,19 @@ export function RegistrationPanel() {
   const [lastRms, setLastRms] = useState<number | null>(null);
   const [detecting, setDetecting] = useState(false);
   const [detectMsg, setDetectMsg] = useState<string | null>(null);
+  // Metal in the CT, measured once per volume. Streaking around restorations
+  // moves the apparent tooth surfaces, which is why a surface fit on such a
+  // scan cannot be trusted — the operator needs to know before they rely on it.
+  const [metal, setMetal] = useState<MetalReport | null>(null);
   const regActive = !!reg;
   useEffect(() => { if (regActive) { setLastRms(null); setDetectMsg(null); } }, [regActive]);
+
+  useEffect(() => {
+    if (!regActive || !state.volumeId) { setMetal(null); return; }
+    const vol = getVolumeData(state.volumeId);
+    // A coarse lattice sweep, well under a frame — no busy state needed.
+    setMetal(vol ? assessMetal(vol) : null);
+  }, [regActive, state.volumeId]);
 
   /**
    * Look for radiopaque markers in the CT. A sweep of the whole field of view
@@ -264,6 +276,19 @@ export function RegistrationPanel() {
         </button>
       </div>
       <p className="text-[11px] text-gray-500 dark:text-gray-400">{t('reg.hint')}</p>
+
+      {metal && metal.severity !== 'none' && (
+        <div className={`rounded px-2 py-1.5 text-[10px] leading-snug ${
+          metal.severity === 'severe'
+            ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+            : 'bg-gray-100 text-gray-600 dark:bg-gray-700/60 dark:text-gray-300'
+        }`}>
+          <span className="font-semibold">
+            {t('reg.metal.found', { mm3: Math.round(metal.volumeMm3), n: metal.sites.length })}
+          </span>{' '}
+          {t(metal.severity === 'severe' ? 'reg.metal.severe' : 'reg.metal.minor')}
+        </div>
+      )}
 
       {reg.pairs.map((p, i) => {
         const err = residuals.get(i);

@@ -9,6 +9,16 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
 
 ### Added
 
+- **Metal in the CT is detected and reported.** Restorations absorb more X-ray
+  than the reconstruction can solve for, and what comes out is a bright core
+  wrapped in dark bands and bright streaks reaching centimetres into the
+  neighbouring anatomy — across exactly the tooth surfaces a scan would be
+  matched against. The registration panel now sweeps the volume for material
+  denser than any tissue, reports how much it found and in how many places, and
+  says plainly that a surface fit cannot be trusted on such a scan. Measured on
+  the bundled sample: 2396 mm³ in eight sites, half the crown surface within
+  4 mm of it. Detecting metal is unambiguous in a way that correcting for it is
+  not, and an operator who knows it is there can register on markers instead.
 - **Radiopaque marker (fiducial) registration.** The answer to the problem the
   previous release could only describe: surface matching cannot pin a scan down
   at the millimetre scale, because most of an arch scan is gingiva the CBCT
@@ -92,6 +102,37 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
   now carries an exact uniform-grid index and an optional trimmed objective.
 
 ### Not shipped
+
+- **Crown-only surface registration, masked by the scan's own colour.** The
+  published method that reports 0.234 mm (Bioengineering 2023) does one thing
+  this project's attempts did not: it removes the gingiva from the intraoral
+  scan and matches crowns alone. The scans carry texture, and the colour does
+  separate them cleanly — saturation runs about 0.23 over the occlusal surface
+  against 0.48 higher up — so the mask was built: per-scan Otsu threshold, a
+  hue window seeded from the occlusal 2 mm (which is enamel by construction, and
+  so adapts to each scan's white balance), a specular reject, erosion over the
+  mesh graph and a component-size floor.
+
+  It does not make the objective usable, and the measurements say why it never
+  could on this data. Starting a fit from seven nearby poses lands on seven
+  different answers, 0.3–1.0 mm apart. Split the arch into thirds and each third
+  converges tightly on its own, but to poses 1.4–2.7 mm from one another, so
+  there is no single rigid pose that satisfies the whole arch. The cause is in
+  the volume, not the algorithm: this sample holds 2396 mm³ of metal, and 90 %
+  of the upper crown surface lies within 16 mm of it. Exclude everything near
+  the metal and the lower jaw's objective does sharpen — six starts agreeing to
+  within 0.2 mm — but it agrees on a pose 4.5 mm from the shipped one, and with
+  no ground truth to check it against, that is a number to investigate rather
+  than to ship. The upper jaw has too little clean surface left to try at all.
+
+  Two corrections to what the previous entry claimed. An earlier round of this
+  measurement reported that colour masking fixed the lower jaw; it probed
+  positive offsets only, and the lower jaw's error runs the other way — it fails
+  on −1 mm y like the upper fails on +1 mm y. And the `scans.json` transform
+  used as "truth" throughout is the offline ICP's own output, so a test that
+  only shows the objective disagreeing with it proves nothing by itself; the
+  conclusions above rest on repeatability and internal consistency instead.
+  What ships from this work is the metal warning, under *Added*.
 
 - **Automatic surface refinement of a scan's registration.** It was built,
   measured against a known-good registration, and removed: no local objective
