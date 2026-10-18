@@ -134,6 +134,29 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
   conclusions above rest on repeatability and internal consistency instead.
   What ships from this work is the metal warning, under *Added*.
 
+  The paper's other pillar was tried too, and closes the question. Instead of
+  an HU isolevel, the scan was matched against *segmented* dentition — connected
+  components above 1800 HU with a size floor, which drops streak fragments by
+  construction where an isosurface cannot. It does give a sharper objective
+  (0.67 mm at the shipped pose falling to 0.28 mm). It also disagrees with the
+  image-based one by 7.5 mm: on the lower jaw the image objective pulls 4.2 mm
+  one way along the patient axis and the segmentation objective 3.3 mm the
+  other. Two methods, one data set, opposite answers — neither has found
+  anything real. The upper jaw does not even stay put: its crowns slide 8-9 mm
+  backwards, because at 1800 HU the whole upper dentition fuses into a single
+  3743 mm³ lump and a point cloud slides freely along it. Separating individual
+  teeth, which is what the paper's correspondences need, is the hard problem
+  here rather than a step on the way.
+
+  One idea of our own went the same way: use the restorations as natural
+  fiducials, since the CT locates them in 0.02 s and metal should read as grey
+  in the scan's texture. The lower jaw's scan shows no grey patch at all and
+  the upper's three sit 8 mm off the occlusal surface, so they are shadows. The
+  CT says why — the largest site is 1648 mm³ in the anterior maxilla, a
+  metal-ceramic framework. Its metal is substructure under a ceramic facing, so
+  the scanner sees a tooth. Metal that a CBCT cannot miss is metal an intraoral
+  scanner cannot see.
+
 - **Automatic surface refinement of a scan's registration.** It was built,
   measured against a known-good registration, and removed: no local objective
   tried — trimmed point-to-point ICP against an extracted surface, nor
