@@ -1,0 +1,40 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "DenCT — Dental CBCT & DICOM Viewer with Guided Implant Planning"
+abstract: >-
+  An open-source, embeddable dental CBCT / CT DICOM viewer and guided implant
+  planner for React and TypeScript. It reconstructs a panoramic (OPG) view along
+  the dental arch, renders the jaw in true 3D with linked MPR, plans implants
+  with nerve, sinus and neighbour safety clearances, pairs intraoral surface
+  scans to the volume by landmark or radiopaque-marker registration, and exports
+  a 3D-printable surgical drill guide (STL) — entirely in the browser, with no
+  upload of patient data. Research and demonstration software; not a certified
+  medical device.
+version: 1.4.0
+date-released: 2026-10-18
+url: "https://dental-cbct-viewer.vercel.app/"
+repository-code: "https://github.com/ZoliQua/Dental-CBCT-Viewer"
+license: MIT
+# Zenodo concept (all-versions) DOI — auto-resolves to the latest archived
+# release. Recommended for citing the software in general. A version-specific
+# DOI is minted per release when it is archived on Zenodo. Both are filled in
+# once the first release has been archived.
+authors:
+  - family-names: Dul
+    given-names: Zoltán
+    orcid: "https://orcid.org/0000-0002-9523-3450"
+keywords:
+  - dental
+  - CBCT
+  - cone-beam computed tomography
+  - DICOM
+  - medical imaging
+  - implant planning
+  - guided surgery
+  - surgical guide
+  - panoramic reconstruction
+  - image registration
+  - intraoral scan
+  - React
+  - TypeScript

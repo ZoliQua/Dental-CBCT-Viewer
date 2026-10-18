@@ -117,7 +117,7 @@ A CSG Boolean-kernel (`manifold-3d`, ~1,5 MB WASM) a sablonépítőn belül lazy
 
 - **`ImplantData`** — világ-belépési pont + apex-tengely (két szögből, a legközelebbi ív-kerethez képest), átmérő, hossz, `systemId`, és opcionális `guided` terv (persely offset/magasság, fúróhossz).
 - **`IMPLANT_SYSTEMS`** — katalógus (Generic, Alpha-Bio, Straumann BLX, NobelActive) rendszerenkénti persely-átmérőkkel.
-- **`PlanData`** — az állapot menthető szelete (implantok, anatómiai jelölők, ívgörbe, keresztmetszet, biztonsági küszöbök, riport-mezők, megjelenítés + sablon-beállítások). Mentsd `onPlanChange` / `getPlan` révén, töltsd vissza `initialPlan` / `loadPlan` révén.
+- **`PlanData`** — az állapot menthető szelete (implantok, anatómiai jelölők, ívgörbe, keresztmetszet, biztonsági küszöbök, riport-mezők, megjelenítés + sablon-beállítások, valamint az importált scanek regisztrációi — csak leírók, a mesh-ek a memóriában maradnak). Mentsd `onPlanChange` / `getPlan` révén, töltsd vissza `initialPlan` / `loadPlan` révén.
 
 ## A csomagolt minta
 
@@ -127,6 +127,12 @@ A `loadSample()` és a nyitóoldali gomb egy ~16 MB-os anonim CBCT-t tölt be a 
 
 - **Vite:** out of the box működik.
 - **Next.js / webpack 5:** kliens-komponensben (`"use client"`) rendereld; a néző mount-kor olvassa a DOM-ot. Állítsd be a COOP/COEP fejléceket. A worker + WASM assetek előre bundle-ölve vannak.
+
+## Hivatkozás
+
+Ha a DenCT hozzájárul egy publikációdhoz, kérlek hivatkozz rá: a repóban van
+[`CITATION.cff`](../CITATION.cff) (a GitHub **Cite this repository** gombja ebből
+csinál BibTeX-et vagy APA-t), és minden kiadás saját DOI-val kerül a **Zenodo**-ra.
 
 ## Licenc & disclaimer
 

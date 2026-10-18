@@ -118,7 +118,7 @@ The CSG Boolean kernel (`manifold-3d`, ~1.5 MB WASM) is loaded lazily inside the
 
 - **`ImplantData`** — world entry + apex axis (from two angles relative to the nearest arch frame), diameter, length, `systemId`, and an optional `guided` plan (sleeve offset/height, drill length).
 - **`IMPLANT_SYSTEMS`** — catalog (Generic, Alpha-Bio, Straumann BLX, NobelActive) with per-system sleeve diameters.
-- **`PlanData`** — the persistable slice of state (implants, anatomy markers, arch curve, cross-section, safety thresholds, report fields, display + guide settings). Save it from `onPlanChange` / `getPlan`, restore it via `initialPlan` / `loadPlan`.
+- **`PlanData`** — the persistable slice of state (implants, anatomy markers, arch curve, cross-section, safety thresholds, report fields, display + guide settings, and the imported scans' registrations — descriptors only, the meshes stay in memory). Save it from `onPlanChange` / `getPlan`, restore it via `initialPlan` / `loadPlan`.
 
 ## The bundled sample
 
@@ -128,6 +128,12 @@ The CSG Boolean kernel (`manifold-3d`, ~1.5 MB WASM) is loaded lazily inside the
 
 - **Vite:** works out of the box.
 - **Next.js / webpack 5:** render inside a client component (`"use client"`); the viewer reads the DOM on mount. Set COOP/COEP headers. Worker + WASM assets are pre-bundled.
+
+## Citation
+
+If DenCT contributes to work you publish, please cite it: the repository carries a
+[`CITATION.cff`](../CITATION.cff) (GitHub's **Cite this repository** button renders
+BibTeX or APA), and every release is archived on **Zenodo** with its own DOI.
 
 ## License & disclaimer
 

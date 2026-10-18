@@ -117,7 +117,7 @@ El kernel CSG booleano (`manifold-3d`, ~1,5 MB WASM) se carga de forma perezosa 
 
 - **`ImplantData`** — punto de entrada en el mundo + eje del ápice (a partir de dos ángulos relativos al marco de arco más cercano), diámetro, longitud, `systemId` y un plan `guided` opcional (offset/altura del casquillo, longitud de fresado).
 - **`IMPLANT_SYSTEMS`** — catálogo (Generic, Alpha-Bio, Straumann BLX, NobelActive) con diámetros de casquillo por sistema.
-- **`PlanData`** — la porción persistible del estado (implantes, marcadores anatómicos, curva del arco, corte transversal, umbrales de seguridad, campos del informe, ajustes de visualización + guía). Guárdalo con `onPlanChange` / `getPlan`, restáuralo con `initialPlan` / `loadPlan`.
+- **`PlanData`** — la porción persistible del estado (implantes, marcadores anatómicos, curva del arco, corte transversal, umbrales de seguridad, campos del informe, ajustes de visualización + guía, y los registros de los escaneos importados — solo descriptores, las mallas permanecen en memoria). Guárdalo con `onPlanChange` / `getPlan`, restáuralo con `initialPlan` / `loadPlan`.
 
 ## La muestra incluida
 
@@ -127,6 +127,12 @@ El kernel CSG booleano (`manifold-3d`, ~1,5 MB WASM) se carga de forma perezosa 
 
 - **Vite:** funciona directamente.
 - **Next.js / webpack 5:** renderiza dentro de un componente cliente (`"use client"`); el visor lee el DOM al montar. Configura las cabeceras COOP/COEP. Los recursos de worker + WASM vienen preempaquetados.
+
+## Cómo citar
+
+Si DenCT contribuye a un trabajo que publiques, cítalo: el repositorio incluye un
+[`CITATION.cff`](../CITATION.cff) (el botón **Cite this repository** de GitHub genera
+BibTeX o APA), y cada versión se archiva en **Zenodo** con su propio DOI.
 
 ## Licencia y aviso
 

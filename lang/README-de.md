@@ -117,7 +117,7 @@ Der CSG-Boolean-Kernel (`manifold-3d`, ~1,5 MB WASM) wird im Schablonen-Builder 
 
 - **`ImplantData`** — Welt-Eintrittspunkt + Apex-Achse (aus zwei Winkeln relativ zum nächsten Bogenrahmen), Durchmesser, Länge, `systemId` und optionaler `guided`-Plan (Hülsen-Offset/-Höhe, Bohrlänge).
 - **`IMPLANT_SYSTEMS`** — Katalog (Generic, Alpha-Bio, Straumann BLX, NobelActive) mit systemspezifischen Hülsendurchmessern.
-- **`PlanData`** — der persistierbare Zustandsanteil (Implantate, Anatomiemarker, Bogenkurve, Querschnitt, Sicherheitsschwellen, Berichtsfelder, Anzeige- + Schablonen-Einstellungen). Über `onPlanChange` / `getPlan` speichern, über `initialPlan` / `loadPlan` wiederherstellen.
+- **`PlanData`** — der persistierbare Zustandsanteil (Implantate, Anatomiemarker, Bogenkurve, Querschnitt, Sicherheitsschwellen, Berichtsfelder, Anzeige- + Schablonen-Einstellungen sowie die Registrierungen der importierten Scans — nur Deskriptoren, die Meshes bleiben im Speicher). Über `onPlanChange` / `getPlan` speichern, über `initialPlan` / `loadPlan` wiederherstellen.
 
 ## Die gebündelte Probe
 
@@ -127,6 +127,13 @@ Der CSG-Boolean-Kernel (`manifold-3d`, ~1,5 MB WASM) wird im Schablonen-Builder 
 
 - **Vite:** funktioniert sofort.
 - **Next.js / webpack 5:** in einer Client-Komponente (`"use client"`) rendern; der Viewer liest das DOM beim Mounten. COOP/COEP-Header setzen. Worker- + WASM-Assets sind vorgebündelt.
+
+## Zitieren
+
+Wenn DenCT zu einer Veröffentlichung beiträgt, zitieren Sie es bitte: Das Repository
+enthält eine [`CITATION.cff`](../CITATION.cff) (GitHubs Schaltfläche **Cite this
+repository** erzeugt daraus BibTeX oder APA), und jedes Release wird mit eigenem DOI
+auf **Zenodo** archiviert.
 
 ## Lizenz & Haftungsausschluss
 
