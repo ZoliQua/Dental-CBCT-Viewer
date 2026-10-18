@@ -31,6 +31,7 @@ const sample: PlanData = {
   windowLevel: { wc: 749, ww: 3439 },
   report: { patientName: 'Teszt', patientAge: '45', patientBirthDate: '1980-01-01', quoteNumber: 'Q-7', statusDescription: 'felső 6-os', clinic: 'Mackó', studyDate: '2026-02-02', seriesName: 'ct2' },
   display: { showName: true, showBirth: false, showDate: true, showClinic: true, labelColor: '#ff0000', labelSizeMain: 20, labelSizeSide: 14, labelAlign: 'left', showSeries: true, showModality: false, showSlice: true, scope: 'main', sliceOpacity: 0.5, preset3d: 'CT-MIP', quality3d: 'high', colormap3d: 'warm' },
+  scans: [{ id: 'scan_1', name: 'Felső', type: 'upperJaw', color: '#e8c0a8', opacity: 1, visible: true, transform: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2, 3, 4, 1], fileName: 'upper.ply' }],
 };
 
 describe('serializePlan / planFromObject round-trip', () => {

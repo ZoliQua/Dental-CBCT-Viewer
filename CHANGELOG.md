@@ -5,10 +5,21 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
 `1.0.0` onward.
 
-## [Unreleased]
+## [1.4.0] — 2026-10-18
 
 ### Added
 
+- **A scan's registration is saved with the plan.** The transform is the
+  expensive part of a plan — minutes of landmark picking, or a marker
+  constellation confirmed bead by bead — and until now it lived only in memory,
+  so reopening a case threw it away and the work had to be repeated. Plans now
+  carry the scan descriptors (arch, colour, visibility and the 4x4), while the
+  mesh itself, which is megabytes, still does not travel. Reopening a plan with
+  the files already loaded puts each saved pose straight back on its mesh,
+  matched by file name rather than by an id that changes every session; a saved
+  scan whose file is not loaded is listed in the Series tree with the file to
+  re-import, and importing it reattaches the registration instead of starting
+  from the volume's centre.
 - **Metal in the CT is detected and reported.** Restorations absorb more X-ray
   than the reconstruction can solve for, and what comes out is a bright core
   wrapped in dark bands and bright streaks reaching centimetres into the
@@ -358,6 +369,7 @@ First public release — the viewer is packaged as an embeddable React library.
   `SharedArrayBuffer`).
 - This is research / demonstration software — **not** a certified medical device.
 
+[1.4.0]: https://github.com/ZoliQua/Dental-CBCT-Viewer/releases/tag/v1.4.0
 [1.3.0]: https://github.com/ZoliQua/Dental-CBCT-Viewer/releases/tag/v1.3.0
 [1.2.0]: https://github.com/ZoliQua/Dental-CBCT-Viewer/releases/tag/v1.2.0
 [1.1.0]: https://github.com/ZoliQua/Dental-CBCT-Viewer/releases/tag/v1.1.0

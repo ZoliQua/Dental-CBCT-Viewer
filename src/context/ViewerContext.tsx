@@ -248,6 +248,36 @@ export type ViewerAction =
 export const MIN_REG_PAIRS = 3;
 export const MAX_REG_PAIRS = 8;
 
+/**
+ * Apply a plan's saved scans to the ones this session already has.
+ *
+ * A plan stores descriptors, not geometry, so loading one must not simply
+ * replace the list: the common case is a plan reopened *after* the meshes have
+ * been imported again, and overwriting would drop the loaded geometry in favour
+ * of entries pointing at nothing. Matching on the file name instead means the
+ * saved registration lands back on the mesh it was measured for, whatever id it
+ * was given this time.
+ *
+ * A saved scan with no file loaded is kept anyway, as a placeholder: it is how
+ * the UI can say which file to re-import to get the registration back. A loaded
+ * scan the plan has never heard of is left alone.
+ *
+ * Exported for unit tests.
+ */
+export function mergePlanScans(current: ScanMesh[], saved: ScanMesh[]): ScanMesh[] {
+  const taken = new Set<string>();
+  const out = current.map((c) => {
+    if (!c.fileName) return c;
+    const match = saved.find((p) => p.fileName === c.fileName && !taken.has(p.id));
+    if (!match) return c;
+    taken.add(match.id);
+    // Keep this session's id — the geometry registry is keyed by it.
+    return { ...match, id: c.id };
+  });
+  for (const p of saved) if (!taken.has(p.id)) out.push(p);
+  return out;
+}
+
 /** Exported for unit tests. */
 export const initialState: ViewerState = {
   isInitialized: false,
@@ -519,8 +549,23 @@ export function viewerReducer(state: ViewerState, action: ViewerAction): ViewerS
       return { ...state, anatomyDrawMode: action.payload };
     case 'SET_ACTIVE_ANATOMY':
       return { ...state, activeAnatomyId: action.payload };
-    case 'ADD_SCAN':
+    case 'ADD_SCAN': {
+      // A restored plan can be waiting for this very file: the autosave is
+      // applied as soon as the study is known, which is before the sample's
+      // own scans arrive. Without this the two would sit in the list side by
+      // side — one with the geometry, one with the registration. The arriving
+      // scan brings the mesh, the waiting entry brings the saved pose.
+      const waiting = action.payload.fileName
+        ? state.scans.find((sc) => sc.fileName === action.payload.fileName && sc.id !== action.payload.id)
+        : undefined;
+      if (waiting) {
+        return {
+          ...state,
+          scans: state.scans.map((sc) => sc.id === waiting.id ? { ...waiting, id: action.payload.id } : sc),
+        };
+      }
       return { ...state, scans: [...state.scans, action.payload] };
+    }
     case 'UPDATE_SCAN':
       return { ...state, scans: state.scans.map(s => s.id === action.payload.id ? action.payload : s) };
     case 'REMOVE_SCAN': {
@@ -595,6 +640,7 @@ export function viewerReducer(state: ViewerState, action: ViewerAction): ViewerS
       return {
         ...state,
         ...plan,
+        scans: mergePlanScans(state.scans, plan.scans),
         planMismatch: false,
         activeImplantId: null,
         editingImplantId: null,

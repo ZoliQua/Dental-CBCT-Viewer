@@ -6,8 +6,8 @@
  * studyInstanceUID; loading onto a different scan should be confirmed first.
  */
 
-import type { ImplantData, AnatomyMarker, MeasurementLayer, ProjectionMode, GuideParams } from '@/types/dicom';
-import { GUIDE_DEFAULTS } from '@/types/dicom';
+import type { ImplantData, AnatomyMarker, MeasurementLayer, ProjectionMode, GuideParams, ScanMesh, ScanType } from '@/types/dicom';
+import { GUIDE_DEFAULTS, SCAN_TYPES, SCAN_DEFAULTS } from '@/types/dicom';
 import type { ReportFields, DisplayConfig } from '@/context/ViewerContext';
 import { DISPLAY_DEFAULTS } from '@/context/ViewerContext';
 
@@ -29,6 +29,13 @@ export interface PlanData {
   windowLevel: { wc: number; ww: number };
   report: ReportFields;
   display: DisplayConfig;
+  /**
+   * Imported surface scans — descriptors only. The mesh itself is megabytes
+   * and stays in memory, but the transform is the expensive part to recreate:
+   * it is the registration, minutes of landmark picking. Saving it means a
+   * reopened plan needs the file back, not the work.
+   */
+  scans: ScanMesh[];
 }
 
 export interface PlanFile extends PlanData {
@@ -65,6 +72,7 @@ export function extractPlan(s: PlanData): PlanData {
     windowLevel: s.windowLevel,
     report: s.report,
     display: s.display,
+    scans: s.scans,
   };
 }
 
@@ -88,6 +96,7 @@ const MAX_MEASUREMENTS = 500;
 const MAX_ANATOMY = 50;
 const MAX_ANATOMY_POINTS = 2000;
 const MAX_ARCH_POINTS = 200;
+const MAX_SCANS = 20;
 const MAX_PROFILE_SAMPLES = 512;
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -121,6 +130,38 @@ function validateMeasurements(v: unknown): MeasurementLayer[] {
   ).slice(0, MAX_MEASUREMENTS);
 }
 
+/**
+ * Scan descriptors out of an untrusted plan file.
+ *
+ * The transform is the point of saving these, and a malformed one would put a
+ * mesh somewhere arbitrary in the patient's anatomy rather than fail visibly,
+ * so an entry without a complete, finite 4x4 is dropped rather than patched.
+ * The colour reaches a CSS swatch, so only a plain hex literal is accepted.
+ */
+function validateScans(v: unknown): ScanMesh[] {
+  if (!Array.isArray(v)) return [];
+  const out: ScanMesh[] = [];
+  for (const e of v) {
+    if (!isObj(e) || typeof e.id !== 'string' || !e.id) continue;
+    if (!isNumTuple(e.transform, 16)) continue;
+    const type: ScanType = SCAN_TYPES.includes(e.type as ScanType) ? (e.type as ScanType) : 'oral';
+    const color = typeof e.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(e.color)
+      ? e.color : SCAN_DEFAULTS[type].color;
+    out.push({
+      id: e.id,
+      name: str(e.name, type),
+      type,
+      color,
+      opacity: Math.min(1, Math.max(0, num(e.opacity, SCAN_DEFAULTS[type].opacity))),
+      visible: bool(e.visible, true),
+      transform: (e.transform as number[]).slice(),
+      fileName: str(e.fileName, ''),
+    });
+    if (out.length >= MAX_SCANS) break;
+  }
+  return out;
+}
+
 function validateArchCurve(v: unknown): [number, number][] | null {
   if (!Array.isArray(v)) return null;
   return v.filter(p => isNumTuple(p, 2)).slice(0, MAX_ARCH_POINTS) as [number, number][];
@@ -137,6 +178,7 @@ export function planFromObject(obj: any): ParsedPlan | null {
   return {
     studyInstanceUID: typeof obj.studyInstanceUID === 'string' ? obj.studyInstanceUID : null,
     implants: validateImplants(obj.implants),
+    scans: validateScans(obj.scans),
     anatomy: validateAnatomy(obj.anatomy),
     measurements: validateMeasurements(obj.measurements),
     archCurveControlPoints: validateArchCurve(obj.archCurveControlPoints),

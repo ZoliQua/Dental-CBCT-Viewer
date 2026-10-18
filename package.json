@@ -1,6 +1,6 @@
 {
   "name": "dental-cbct-viewer",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "DenCT — open-source dental CBCT / CT DICOM viewer and guided implant planner for React: panoramic (OPG) reconstruction, true-3D volume rendering, MPR and cross-sections, nerve / sinus safety clearances, bone quality, and a 3D-printable surgical drill guide (STL). Runs entirely in the browser — no upload.",
   "type": "module",
   "license": "MIT",

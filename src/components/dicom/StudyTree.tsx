@@ -222,8 +222,23 @@ function ScanRow({ scan }: { scan: ScanMesh }) {
         </div>
         <div className="text-[11px] text-gray-500 truncate">
           {t(`scan.${scan.type}`)}
-          {info ? ` · ${t('series.triangles', { n: info.triangles.toLocaleString() })}` : ` · ${t('scan.notLoaded')}`}
+          {info && ` · ${t('series.triangles', { n: info.triangles.toLocaleString() })}`}
         </div>
+        {/* A scan the plan remembers but this session has not loaded. The
+            registration is saved and waiting; it needs the file back, so say
+            which one rather than only that something is missing. */}
+        {!info && (
+          <div className="text-[10px] text-amber-600 dark:text-amber-400 leading-tight">
+            {scan.fileName ? (
+              <>
+                <div>{t('scan.reimport')}</div>
+                {/* The file name is the actionable part, so it gets its own
+                    line rather than being the half that the panel truncates. */}
+                <div className="font-mono truncate" title={scan.fileName}>{scan.fileName}</div>
+              </>
+            ) : t('scan.notLoaded')}
+          </div>
+        )}
         {extent && <div className="text-[10px] text-gray-400 dark:text-gray-500">{extent}</div>}
       </div>
       <button

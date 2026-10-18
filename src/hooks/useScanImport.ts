@@ -28,7 +28,7 @@ export function useScanImport() {
   return useCallback(async (files: File[]): Promise<ScanImportResult> => {
     // Cornerstone, vtk and the mesh readers are all heavy — pulled in only when
     // a scan is actually imported (see core/ensureCornerstone).
-    const [{ loadScanPolyData, setScanPolyData, setScanBaseTransform, polyDataCenter, translation16, IDENTITY16 }, { getVolumeData }] =
+    const [{ loadScanPolyData, setScanPolyData, setScanBaseTransform, polyDataCenter, translation16, IDENTITY16, hasScanPolyData }, { getVolumeData }] =
       await Promise.all([import('@/core/scanMesh'), import('@/core/cprEngine')]);
 
     // Volume centre, computed once: every imported mesh starts there.
@@ -50,6 +50,20 @@ export function useScanImport() {
         failed.push(file.name);
         continue;
       }
+      // A loaded plan may already be waiting for this exact file, holding the
+      // registration measured for it last time. Registering the geometry under
+      // that entry's id revives it in place, which is the whole reason the plan
+      // bothered to remember the file name.
+      const awaiting = state.scans.find(
+        (sc) => sc.fileName === file.name && !hasScanPolyData(sc.id));
+      if (awaiting) {
+        setScanPolyData(awaiting.id, pd);
+        setScanBaseTransform(awaiting.id, awaiting.transform);
+        dispatch({ type: 'UPDATE_SCAN', payload: { ...awaiting, visible: true } });
+        added.push(awaiting);
+        continue;
+      }
+
       const id = `scan_${Date.now()}_${added.length}`;
       setScanPolyData(id, pd);
 
@@ -78,5 +92,5 @@ export function useScanImport() {
 
     if (failed.length) window.alert(`${t('scan.invalid')}\n\n${failed.join('\n')}`);
     return { added, failed };
-  }, [state.volumeId, dispatch, t]);
+  }, [state.volumeId, state.scans, dispatch, t]);
 }
