@@ -1,4 +1,4 @@
-# DQ-Dicom-Viewer — Programterv
+# Dental-CBCT-Viewer — Programterv
 
 ## 1. Cél és Scope
 
@@ -41,7 +41,7 @@ A DentalQuoteCreator-ral kompatibilis stack:
 ## 3. Projekt struktúra
 
 ```
-DQ-Dicom-Viewer/
+Dental-CBCT-Viewer/
 ├── package.json
 ├── vite.config.ts
 ├── tsconfig.json
@@ -175,7 +175,7 @@ A meglévő submodule pattern-t követve:
 # .gitmodules-ba kerül (DentalQuoteCreator oldalon):
 [submodule "dq-dicom-viewer"]
     path = src/modules/dq-dicom-viewer
-    url = https://github.com/ZoliQua/DQ-Dicom-Viewer.git
+    url = https://github.com/ZoliQua/Dental-CBCT-Viewer.git
 ```
 
 ```typescript
