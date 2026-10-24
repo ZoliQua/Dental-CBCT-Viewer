@@ -17,6 +17,7 @@ export * from './core/safety';
 export * from './core/boneQuality';
 export * from './core/cprMath';
 export * from './core/archCurve';
+export * from './core/registrationError';
 
 // Drill-guide geometry + STL export (guideBuilder is async / WASM via manifold)
 export * from './core/guideGeom';

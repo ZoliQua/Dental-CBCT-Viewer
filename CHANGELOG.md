@@ -5,6 +5,28 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
 `1.0.0` onward.
 
+## [Unreleased]
+
+### Added
+
+- **The registration says how far off it can be where the implant goes.** The
+  panel could already show the residual at each landmark pair, which is the
+  obvious number and the wrong one: Fitzpatrick, West & Maurer (IEEE TMI, 1998)
+  showed it is essentially uncorrelated with the error at a target away from
+  the markers. A constellation bunched on one side of the arch fits with a
+  flattering 0.1 mm residual and still swings a millimetre at a molar on the
+  far side, because the markers pin translation down well and rotation about
+  themselves hardly at all — and nothing in the fit announces it. The panel now
+  predicts the error at each planned implant's apex (at the scan's own extent
+  when nothing is planned yet), names the worst one, and separates the two
+  failures it can see: markers lying on one line, where rotation about that
+  line is simply undetermined, and markers too bunched to hold the far end of
+  the arch, where the fix is to spread them rather than to click more
+  carefully. New pure `src/core/registrationError.ts`, exported from `/core`,
+  with 12 tests. The estimate is an expectation over many registrations, not a
+  bound on this one; its value is comparative, and it is reported because the
+  failure it catches is invisible otherwise.
+
 ## [1.4.0] — 2026-10-18
 
 ### Added

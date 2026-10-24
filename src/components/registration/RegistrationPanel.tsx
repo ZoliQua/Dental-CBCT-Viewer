@@ -11,22 +11,41 @@
  * whereas on the rendering it is simply the point you can see. Picking honours
  * the jaw filter, so a clipped-away arch can never be clicked by accident.
  *
+ * The panel reports the predicted error at the planned implants, not only
+ * the residual at the landmarks: the residual says how well the pairs agree
+ * with each other, which is not the same question as how well the scan is
+ * held where the implant goes. See core/registrationError.
+ *
  * Best used in the 2×2 layout, where both the Axial and 3D panes are visible.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getRenderingEngine } from '@cornerstonejs/core';
 import { useViewer, MIN_REG_PAIRS, MAX_REG_PAIRS } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
 import { RENDERING_ENGINE_ID, VP_AXIAL, VP_3D } from '@/core/constants';
 import { kabschTransformWithRms, mul4, applyMat4, pickTriangleSoup } from '@/core/registration';
 import { scanTriangleSoupWorld } from '@/core/scanMesh';
+import { registrationAccuracy } from '@/core/registrationError';
 import { pickVolumeSurface } from '@/core/volumePick';
 import { detectFiducials, nearestFiducialToRay, snapToSphere, matchConstellations } from '@/core/fiducials';
 import { jawSplitFor, jawClipPlane } from '@/core/jawSplit';
 import { assessMetal, type MetalReport } from '@/core/metalArtifact';
 import { getVolumeData } from '@/core/cprEngine';
-import type { Vec3 } from '@/core/implantGeometry';
+import { implantWorldAxis, type Vec3 } from '@/core/implantGeometry';
+
+/**
+ * Sub-millimetre is the scale guided surgery is planned at, so half a
+ * millimetre reads as good, a whole one as worth a second look, and anything
+ * beyond as a registration to redo.
+ */
+function treTone(mm: number): string {
+  if (!Number.isFinite(mm) || mm > 1) return 'text-red-600 dark:text-red-400';
+  if (mm > 0.5) return 'text-amber-600 dark:text-amber-400';
+  return 'text-green-600 dark:text-green-400';
+}
+
+const treText = (mm: number) => (Number.isFinite(mm) ? `±${mm.toFixed(2)} mm` : '—');
 
 export function RegistrationPanel() {
   const { state, dispatch } = useViewer();
@@ -36,6 +55,9 @@ export function RegistrationPanel() {
   // Fit error (RMS mm) of the last completed registration, shown once the
   // panel closes. > 1 mm is highlighted as a likely mis-picked landmark pair.
   const [lastRms, setLastRms] = useState<number | null>(null);
+  // Predicted error at the target, kept past END_REGISTRATION so the
+  // closing readout can show what the fit is actually worth.
+  const [lastTre, setLastTre] = useState<number | null>(null);
   const [detecting, setDetecting] = useState(false);
   const [detectMsg, setDetectMsg] = useState<string | null>(null);
   // Metal in the CT, measured once per volume. Streaking around restorations
@@ -43,7 +65,7 @@ export function RegistrationPanel() {
   // scan cannot be trusted — the operator needs to know before they rely on it.
   const [metal, setMetal] = useState<MetalReport | null>(null);
   const regActive = !!reg;
-  useEffect(() => { if (regActive) { setLastRms(null); setDetectMsg(null); } }, [regActive]);
+  useEffect(() => { if (regActive) { setLastRms(null); setLastTre(null); setDetectMsg(null); } }, [regActive]);
 
   useEffect(() => {
     if (!regActive || !state.volumeId) { setMetal(null); return; }
@@ -156,6 +178,42 @@ export function RegistrationPanel() {
     return () => { for (const c of cleanups) c(); };
   }, [reg?.picking, scan, state.volumeId, state.jawSide, dispatch]);
 
+  /**
+   * Where the registration's accuracy is worth knowing. The planned implants
+   * first — the apex is the deepest consequence of a bad pose, and it is the
+   * point a surgeon would name. With nothing planned yet the honest stand-in
+   * is the scan's own extent: the corners of what is being registered bound
+   * how far wrong the far end of the arch can be.
+   */
+  const scanId = scan?.id;
+  const scanTransform = scan?.transform;
+  const treTargets = useMemo(() => {
+    const out: { target: string; point: Vec3 }[] = [];
+    for (const imp of state.implants) {
+      const ax = implantWorldAxis(state.archCurveControlPoints ?? [], imp);
+      if (ax) out.push({ target: imp.name, point: ax.apex });
+    }
+    if (out.length || !scanId || !scanTransform) return out;
+    const soup = scanTriangleSoupWorld(scanId, scanTransform);
+    if (!soup?.length) return out;
+    const lo: Vec3 = [Infinity, Infinity, Infinity];
+    const hi: Vec3 = [-Infinity, -Infinity, -Infinity];
+    for (let i = 0; i < soup.length; i += 3) {
+      for (let k = 0; k < 3; k++) {
+        const v = soup[i + k];
+        if (v < lo[k]) lo[k] = v;
+        if (v > hi[k]) hi[k] = v;
+      }
+    }
+    for (let c = 0; c < 8; c++) {
+      out.push({
+        target: '',
+        point: [c & 1 ? hi[0] : lo[0], c & 2 ? hi[1] : lo[1], c & 4 ? hi[2] : lo[2]],
+      });
+    }
+    return out;
+  }, [state.implants, state.archCurveControlPoints, scanId, scanTransform]);
+
   if (!reg || !scan) {
     // Post-registration fit readout (registration just ended).
     if (lastRms === null) return null;
@@ -173,6 +231,12 @@ export function RegistrationPanel() {
             ✕
           </button>
         </div>
+        {lastTre !== null && (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] text-gray-500 dark:text-gray-400">{t('reg.tre.short')}</span>
+            <span className={`text-[11px] font-mono font-semibold ${treTone(lastTre)}`}>{treText(lastTre)}</span>
+          </div>
+        )}
         {high && <p className="text-[11px] text-red-600 dark:text-red-400">{t('reg.rmsHigh')}</p>}
       </div>
     );
@@ -206,6 +270,27 @@ export function RegistrationPanel() {
     }
   }
   const worst = residuals.size ? Math.max(...residuals.values()) : 0;
+
+  /**
+   * What the fit is worth at the target. The residual above is the error at
+   * the landmarks, where the fit was free to minimise it; the number that
+   * decides whether a guide drilled off this pose lands where it was planned
+   * is the error somewhere else entirely, and the two are not the same — a
+   * constellation bunched on one side of the arch fits beautifully and still
+   * swings the far end. Predicted from the CBCT-side points, since the
+   * targets live in that space.
+   */
+  const accuracy = fit
+    ? registrationAccuracy(filled.map((p) => p.cbct!) as Vec3[], fit.rmsMm, treTargets)
+    : null;
+  const treMm = accuracy?.worstMm ?? null;
+  const treWorstName = accuracy?.targets[0]?.target ?? '';
+  // The warning worth making loudly: the fit looks tight and is not. Only
+  // when the residual itself looks acceptable — saying "the residual is small"
+  // over a visibly bad one would be nonsense, and a bad residual already has
+  // its own warning.
+  const treMisleading = fit != null && treMm != null && Number.isFinite(treMm)
+    && fit.rmsMm <= 1 && treMm > 3 * Math.max(fit.rmsMm, 0.05) && treMm > 0.5;
 
   /**
    * Pairing marker 2 with marker 3 is the classic fiducial blunder, and it does
@@ -242,6 +327,7 @@ export function RegistrationPanel() {
     if (!res) return;
     dispatch({ type: 'UPDATE_SCAN', payload: { ...scan, transform: mul4(res.matrix, scan.transform) } });
     setLastRms(res.rmsMm);
+    setLastTre(treMm);
     dispatch({ type: 'END_REGISTRATION' });
   };
 
@@ -353,6 +439,29 @@ export function RegistrationPanel() {
           </span>
         )}
       </div>
+
+      {accuracy && treMm !== null && (
+        <div className="rounded px-2 py-1.5 bg-gray-50 dark:bg-gray-700/50 space-y-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[10px] leading-tight text-gray-500 dark:text-gray-400">
+              {treWorstName ? t('reg.tre.atImplant') : t('reg.tre.atScan')}
+            </span>
+            <span className={`text-[11px] font-mono font-semibold whitespace-nowrap ${treTone(treMm)}`}>
+              {treText(treMm)}
+            </span>
+          </div>
+          {treWorstName && (
+            <p className="text-[10px] font-mono truncate text-gray-400 dark:text-gray-500" title={treWorstName}>
+              {t('reg.tre.worst', { name: treWorstName })}
+            </p>
+          )}
+          {accuracy.degenerate ? (
+            <p className="text-[10px] leading-snug text-red-600 dark:text-red-400">{t('reg.tre.collinear')}</p>
+          ) : treMisleading ? (
+            <p className="text-[10px] leading-snug text-amber-700 dark:text-amber-400">{t('reg.tre.spread')}</p>
+          ) : null}
+        </div>
+      )}
 
       <button
         onClick={align}
