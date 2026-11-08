@@ -67,6 +67,34 @@ All props are optional. Import the type with
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Called whenever the implant list changes. |
 | `className` | `string` | Extra class on the root element. |
 | `embedded` | `boolean` | Embed mode — the host owns page-level consent, so the built-in disclaimer banner is suppressed. |
+| `features` | `ViewerFeatures` | Edition switches, `{ implantPlanning?: boolean; drillGuide?: boolean }`, both `true` by default. See [Editions](#editions). |
+| `branding` | `boolean` | Show the web promotion — the GitHub star, the landing page's About box and the other-projects links. Default `true`. |
+| `theme` | `'dark' \| 'light'` | Host-owned theme. When set it overrides the remembered choice, follows the prop live, and the viewer's own theme toggles are hidden. Omit it to keep the built-in toggle. |
+
+### Editions
+
+The same component runs as a plain imaging viewer or as the full planner.
+
+- **`features={{ implantPlanning: false }}`** — no implant planning. Every way
+  in is gone: the *+ Implant* buttons, the implant list and its edit popup,
+  *Plan from crown* on a tooth-setup scan, the implant-planning and drill-guide
+  settings tabs, the implant / safety / bone-quality sections of the PDF report
+  and the intro tour's planning step. It is enforced on the state, not only the
+  UI: implants (and guide settings) are dropped from every plan loaded —
+  `initialPlan`, `loadPlan`, the *Load plan* menu and the session autosave —
+  and `addImplant` / `updateImplant` are no-ops. Viewing, MPR, panoramic and
+  cross-sections, 3D, measurements and annotations, nerve / sinus tracing,
+  scan import and registration, and image / PDF export all stay. It implies
+  `drillGuide: false`. Help and intro text that described the planner switch
+  to edition copy.
+- **`features={{ drillGuide: false }}`** — implants without guided surgery: no
+  sleeve settings, no drill-guide settings tab, no *Drill guide (STL)* export,
+  and `exportGuideStl()` resolves `false`. Sleeves are dropped from loaded
+  plans.
+
+```tsx
+<DicomViewer features={{ implantPlanning: false }} branding={false} theme="dark" />
+```
 
 ---
 
@@ -102,7 +130,13 @@ function App() {
 | `setLayout` | `(mode: LayoutMode) => void` | Switch layout. |
 | `setActiveView` | `(view: ViewKey) => void` | Set the active MPR/3D view (`'AXIAL'` \| `'SAGITTAL'` \| `'CORONAL'` \| `'3D'`). |
 | `exportPdf` | `() => Promise<void>` | Build + download the multi-view PDF report. |
-| `exportGuideStl` | `() => Promise<boolean>` | Build + download the printable drill-guide STL (`false` if there is nothing to build). |
+| `exportGuideStl` | `() => Promise<boolean>` | Build + download the printable drill-guide STL (`false` if there is nothing to build, or the edition has no drill guide). |
+| `openSettings` | `() => void` | Open the settings dialog (e.g. from a native app menu). |
+| `openHelp` | `() => void` | Open the help panel. |
+| `startTour` | `() => void` | Start the intro tour. |
+
+With `features={{ implantPlanning: false }}`, `addImplant` and `updateImplant`
+do nothing and `loadPlan` drops the plan's implants.
 
 ---
 

@@ -26,6 +26,24 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
   with 12 tests. The estimate is an expectation over many registrations, not a
   bound on this one; its value is comparative, and it is reported because the
   failure it catches is invisible otherwise.
+- **Editions: the viewer without the planner.** A new `features` prop,
+  `{ implantPlanning?: boolean; drillGuide?: boolean }`, both on by default.
+  `implantPlanning: false` is a pure imaging viewer — for teaching, and for
+  stores where a planning tool counts as a medical device — and `drillGuide:
+  false` keeps implants but drops guided surgery and the STL guide. Hiding the
+  buttons would not have been enough, because a plan file, the session autosave
+  or the imperative API can all carry implants in; so every action now passes
+  one gate (`src/core/features.ts`) on its way to the reducer, and a disabled
+  feature's data never reaches the state. Implants and guide settings are
+  dropped from every plan loaded, and `addImplant` / `updateImplant` become
+  no-ops. Help, intro and disclaimer text that described the planner reads
+  edition copy instead (`<key>@viewer`, in all four languages). 20 tests.
+- **`branding` and `theme` props.** `branding={false}` hides the web promotion
+  — the GitHub star, the landing page's About box, the other-projects links.
+  `theme` lets a host own dark / light: it overrides the remembered choice,
+  follows the prop live, and the viewer's own toggles step aside.
+- **`openSettings()`, `openHelp()` and `startTour()`** on the imperative handle,
+  so a native menu can open them.
 
 ## [1.4.0] — 2026-10-18
 
