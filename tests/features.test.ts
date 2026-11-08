@@ -1,14 +1,16 @@
 /**
  * Edition feature switches: defaults, the plan stripping applied on every load,
- * and the action gate in front of the reducer.
+ * the action gate in front of the reducer, and the edition copy lookup.
  */
 
 import { describe, it, expect } from 'vitest';
 import {
-  resolveFeatures, stripPlanForFeatures, gateAction, ALL_FEATURES,
+  resolveFeatures, stripPlanForFeatures, gateAction, copyVariant, ALL_FEATURES,
 } from '../src/core/features';
 import { viewerReducer, initialState, type ViewerAction, type ViewerState } from '../src/context/ViewerContext';
 import { planFromObject, serializePlan, type PlanData } from '../src/core/planIO';
+import { translations } from '../src/i18n/translations';
+import { translate } from '../src/i18n/I18nContext';
 import { GUIDE_DEFAULTS, type ImplantData } from '../src/types/dicom';
 
 const VIEWER = resolveFeatures({ implantPlanning: false });
@@ -156,3 +158,37 @@ describe('gate + reducer: no route brings implants into a viewer edition', () =>
   });
 });
 
+describe('edition copy', () => {
+  it('picks the variant for the missing feature', () => {
+    expect(copyVariant(ALL_FEATURES)).toBeNull();
+    expect(copyVariant(VIEWER)).toBe('viewer');
+    expect(copyVariant(NO_GUIDE)).toBe('noguide');
+  });
+
+  it('prefers the variant, and falls back to the plain key', () => {
+    expect(translate('en', 'pdf.description', undefined, 'viewer')).toBe(translations.en['pdf.description@viewer']);
+    expect(translate('hu', 'pdf.description', undefined, 'viewer')).toBe(translations.hu['pdf.description@viewer']);
+    expect(translate('en', 'pdf.description')).toBe(translations.en['pdf.description']);
+    expect(translate('en', 'layers.title', undefined, 'viewer')).toBe(translations.en['layers.title']);
+  });
+
+  it('has every variant in every language, and only for keys that exist', () => {
+    const variants = Object.keys(translations.en).filter((k) => k.includes('@'));
+    expect(variants.length).toBeGreaterThan(0);
+    for (const k of variants) {
+      expect(translations.en[k.split('@')[0]], `${k} has no plain key`).toBeDefined();
+      for (const lang of ['de', 'es', 'hu'] as const) {
+        expect(translations[lang][k], `${lang} lacks ${k}`).toBeDefined();
+      }
+    }
+  });
+
+  it('never mentions implants or the drill guide in the viewer copy', () => {
+    for (const lang of ['en', 'de', 'es', 'hu'] as const) {
+      for (const [k, v] of Object.entries(translations[lang])) {
+        if (!k.endsWith('@viewer')) continue;
+        expect(v, `${lang} ${k}`).not.toMatch(/implant|drill|bohr|fresado|fúró|sleeve|hülse|casquillo|persely/i);
+      }
+    }
+  });
+});

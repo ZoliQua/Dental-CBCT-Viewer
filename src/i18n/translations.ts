@@ -513,6 +513,19 @@ const en: Dict = {
   'pdf.guideNote': 'Drill guide STL: no integrated drill stop, no metal sleeve; verify fit on a printed model before clinical use.',
   'pdf.reportOverride': 'report: {value}',
   'pdf.boneCaveat': 'CBCT gray values (GV) are uncalibrated — the Misch class is indicative only.',
+  // Edition copy: read instead of the plain key when the edition lacks the
+  // feature the plain text describes (see I18nContext)
+  'disclaimer.text@viewer': 'This tool is provided for research, teaching and demonstration purposes only. It is not certified medical software and must not be used for clinical diagnosis, treatment planning, or precise measurements. By using this tool you accept that its developers assume no liability whatsoever for any consequences arising from its use.',
+  'pdf.description@viewer': 'Imaging report generated with DenCT.',
+  'intro.s1b@viewer': 'A research and teaching CBCT/CT viewer — MPR, 3D, panoramic reconstruction, measurements and intraoral scans. Not for clinical use.',
+  'intro.s4b@viewer': 'The left panel holds the interaction tools (window/level, pan, zoom, measurements) and the layers list for anatomy, scans and measurements.',
+  'intro.s6b@viewer': 'Export a PDF report with all views, or save/load your work. Settings and Patients are top-right.',
+  'help.layersBody@viewer': 'The Layers rail on the left lists every anatomy trace, scan and measurement — show/hide, rename or delete each. The quick button above the list adds a text annotation.',
+  'help.exportBody@viewer': 'From the top bar, “Save Image” exports PNG/JPG at a chosen resolution — pick which views, tick the on-image info to burn in, and save as separate files or one grid. “Save PDF” builds a report with toggleable header fields and sections (views, measurements) in portrait or landscape. Saving and loading your work as a JSON file is also here.',
+  'landing.why6d@viewer': 'Arch curve, panoramic (OPG) and tiltable cross-sections along the arch.',
+  'intro.s5b@noguide': 'Place implants on the cross-section and watch the safety margins to nerve, sinus and neighbours plus bone quality.',
+  'intro.s6b@noguide': 'Export a PDF report with all views, or save/load the plan. Settings and Patients are top-right.',
+  'help.exportBody@noguide': 'From the top bar, “Save Image” exports PNG/JPG at a chosen resolution — pick which views, tick the on-image info to burn in, and save as separate files or one grid. “Save PDF” builds a report with toggleable header fields and sections (views, implants, measurements, safety, bone quality) in portrait or landscape. Save/load plan is also here.',
 };
 
 const de: Dict = {
@@ -1000,6 +1013,18 @@ const de: Dict = {
   'pdf.guideNote': 'Bohrschablone (STL): kein integrierter Bohrstop, keine Metallhülse; Passung vor klinischer Verwendung auf einem gedruckten Modell prüfen.',
   'pdf.reportOverride': 'Bericht: {value}',
   'pdf.boneCaveat': 'CBCT-Grauwerte (GV) sind unkalibriert — die Misch-Klasse ist nur indikativ.',
+  // Editions-Texte (siehe I18nContext)
+  'disclaimer.text@viewer': 'Dieses Werkzeug dient ausschließlich Forschungs-, Lehr- und Demonstrationszwecken. Es ist keine zertifizierte medizinische Software und darf nicht für klinische Diagnosen, Behandlungsplanung oder präzise Messungen verwendet werden. Mit der Nutzung akzeptieren Sie, dass die Entwickler keinerlei Haftung für Folgen der Nutzung übernehmen.',
+  'pdf.description@viewer': 'Bildgebungsbericht, erstellt mit DenCT.',
+  'intro.s1b@viewer': 'Ein CBCT/CT-Viewer für Forschung und Lehre — MPR, 3D, Panorama, Messungen und Intraoralscans. Nicht für den klinischen Einsatz.',
+  'intro.s4b@viewer': 'Das linke Panel enthält die Werkzeuge (Fenster/Ebene, Verschieben, Zoom, Messungen) und die Ebenenliste für Anatomie, Scans und Messungen.',
+  'intro.s6b@viewer': 'Exportieren Sie einen PDF-Bericht mit allen Ansichten oder speichern/laden Sie Ihre Arbeit. Einstellungen und Patienten oben rechts.',
+  'help.layersBody@viewer': 'Die Ebenen-Leiste links listet jede Anatomie-Markierung, jeden Scan und jede Messung — ein-/ausblenden, umbenennen, löschen. Der Schnell-Button darüber fügt eine Textnotiz hinzu.',
+  'help.exportBody@viewer': 'In der oberen Leiste: „Bild speichern“ exportiert PNG/JPG in gewählter Auflösung — Ansichten wählen, Info fürs Bild ankreuzen, als Einzeldateien oder ein Raster. „PDF speichern“ erstellt einen Bericht mit umschaltbaren Kopf-Feldern und Abschnitten (Ansichten, Messungen) in Hoch- oder Querformat. Auch Speichern/Laden Ihrer Arbeit als JSON-Datei.',
+  'landing.why6d@viewer': 'Bogenkurve, Panorama (OPG) und kippbare Querschnitte entlang des Bogens.',
+  'intro.s5b@noguide': 'Platzieren Sie Implantate im Querschnitt und beachten Sie die Sicherheitsabstände zu Nerv, Sinus und Nachbarn sowie die Knochenqualität.',
+  'intro.s6b@noguide': 'Exportieren Sie einen PDF-Bericht mit allen Ansichten oder speichern/laden Sie den Plan. Einstellungen und Patienten oben rechts.',
+  'help.exportBody@noguide': 'In der oberen Leiste: „Bild speichern“ exportiert PNG/JPG in gewählter Auflösung — Ansichten wählen, Info fürs Bild ankreuzen, als Einzeldateien oder ein Raster. „PDF speichern“ erstellt einen Bericht mit umschaltbaren Kopf-Feldern und Abschnitten (Ansichten, Implantate, Messungen, Sicherheit, Knochenqualität) in Hoch- oder Querformat. Auch Plan speichern/laden.',
 };
 
 const es: Dict = {
@@ -1487,6 +1512,18 @@ const es: Dict = {
   'pdf.guideNote': 'Férula quirúrgica (STL): sin tope de fresado integrado ni casquillo metálico; verifique el ajuste en un modelo impreso antes del uso clínico.',
   'pdf.reportOverride': 'informe: {value}',
   'pdf.boneCaveat': 'Los valores de gris (GV) del CBCT no están calibrados — la clase de Misch es solo orientativa.',
+  // Textos por edición (ver I18nContext)
+  'disclaimer.text@viewer': 'Esta herramienta se ofrece únicamente con fines de investigación, docencia y demostración. No es software médico certificado y no debe utilizarse para diagnóstico clínico, planificación de tratamientos ni mediciones precisas. Al usar esta herramienta acepta que sus desarrolladores no asumen ninguna responsabilidad por las consecuencias derivadas de su uso.',
+  'pdf.description@viewer': 'Informe de imagen generado con DenCT.',
+  'intro.s1b@viewer': 'Un visor CBCT/CT para investigación y docencia — MPR, 3D, panorámica, mediciones y escaneos intraorales. No para uso clínico.',
+  'intro.s4b@viewer': 'El panel izquierdo contiene las herramientas (ventana/nivel, desplazar, zoom, mediciones) y la lista de capas de anatomía, escaneos y mediciones.',
+  'intro.s6b@viewer': 'Exporte un informe PDF con todas las vistas, o guarde/cargue su trabajo. Ajustes y Pacientes arriba a la derecha.',
+  'help.layersBody@viewer': 'La barra de Capas a la izquierda lista cada trazado anatómico, escaneo y medición — mostrar/ocultar, renombrar o eliminar. El botón rápido encima añade una anotación de texto.',
+  'help.exportBody@viewer': 'Desde la barra superior: «Guardar imagen» exporta PNG/JPG a la resolución elegida — elija qué vistas, marque la info a grabar en la imagen, y guarde como archivos separados o una cuadrícula. «Guardar PDF» crea un informe con campos de encabezado y secciones conmutables (vistas, mediciones) en vertical u horizontal. También guardar/cargar su trabajo como archivo JSON.',
+  'landing.why6d@viewer': 'Curva del arco, panorámica (OPG) y cortes transversales inclinables a lo largo del arco.',
+  'intro.s5b@noguide': 'Coloque implantes en el corte transversal y vigile los márgenes de seguridad a nervio, seno y vecinos, además de la calidad ósea.',
+  'intro.s6b@noguide': 'Exporte un informe PDF con todas las vistas, o guarde/cargue el plan. Ajustes y Pacientes arriba a la derecha.',
+  'help.exportBody@noguide': 'Desde la barra superior: «Guardar imagen» exporta PNG/JPG a la resolución elegida — elija qué vistas, marque la info a grabar en la imagen, y guarde como archivos separados o una cuadrícula. «Guardar PDF» crea un informe con campos de encabezado y secciones conmutables (vistas, implantes, mediciones, seguridad, calidad ósea) en vertical u horizontal. También guardar/cargar plan.',
 };
 
 const hu: Dict = {
@@ -1974,6 +2011,18 @@ const hu: Dict = {
   'pdf.guideNote': 'Fúrósablon (STL): nincs beépített fúróütköző és fémpersely; klinikai használat előtt ellenőrizd az illeszkedést kinyomtatott modellen.',
   'pdf.reportOverride': 'riport: {value}',
   'pdf.boneCaveat': 'A CBCT szürkeértékek (GV) kalibrálatlanok — a Misch-osztály csak tájékoztató jellegű.',
+  // Kiadásfüggő szövegek (lásd I18nContext)
+  'disclaimer.text@viewer': 'Ez az eszköz kutatási, oktatási és bemutató célokat szolgál. Nem orvostechnikai eszközként bevizsgált szoftver, ezért klinikai diagnózis felállítására, kezelési terv készítésére vagy pontos mérések végzésére nem alkalmas. Az eszköz használatával elfogadod, hogy a fejlesztők a felhasználásból eredő semmilyen következményért nem vállalnak felelősséget.',
+  'pdf.description@viewer': 'Képalkotási riport — DenCT.',
+  'intro.s1b@viewer': 'Kutatási és oktatási CBCT/CT néző — MPR, 3D, panoráma, mérések és intraorális scanek. Nem klinikai használatra.',
+  'intro.s4b@viewer': 'A bal panel tartalmazza az eszközöket (ablak/szint, pan, zoom, mérők) és a réteglistát (anatómia, scanek, mérések).',
+  'intro.s6b@viewer': 'Exportálj PDF-riportot minden nézettel, vagy mentsd/töltsd be a munkádat. A Beállítások és a Páciensek jobbra fent.',
+  'help.layersBody@viewer': 'A bal oldali Rétegek sáv minden anatómiai jelölést, scant és mérést listáz — megjelenítés/rejtés, átnevezés, törlés. A lista fölötti gyorsgomb szöveget ad hozzá.',
+  'help.exportBody@viewer': 'A felső sávból: a „Kép mentése” PNG/JPG-t exportál választott felbontásban — kiválasztod a nézeteket, bepipálod a képre égetendő feliratokat, és külön fájlként vagy egy rácsban mented. A „PDF mentése” riportot készít ki/bekapcsolható fejléc-mezőkkel és szekciókkal (nézetek, mérések) álló vagy fekvő tájolásban. Itt a munka JSON-fájlba mentése/betöltése is.',
+  'landing.why6d@viewer': 'Fogív-görbe, panoráma (OPG) és a fogív mentén dönthető keresztmetszetek.',
+  'intro.s5b@noguide': 'Helyezz implantátumot a keresztmetszeten, és figyeld a biztonsági távolságokat (ideg, arcüreg, szomszéd) és a csontminőséget.',
+  'intro.s6b@noguide': 'Exportálj PDF-riportot minden nézettel, vagy ments/tölts be tervet. A Beállítások és a Páciensek jobbra fent.',
+  'help.exportBody@noguide': 'A felső sávból: a „Kép mentése” PNG/JPG-t exportál választott felbontásban — kiválasztod a nézeteket, bepipálod a képre égetendő feliratokat, és külön fájlként vagy egy rácsban mented. A „PDF mentése” riportot készít ki/bekapcsolható fejléc-mezőkkel és szekciókkal (nézetek, implantok, mérések, biztonság, csontminőség) álló vagy fekvő tájolásban. Itt a terv mentése/betöltése is.',
 };
 
 export const translations: Record<Language, Dict> = { en, de, es, hu };
