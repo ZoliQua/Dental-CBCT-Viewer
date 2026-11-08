@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
+import { useFeatures } from '@/context/FeaturesContext';
 import { setAnnotationVisible, removeAnnotationByUid } from '@/core/annotationLayer';
 import { removeScanPolyData, scanTriangleSoupWorld } from '@/core/scanMesh';
 import { ScanAdjust } from './ScanAdjust';
@@ -170,6 +171,7 @@ function LayerRow({ name, visible, active = false, onToggleVisible, onEdit, onDe
 export function LayersContent() {
   const { state, dispatch } = useViewer();
   const { t } = useI18n();
+  const { implantPlanning } = useFeatures();
   // Which scan's manual-correction controls are open (one at a time).
   const [adjusting, setAdjusting] = useState<string | null>(null);
 
@@ -222,7 +224,7 @@ export function LayersContent() {
               onRename={(name) => dispatch({ type: 'UPDATE_IMPLANT', payload: { ...imp, name } })}
             />
           ))}
-          {state.implants.length === 0 && (
+          {implantPlanning && state.implants.length === 0 && (
             <div className="text-xs text-gray-500 px-1 py-2 select-none">
               {t('layers.none')}
             </div>
@@ -314,7 +316,7 @@ export function LayersContent() {
                 >
                   {t('scanAdjust.button')}
                 </button>
-                {sc.type === 'toothSetup' && (
+                {implantPlanning && sc.type === 'toothSetup' && (
                   <button
                     onClick={() => planFromCrown(sc)}
                     title={t('crown.planHint')}

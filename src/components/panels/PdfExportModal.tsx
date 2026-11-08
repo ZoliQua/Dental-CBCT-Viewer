@@ -9,6 +9,7 @@ import { createPortal } from 'react-dom';
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useFeatures } from '@/context/FeaturesContext';
 import { exportPlanPdf } from '@/core/viewerExports';
 import type { PdfConfig } from '@/core/pdfExport';
 import type { OverlayContent } from '@/core/viewCapture';
@@ -28,6 +29,9 @@ export function PdfExportModal({ open, onClose }: { open: boolean; onClose: () =
   const { state } = useViewer();
   const { t, lang } = useI18n();
   const { theme } = useTheme();
+  // Implants, their clearances and their bone quality are one block of the
+  // planner; without it those sections are neither offered nor printed.
+  const { implantPlanning } = useFeatures();
 
   const views: ViewInfo[] = useMemo(() => {
     if (!open) return [];
@@ -38,7 +42,9 @@ export function PdfExportModal({ open, onClose }: { open: boolean; onClose: () =
   }, [open]);
 
   const [header, setHeader] = useState({ patientName: true, studyDate: true, birth: true, age: true, quote: true, status: true, clinic: true });
-  const [sections, setSections] = useState({ views: true, implants: true, measurements: true, safety: true, boneQuality: true, disclaimer: true });
+  const [sections, setSections] = useState({
+    views: true, implants: implantPlanning, measurements: true, safety: implantPlanning, boneQuality: implantPlanning, disclaimer: true,
+  });
   const [landscape, setLandscape] = useState(false);
   const [viewsCols, setViewsCols] = useState(2);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
@@ -115,10 +121,10 @@ export function PdfExportModal({ open, onClose }: { open: boolean; onClose: () =
         <Section title={t('pdfexport.sections')}>
           <div className="grid grid-cols-2 gap-1.5">
             <Check label={t('pdf.viewsTitle')} checked={sections.views} onChange={(v) => setS({ views: v })} />
-            <Check label={t('pdf.implantsTitle')} checked={sections.implants} onChange={(v) => setS({ implants: v })} />
+            {implantPlanning && <Check label={t('pdf.implantsTitle')} checked={sections.implants} onChange={(v) => setS({ implants: v })} />}
             <Check label={t('pdf.measurementsTitle')} checked={sections.measurements} onChange={(v) => setS({ measurements: v })} />
-            <Check label={t('pdf.safetyTitle')} checked={sections.safety} onChange={(v) => setS({ safety: v })} />
-            <Check label={t('bone.title')} checked={sections.boneQuality} onChange={(v) => setS({ boneQuality: v })} />
+            {implantPlanning && <Check label={t('pdf.safetyTitle')} checked={sections.safety} onChange={(v) => setS({ safety: v })} />}
+            {implantPlanning && <Check label={t('bone.title')} checked={sections.boneQuality} onChange={(v) => setS({ boneQuality: v })} />}
             <Check label={t('pdfexport.disclaimer')} checked={sections.disclaimer} onChange={(v) => setS({ disclaimer: v })} />
           </div>
         </Section>

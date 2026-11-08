@@ -4,6 +4,7 @@ import { setupTools, addViewportTo3DToolGroup } from '@/core/toolManager';
 import { RENDERING_ENGINE_ID, VP_3D } from '@/core/constants';
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
+import { useFeatures } from '@/context/FeaturesContext';
 import { ViewportOverlay } from './ViewportOverlay';
 import { Implant3DActors } from './Implant3DActors';
 import { ScanActors } from './ScanActors';
@@ -38,6 +39,7 @@ interface Viewport3DProps {
 
 export function Viewport3D({ volumeId }: Viewport3DProps) {
   const { t } = useI18n();
+  const { implantPlanning, drillGuide } = useFeatures();
   const { state, dispatch } = useViewer();
   const elementRef = useRef<HTMLDivElement>(null);
   const enabledRef = useRef(false);
@@ -393,13 +395,13 @@ export function Viewport3D({ volumeId }: Viewport3DProps) {
       )}
 
       {/* 3D implant layer toggles (bottom-right, translucent — clear of overlays) */}
-      {state.implants.length > 0 && (
+      {implantPlanning && state.implants.length > 0 && (
         <div className="absolute bottom-2 right-2 z-10 flex flex-col gap-1 rounded-lg bg-slate-900/70 backdrop-blur-sm border border-slate-700/60 p-1.5">
           {([
             ['implant', t('view3d.implant')],
             ['sleeve', t('view3d.sleeve')],
             ['axis', t('view3d.axis')],
-          ] as [keyof Implant3DLayers, string][]).map(([key, label]) => (
+          ] as [keyof Implant3DLayers, string][]).filter(([key]) => drillGuide || key !== 'sleeve').map(([key, label]) => (
             <label key={key} className="flex items-center gap-1.5 text-[10px] text-slate-200 cursor-pointer select-none">
               <input
                 type="checkbox"

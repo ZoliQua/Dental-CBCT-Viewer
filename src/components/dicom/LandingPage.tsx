@@ -3,6 +3,8 @@
  * DICOM upload) above the fold, a metrics strip, then Why / Views / Tools /
  * Imaging / Privacy sections and a closing CTA, over a slowly rotating
  * pseudo-3D backdrop. All copy goes through t() (4 languages).
+ *
+ * Feature cards for planning the edition lacks are left out.
  */
 
 import { useState } from 'react';
@@ -14,6 +16,7 @@ import { ViewsShowcase } from './landing/ViewsShowcase';
 import { SectionHeading } from './landing/SectionHeading';
 import { OtherProjects } from '@/components/common/OtherProjects';
 import { useI18n } from '@/i18n/I18nContext';
+import { useFeatures } from '@/context/FeaturesContext';
 import { useSampleLoad, type SampleKind } from '@/hooks/useSampleLoad';
 import { publicUrl } from '@/utils/publicUrl';
 
@@ -21,6 +24,7 @@ const REPO_URL = 'https://github.com/ZoliQua/Dental-CBCT-Viewer';
 
 export function LandingPage() {
   const { t } = useI18n();
+  const { implantPlanning, drillGuide } = useFeatures();
   const loadSample = useSampleLoad();
   const [samplePct, setSamplePct] = useState<number | null>(null); // null = not loading
 
@@ -40,25 +44,31 @@ export function LandingPage() {
     { value: '100%', label: t('landing.metricPrivate') },
   ];
 
-  const why: FeatureItem[] = [
+  // `needs` names the feature a card advertises; cards for a feature this
+  // edition does not have are dropped.
+  const has = (needs?: 'implantPlanning' | 'drillGuide') =>
+    !needs || (needs === 'implantPlanning' ? implantPlanning : drillGuide);
+
+  const why: FeatureItem[] = ([
     { icon: 'code', title: t('landing.why1t'), desc: t('landing.why1d') },
     { icon: 'shield', title: t('landing.why2t'), desc: t('landing.why2d') },
-    { icon: 'target', title: t('landing.why3t'), desc: t('landing.why3d') },
-    { icon: 'printer', title: t('landing.why4t'), desc: t('landing.why4d') },
+    { icon: 'target', title: t('landing.why3t'), desc: t('landing.why3d'), needs: 'implantPlanning' },
+    { icon: 'printer', title: t('landing.why4t'), desc: t('landing.why4d'), needs: 'drillGuide' },
     { icon: 'doc', title: t('landing.why5t'), desc: t('landing.why5d') },
     { icon: 'tooth', title: t('landing.why6t'), desc: t('landing.why6d') },
-  ];
+  ] as (FeatureItem & { needs?: 'implantPlanning' | 'drillGuide' })[]).filter((it) => has(it.needs));
 
-  const tools: FeatureItem[] = [
+  // Misch bone quality is sampled along a planned implant, so it goes too.
+  const tools: FeatureItem[] = ([
     { icon: 'ruler', title: t('landing.tool1') },
     { icon: 'layers', title: t('landing.tool2') },
-    { icon: 'target', title: t('landing.tool3') },
-    { icon: 'shield', title: t('landing.tool4') },
-    { icon: 'bone', title: t('landing.tool5') },
-    { icon: 'printer', title: t('landing.tool6') },
+    { icon: 'target', title: t('landing.tool3'), needs: 'implantPlanning' },
+    { icon: 'shield', title: t('landing.tool4'), needs: 'implantPlanning' },
+    { icon: 'bone', title: t('landing.tool5'), needs: 'implantPlanning' },
+    { icon: 'printer', title: t('landing.tool6'), needs: 'drillGuide' },
     { icon: 'doc', title: t('landing.tool7') },
     { icon: 'wave', title: t('landing.tool8') },
-  ];
+  ] as (FeatureItem & { needs?: 'implantPlanning' | 'drillGuide' })[]).filter((it) => has(it.needs));
 
   const presets: FeatureItem[] = [
     { icon: 'sun', title: t('landing.preset1') },

@@ -7,6 +7,7 @@
 
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
+import { useFeatures } from '@/context/FeaturesContext';
 import { setActiveTool } from '@/core/toolManager';
 import { TOOL_ICONS } from './toolIcons';
 import { LayersContent, StackIcon } from '@/components/layers/LayersPanel';
@@ -113,6 +114,7 @@ function ToolButton({
 export function LeftPanel() {
   const { state, dispatch } = useViewer();
   const { t } = useI18n();
+  const { implantPlanning } = useFeatures();
   const patientOpen = state.patientOpen;
   const toolsOpen = state.toolsOpen;
   const layersOpen = state.layersOpen;
@@ -213,17 +215,19 @@ export function LeftPanel() {
 
             {/* Context tools on the panoramic/cross-section layout */}
             {state.layoutMode === 'OPG2+1' && (
-              <div className="grid grid-cols-3 gap-1 pt-1">
-                <button
-                  onClick={() => dispatch({ type: 'SET_IMPLANT_PLACEMENT_MODE', payload: !state.implantPlacementMode })}
-                  title={t('opg.addImplantTitle')}
-                  className={`px-2 py-1 text-[11px] rounded-md border transition-colors ${
-                    state.implantPlacementMode ? 'border-dental-500 bg-dental-600 text-white'
-                      : 'border-slate-200 dark:border-slate-700/60 bg-slate-100/60 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {t('opg.addImplant')}
-                </button>
+              <div className={`grid ${implantPlanning ? 'grid-cols-3' : 'grid-cols-2'} gap-1 pt-1`}>
+                {implantPlanning && (
+                  <button
+                    onClick={() => dispatch({ type: 'SET_IMPLANT_PLACEMENT_MODE', payload: !state.implantPlacementMode })}
+                    title={t('opg.addImplantTitle')}
+                    className={`px-2 py-1 text-[11px] rounded-md border transition-colors ${
+                      state.implantPlacementMode ? 'border-dental-500 bg-dental-600 text-white'
+                        : 'border-slate-200 dark:border-slate-700/60 bg-slate-100/60 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {t('opg.addImplant')}
+                  </button>
+                )}
                 {(['nerve', 'sinus'] as const).map((kind) => (
                   <button
                     key={kind}
@@ -251,7 +255,7 @@ export function LeftPanel() {
           <div className="space-y-2 rounded-lg border border-slate-200 dark:border-slate-700/60 p-2">
             <SectionLabel>{t('layers.title')}</SectionLabel>
             {/* Quick add: text annotation + implant placement */}
-            <div className="grid grid-cols-2 gap-1">
+            <div className={`grid ${implantPlanning ? 'grid-cols-2' : 'grid-cols-1'} gap-1`}>
               <button
                 onClick={() => pick('arrowAnnotate')}
                 className={`flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] rounded-md border transition-colors ${
@@ -263,17 +267,19 @@ export function LeftPanel() {
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 7h16M4 12h10M4 17h7" strokeLinecap="round" /></svg>
                 {t('layers.addText')}
               </button>
-              <button
-                onClick={() => dispatch({ type: 'SET_IMPLANT_PLACEMENT_MODE', payload: !state.implantPlacementMode })}
-                className={`flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] rounded-md border transition-colors ${
-                  state.implantPlacementMode
-                    ? 'border-dental-500 bg-dental-600 text-white'
-                    : 'border-slate-200 dark:border-slate-700/60 bg-slate-100/60 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 3v6m0 0l3.5 8.5a2 2 0 01-1.8 2.5h-3.4a2 2 0 01-1.8-2.5L12 9zM9 6h6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                {t('layers.addImplant')}
-              </button>
+              {implantPlanning && (
+                <button
+                  onClick={() => dispatch({ type: 'SET_IMPLANT_PLACEMENT_MODE', payload: !state.implantPlacementMode })}
+                  className={`flex items-center justify-center gap-1 px-2 py-1.5 text-[11px] rounded-md border transition-colors ${
+                    state.implantPlacementMode
+                      ? 'border-dental-500 bg-dental-600 text-white'
+                      : 'border-slate-200 dark:border-slate-700/60 bg-slate-100/60 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 3v6m0 0l3.5 8.5a2 2 0 01-1.8 2.5h-3.4a2 2 0 01-1.8-2.5L12 9zM9 6h6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  {t('layers.addImplant')}
+                </button>
+              )}
             </div>
             <LayersContent />
           </div>
@@ -302,7 +308,7 @@ export function LeftPanel() {
         </div>
       </div>
 
-      {state.editingImplantId && (
+      {implantPlanning && state.editingImplantId && (
         <ImplantEditPopup
           implantId={state.editingImplantId}
           onClose={() => dispatch({ type: 'SET_EDITING_IMPLANT', payload: null })}

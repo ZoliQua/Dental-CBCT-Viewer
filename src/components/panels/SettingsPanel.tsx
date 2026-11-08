@@ -1,13 +1,15 @@
 /**
  * Settings — a centered modal with a left tab rail. Tabs: General, Patient,
  * Panoramic view, Implant planning, Guide. Each control has a short help line.
- * Replaces the old right-slide-in settings panel.
+ * Replaces the old right-slide-in settings panel. The planning tabs only exist
+ * in an edition that has those features (see FeaturesContext).
  */
 
 import { useState } from 'react';
 import { useViewer, type ReportFields, type DisplayConfig } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useFeatures } from '@/context/FeaturesContext';
 import { WindowLevelPresets } from '@/components/tools/WindowLevel';
 import { IMPLANT_SYSTEMS, VOLUME_3D_PRESETS, type ProjectionMode } from '@/types/dicom';
 import { XRAY_PRESET_ID, VOLUME_3D_COLORMAPS } from '@/core/volume3DPreset';
@@ -59,6 +61,7 @@ export function SettingsPanel() {
   const { state, dispatch } = useViewer();
   const { t } = useI18n();
   const { theme, toggleTheme } = useTheme();
+  const { implantPlanning, drillGuide } = useFeatures();
   const [tab, setTab] = useState<Tab>('general');
 
   const open = state.activePanel === 'settings';
@@ -74,8 +77,8 @@ export function SettingsPanel() {
     { id: 'patient', label: t('settings.tab.patient') },
     { id: 'threed', label: t('settings.tab.threed') },
     { id: 'panoramic', label: t('settings.tab.panoramic') },
-    { id: 'implant', label: t('settings.tab.implant') },
-    { id: 'guide', label: t('settings.guide') },
+    ...(implantPlanning ? [{ id: 'implant' as const, label: t('settings.tab.implant') }] : []),
+    ...(drillGuide ? [{ id: 'guide' as const, label: t('settings.guide') }] : []),
     { id: 'about', label: t('settings.tab.about') },
   ];
 
@@ -279,7 +282,7 @@ export function SettingsPanel() {
             </Section>
           )}
 
-          {tab === 'implant' && (
+          {tab === 'implant' && implantPlanning && (
             <Section title={t('settings.safety')}>
               <Help>{t('settings.help.implant')}</Help>
               <Field label={t('settings.defaultImplant')}>
@@ -314,7 +317,7 @@ export function SettingsPanel() {
             </Section>
           )}
 
-          {tab === 'guide' && (
+          {tab === 'guide' && drillGuide && (
             <Section title={t('settings.guide')}>
               <Help>{t('settings.help.guide')}</Help>
               <label className="flex items-center gap-2 mb-2 text-[12px] text-slate-700 dark:text-slate-300">

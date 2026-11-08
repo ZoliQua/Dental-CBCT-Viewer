@@ -5,6 +5,7 @@
 
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
+import { useFeatures } from '@/context/FeaturesContext';
 import type { ImplantData } from '@/types/dicom';
 import {
   IMPLANT_SYSTEMS,
@@ -38,9 +39,10 @@ interface ImplantEditPopupProps {
 export function ImplantEditPopup({ implantId, onClose }: ImplantEditPopupProps) {
   const { state, dispatch } = useViewer();
   const { t } = useI18n();
+  const { implantPlanning, drillGuide } = useFeatures();
   const implant = state.implants.find(i => i.id === implantId);
 
-  if (!implant) return null;
+  if (!implant || !implantPlanning) return null;
 
   const update = (partial: Partial<ImplantData>) => {
     dispatch({ type: 'UPDATE_IMPLANT', payload: { ...implant, ...partial } });
@@ -191,6 +193,7 @@ export function ImplantEditPopup({ implantId, onClose }: ImplantEditPopupProps) 
         </div>
 
         {/* ── Guided surgery (drill sleeve + osteotomy) ── */}
+        {drillGuide && (
         <div className="border-t border-gray-200 dark:border-gray-700 pt-2 space-y-2">
           <label className="flex items-center justify-between cursor-pointer select-none">
             <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{t('guided.title')}</span>
@@ -244,6 +247,7 @@ export function ImplantEditPopup({ implantId, onClose }: ImplantEditPopupProps) 
             </>
           )}
         </div>
+        )}
 
         {/* Safety clearances */}
         {safetyEval && (

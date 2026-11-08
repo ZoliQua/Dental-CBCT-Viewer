@@ -1,26 +1,36 @@
 /**
  * Step-by-step intro tour — a standalone, self-paced walkthrough of what the
  * app does and how to use it. Launched from the top-bar button; a centered
- * modal with Back / Next / progress dots. Text is fully localized.
+ * modal with Back / Next / progress dots. Text is fully localized. The
+ * implant-planning step is skipped in an edition without planning.
  */
 
 import { useState } from 'react';
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
+import { useFeatures } from '@/context/FeaturesContext';
 
-const STEP_KEYS = ['s1', 's2', 's3', 's4', 's5', 's6'] as const;
-const ICONS = ['🦷', '📂', '🗂️', '🧰', '🦿', '📄'];
+const STEPS = [
+  { key: 's1', icon: '🦷' },
+  { key: 's2', icon: '📂' },
+  { key: 's3', icon: '🗂️' },
+  { key: 's4', icon: '🧰' },
+  { key: 's5', icon: '🦿', planning: true },
+  { key: 's6', icon: '📄' },
+];
 
 export function IntroTour() {
   const { state, dispatch } = useViewer();
   const { t } = useI18n();
+  const { implantPlanning } = useFeatures();
   const [i, setI] = useState(0);
+  const steps = STEPS.filter((s) => implantPlanning || !s.planning);
 
   if (state.activePanel !== 'intro') return null;
 
   const close = () => { setI(0); dispatch({ type: 'SET_ACTIVE_PANEL', payload: null }); };
-  const last = STEP_KEYS.length - 1;
-  const key = STEP_KEYS[i];
+  const last = steps.length - 1;
+  const { key, icon } = steps[Math.min(i, last)];
 
   return (
     <div className="fixed inset-0 z-[65] flex items-center justify-center p-4" onMouseDown={close}>
@@ -30,14 +40,14 @@ export function IntroTour() {
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="p-6 text-center space-y-3">
-          <div className="text-4xl">{ICONS[i]}</div>
+          <div className="text-4xl">{icon}</div>
           <h2 className="text-lg font-semibold text-dental-600 dark:text-dental-400">{t(`intro.${key}t`)}</h2>
           <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{t(`intro.${key}b`)}</p>
         </div>
 
         {/* Progress dots */}
         <div className="flex justify-center gap-1.5 pb-4">
-          {STEP_KEYS.map((_, idx) => (
+          {steps.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setI(idx)}

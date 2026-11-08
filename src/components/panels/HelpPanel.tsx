@@ -1,10 +1,12 @@
 /**
  * Help panel (slides in from the right): detailed description of every part
- * of the application.
+ * of the application. Sections about a feature the edition lacks are left
+ * out; the rest read their edition copy through t() (see I18nContext).
  */
 
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
+import { useFeatures } from '@/context/FeaturesContext';
 import { SidePanel } from './SidePanel';
 
 const SECTIONS = [
@@ -24,6 +26,8 @@ const SECTIONS = [
 export function HelpPanel() {
   const { state, dispatch } = useViewer();
   const { t } = useI18n();
+  const { implantPlanning } = useFeatures();
+  const sections = SECTIONS.filter(([titleKey]) => implantPlanning || titleKey !== 'help.implantTitle');
 
   return (
     <SidePanel
@@ -33,7 +37,7 @@ export function HelpPanel() {
       closeTitle={t('layers.close')}
     >
       <div className="space-y-4">
-        {SECTIONS.map(([titleKey, bodyKey]) => (
+        {sections.map(([titleKey, bodyKey]) => (
           <section key={titleKey}>
             <h3 className="text-xs font-bold text-dental-600 dark:text-dental-400 mb-1 select-none">
               {t(titleKey)}

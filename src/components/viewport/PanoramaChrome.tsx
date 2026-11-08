@@ -2,10 +2,12 @@
  * On-image chrome for the Panoramic (OPG2+1) layout: a "Tools" box and, below
  * it, a separate planning box (implant / nerve / sinus) in the top-right corner
  * of the panoramic — so the tools are reachable without opening the side rail.
+ * Without implant planning the second box keeps only the anatomy tracing.
  */
 
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
+import { useFeatures } from '@/context/FeaturesContext';
 import { setActiveTool } from '@/core/toolManager';
 import { TOOL_ICONS } from '@/components/layout/toolIcons';
 import type { ViewportTool } from '@/types/dicom';
@@ -68,6 +70,7 @@ function PlanButton({ active, label, title, onClick }: {
 export function PanoramaChrome() {
   const { state, dispatch } = useViewer();
   const { t } = useI18n();
+  const { implantPlanning } = useFeatures();
 
   const pick = (tool: ViewportTool) => {
     setActiveTool(tool);
@@ -97,16 +100,18 @@ export function PanoramaChrome() {
         </div>
       </div>
 
-      {/* Planning box: implant / nerve / sinus */}
+      {/* Planning box: implant / nerve / sinus (anatomy only without planning) */}
       <div className="flex flex-col gap-1 rounded-lg bg-slate-900/70 backdrop-blur-sm border border-slate-700/60 px-1.5 py-1 shadow-lg">
-        <BoxLabel>{t('opg.planning')}</BoxLabel>
+        <BoxLabel>{implantPlanning ? t('opg.planning') : t('layers.anatomy')}</BoxLabel>
         <div className="flex items-center gap-1">
-          <PlanButton
-            active={state.implantPlacementMode}
-            label={t('opg.addImplant')}
-            title={t('opg.addImplantTitle')}
-            onClick={() => dispatch({ type: 'SET_IMPLANT_PLACEMENT_MODE', payload: !state.implantPlacementMode })}
-          />
+          {implantPlanning && (
+            <PlanButton
+              active={state.implantPlacementMode}
+              label={t('opg.addImplant')}
+              title={t('opg.addImplantTitle')}
+              onClick={() => dispatch({ type: 'SET_IMPLANT_PLACEMENT_MODE', payload: !state.implantPlacementMode })}
+            />
+          )}
           <PlanButton active={state.anatomyDrawMode === 'nerve'} label={t('anatomy.nerve')} title={t('anatomy.nerveTitle')} onClick={() => toggleAnatomy('nerve')} />
           <PlanButton active={state.anatomyDrawMode === 'sinus'} label={t('anatomy.sinus')} title={t('anatomy.sinusTitle')} onClick={() => toggleAnatomy('sinus')} />
         </div>

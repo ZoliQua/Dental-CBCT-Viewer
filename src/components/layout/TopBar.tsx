@@ -8,6 +8,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useViewer } from '@/context/ViewerContext';
 import { useI18n } from '@/i18n/I18nContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useFeatures } from '@/context/FeaturesContext';
 import { LANGUAGES } from '@/i18n/translations';
 import { useLayoutSwitch } from '@/hooks/useLayoutSwitch';
 import { LayoutConfigButton } from './LayoutConfigButton';
@@ -153,6 +154,7 @@ export function TopBar() {
   const { state, dispatch } = useViewer();
   const { lang, setLang, t } = useI18n();
   const { theme, toggleTheme } = useTheme();
+  const { drillGuide } = useFeatures();
   const handleLayoutChange = useLayoutSwitch();
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
@@ -397,14 +399,16 @@ export function TopBar() {
                 >
                   {t('export.savePdf')}
                 </button>
-                <button
-                  onClick={exportGuide}
-                  disabled={!hasGuided}
-                  title={hasGuided ? undefined : t('guide.noImplants')}
-                  className="w-full px-3 py-1.5 text-xs text-left text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
-                >
-                  {t('guide.export')}
-                </button>
+                {drillGuide && (
+                  <button
+                    onClick={exportGuide}
+                    disabled={!hasGuided}
+                    title={hasGuided ? undefined : t('guide.noImplants')}
+                    className="w-full px-3 py-1.5 text-xs text-left text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {t('guide.export')}
+                  </button>
+                )}
                 <div className="my-1 border-t border-gray-200 dark:border-gray-700" />
                 <button
                   onClick={savePlan}
