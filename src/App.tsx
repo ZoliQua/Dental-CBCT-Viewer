@@ -103,6 +103,10 @@ export interface DicomViewerHandle {
   exportPdf(): Promise<void>;
   /** Resolves false when there is nothing to build — or the edition has no drill guide. */
   exportGuideStl(): Promise<boolean>;
+  /** Open the settings, help panel or intro tour — e.g. from a native app menu. */
+  openSettings(): void;
+  openHelp(): void;
+  startTour(): void;
 }
 
 function ViewerApp({
@@ -150,6 +154,9 @@ function ViewerApp({
     exportGuideStl: () => features.drillGuide
       ? import('@/core/viewerExports').then((m) => m.exportDrillGuideStl(stateRef.current)).then((r) => r.ok)
       : Promise.resolve(false),
+    openSettings: () => dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'settings' }),
+    openHelp: () => dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'help' }),
+    startTour: () => dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'intro' }),
   }), [dispatch, loadFiles, importScans, loadSample, t, lang, features.drillGuide]);
 
   // ── Prop → state wiring ─────────────────────────────────────
