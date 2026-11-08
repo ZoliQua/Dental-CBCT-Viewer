@@ -77,6 +77,11 @@ export interface DicomViewerProps {
    *  from any plan loaded. `drillGuide: false` keeps implants but removes the
    *  guided sleeves and the STL guide export. */
   features?: ViewerFeatures;
+  /** Show the web promotion (GitHub star, other projects). Default true. */
+  branding?: boolean;
+  /** Host-owned theme. When set it wins over the stored choice, follows the
+   *  prop live and hides the viewer's own theme toggle. */
+  theme?: 'dark' | 'light';
 }
 
 export interface DicomViewerHandle {
@@ -263,9 +268,9 @@ function ViewerApp({
  */
 const DicomViewer = forwardRef<DicomViewerHandle, DicomViewerProps>((props, ref) => {
   return (
-    <FeaturesProvider features={props.features}>
+    <FeaturesProvider features={props.features} branding={props.branding}>
       <I18nProvider>
-        <ThemeProvider>
+        <ThemeProvider theme={props.theme}>
           <ViewerProvider>
             <ViewerApp props={props} handleRef={ref} />
           </ViewerProvider>

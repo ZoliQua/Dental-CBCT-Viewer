@@ -153,7 +153,7 @@ function TopBarButton({
 export function TopBar() {
   const { state, dispatch } = useViewer();
   const { lang, setLang, t } = useI18n();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, controlled: themeControlled } = useTheme();
   const { drillGuide } = useFeatures();
   const handleLayoutChange = useLayoutSwitch();
   const [langOpen, setLangOpen] = useState(false);
@@ -469,10 +469,12 @@ export function TopBar() {
           )}
         </div>
 
-        {/* Dark / light mode */}
-        <TopBarButton title={t('topbar.theme')} onClick={toggleTheme}>
-          {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
-        </TopBarButton>
+        {/* Dark / light mode — unless the host owns the theme */}
+        {!themeControlled && (
+          <TopBarButton title={t('topbar.theme')} onClick={toggleTheme}>
+            {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+          </TopBarButton>
+        )}
 
         {/* Settings / intro / help — only once a study is open */}
         {state.study && (

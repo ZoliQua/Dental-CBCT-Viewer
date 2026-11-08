@@ -60,8 +60,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export function SettingsPanel() {
   const { state, dispatch } = useViewer();
   const { t } = useI18n();
-  const { theme, toggleTheme } = useTheme();
-  const { implantPlanning, drillGuide } = useFeatures();
+  const { theme, toggleTheme, controlled: themeControlled } = useTheme();
+  const { implantPlanning, drillGuide, branding } = useFeatures();
   const [tab, setTab] = useState<Tab>('general');
 
   const open = state.activePanel === 'settings';
@@ -118,6 +118,7 @@ export function SettingsPanel() {
 
           {tab === 'general' && (
             <>
+              {!themeControlled && (
               <Section title={t('settings.theme')}>
                 <div className="flex gap-1">
                   {(['light', 'dark'] as const).map((th) => (
@@ -133,6 +134,7 @@ export function SettingsPanel() {
                   ))}
                 </div>
               </Section>
+              )}
 
               <Section title={t('settings.onImage')}>
                 <Help>{t('settings.help.display')}</Help>
@@ -371,10 +373,12 @@ export function SettingsPanel() {
                 </ul>
               </Section>
 
-              <div className="space-y-2">
-                <p className="text-xs text-slate-600 dark:text-slate-300">{t('about.otherProjects')}</p>
-                <OtherProjects />
-              </div>
+              {branding && (
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-600 dark:text-slate-300">{t('about.otherProjects')}</p>
+                  <OtherProjects />
+                </div>
+              )}
 
               <p className="text-[11px] text-amber-700 dark:text-amber-300">⚠️ {t('landing.disclaimerShort')}</p>
             </>

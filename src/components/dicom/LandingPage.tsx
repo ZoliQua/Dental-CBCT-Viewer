@@ -4,7 +4,8 @@
  * Imaging / Privacy sections and a closing CTA, over a slowly rotating
  * pseudo-3D backdrop. All copy goes through t() (4 languages).
  *
- * Feature cards for planning the edition lacks are left out.
+ * Feature cards for planning the edition lacks are left out, and with
+ * `branding` off so is the web promotion (GitHub star, About, other projects).
  */
 
 import { useState } from 'react';
@@ -24,7 +25,7 @@ const REPO_URL = 'https://github.com/ZoliQua/Dental-CBCT-Viewer';
 
 export function LandingPage() {
   const { t } = useI18n();
-  const { implantPlanning, drillGuide } = useFeatures();
+  const { implantPlanning, drillGuide, branding } = useFeatures();
   const loadSample = useSampleLoad();
   const [samplePct, setSamplePct] = useState<number | null>(null); // null = not loading
 
@@ -109,7 +110,7 @@ export function LandingPage() {
           <img src={publicUrl('cbct-icon.png')} alt="DenCT" className="w-24 h-24 rounded-2xl shadow-md object-contain" />
           <h1 className="text-3xl sm:text-4xl font-bold text-dental-600 dark:text-dental-400">{t('landing.title')}</h1>
           <p className="max-w-2xl text-base text-gray-700 dark:text-gray-300 leading-relaxed">{t('landing.heroSub')}</p>
-          <GithubStar />
+          {branding && <GithubStar />}
 
           {/* Loader — left: samples · right: upload */}
           <div className="w-full grid md:grid-cols-2 gap-4 mt-3 text-left">
@@ -218,6 +219,7 @@ export function LandingPage() {
         </section>
 
         {/* ── About + other projects ────────────────────── */}
+        {branding && (
         <section className="bg-white/80 border border-gray-300 dark:bg-gray-800/75 dark:border-gray-700 rounded-2xl p-6 shadow-sm backdrop-blur-md">
           <h2 className="text-lg font-bold text-dental-600 dark:text-dental-400 mb-2">👋 {t('landing.aboutTitle')}</h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{t('landing.aboutBody')}</p>
@@ -233,6 +235,7 @@ export function LandingPage() {
 
           <p className="text-xs text-gray-500 mt-4">{t('landing.aboutBuilt')}</p>
         </section>
+        )}
       </div>
 
       {/* Darken + % overlay while the sample loads */}
