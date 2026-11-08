@@ -2,6 +2,8 @@ import { useEffect, useCallback, useRef, useImperativeHandle, forwardRef, lazy, 
 import { ViewerProvider, useViewer } from '@/context/ViewerContext';
 import { I18nProvider, useI18n } from '@/i18n/I18nContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { FeaturesProvider, useFeatures } from '@/context/FeaturesContext';
+import type { ViewerFeatures } from '@/core/features';
 import { ensureCornerstone } from '@/core/ensureCornerstone';
 import { LandingPage } from '@/components/dicom/LandingPage';
 import { DisclaimerBanner } from '@/components/dicom/DisclaimerBanner';
@@ -70,6 +72,11 @@ export interface DicomViewerProps {
   /** Embed mode — the host owns page-level consent, so the built-in
    *  disclaimer banner is suppressed. */
   embedded?: boolean;
+  /** Edition switches, both on by default. `implantPlanning: false` is a pure
+   *  imaging viewer: no implant UI, and implants (and guide data) are dropped
+   *  from any plan loaded. `drillGuide: false` keeps implants but removes the
+   *  guided sleeves and the STL guide export. */
+  features?: ViewerFeatures;
 }
 
 export interface DicomViewerHandle {
@@ -89,6 +96,7 @@ export interface DicomViewerHandle {
   setLayout(mode: LayoutMode): void;
   setActiveView(view: ViewKey): void;
   exportPdf(): Promise<void>;
+  /** Resolves false when there is nothing to build — or the edition has no drill guide. */
   exportGuideStl(): Promise<boolean>;
 }
 
@@ -102,6 +110,7 @@ function ViewerApp({
   const { state, dispatch } = useViewer();
   const { t, lang, setLang } = useI18n();
   const { theme } = useTheme();
+  const features = useFeatures();
   const { loadFiles } = useDicomLoader();
 
   // Latest state for the imperative handle (avoids stale closures without
@@ -118,6 +127,8 @@ function ViewerApp({
   const loadSample = useSampleLoad();
   const importScans = useScanImport();
 
+  // addImplant / updateImplant / loadPlan go through the same feature gate as
+  // the UI (see ViewerProvider), so an edition without planning ignores them.
   useImperativeHandle(handleRef, (): DicomViewerHandle => ({
     getImplants: () => stateRef.current.implants,
     addImplant: (implant) => dispatch({ type: 'ADD_IMPLANT', payload: implant }),
@@ -131,8 +142,10 @@ function ViewerApp({
     setLayout: (mode) => dispatch({ type: 'SET_LAYOUT_MODE', payload: mode }),
     setActiveView: (view) => dispatch({ type: 'SET_VIEW_MODE', payload: view }),
     exportPdf: () => import('@/core/viewerExports').then((m) => m.exportPlanPdf(stateRef.current, t, lang)),
-    exportGuideStl: () => import('@/core/viewerExports').then((m) => m.exportDrillGuideStl(stateRef.current)).then((r) => r.ok),
-  }), [dispatch, loadFiles, importScans, loadSample, t, lang]);
+    exportGuideStl: () => features.drillGuide
+      ? import('@/core/viewerExports').then((m) => m.exportDrillGuideStl(stateRef.current)).then((r) => r.ok)
+      : Promise.resolve(false),
+  }), [dispatch, loadFiles, importScans, loadSample, t, lang, features.drillGuide]);
 
   // ── Prop → state wiring ─────────────────────────────────────
   const appliedInitial = useRef(false);
@@ -250,13 +263,15 @@ function ViewerApp({
  */
 const DicomViewer = forwardRef<DicomViewerHandle, DicomViewerProps>((props, ref) => {
   return (
-    <I18nProvider>
-      <ThemeProvider>
-        <ViewerProvider>
-          <ViewerApp props={props} handleRef={ref} />
-        </ViewerProvider>
-      </ThemeProvider>
-    </I18nProvider>
+    <FeaturesProvider features={props.features}>
+      <I18nProvider>
+        <ThemeProvider>
+          <ViewerProvider>
+            <ViewerApp props={props} handleRef={ref} />
+          </ViewerProvider>
+        </ThemeProvider>
+      </I18nProvider>
+    </FeaturesProvider>
   );
 });
 DicomViewer.displayName = 'DicomViewer';

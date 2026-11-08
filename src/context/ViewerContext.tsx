@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useReducer, type ReactNode, type Dispatch } from 'react';
+import { createContext, useCallback, useContext, useEffect, useReducer, useRef, type ReactNode, type Dispatch } from 'react';
 import type { DicomStudyInfo, ViewportTool, LayoutMode, ViewMode, ProjectionMode, ImplantData, MeasurementLayer, AnatomyMarker, AnatomyType, ScanMesh, GuideParams, PanelConfig } from '@/types/dicom';
 import { GUIDE_DEFAULTS, DEFAULT_PANEL, DEFAULT_IMPLANT_SYSTEM_ID, normalizePanelViews, normalizeOpgOrder, isIoScan } from '@/types/dicom';
 import { loadViewPrefs, saveViewPrefs } from '@/core/viewPrefs';
@@ -6,6 +6,8 @@ import type { JawSide } from '@/core/jawSplit';
 import type { Fiducial } from '@/core/fiducials';
 import type { ParsedPlan } from '@/core/planIO';
 import type { Volume3DQuality, Volume3DColormap } from '@/core/volume3DPreset';
+import { gateAction } from '@/core/features';
+import { useFeatures } from './FeaturesContext';
 
 export interface ViewerState {
   isInitialized: boolean;
@@ -676,10 +678,36 @@ const ViewerContext = createContext<{
 export function ViewerProvider({ children }: { children: ReactNode }) {
   // Start from the user's remembered layout (see core/viewPrefs). A host that
   // passes `initialLayout` still wins: App applies it once after mount.
-  const [state, dispatch] = useReducer(viewerReducer, initialState, (init) => {
+  const [state, rawDispatch] = useReducer(viewerReducer, initialState, (init) => {
     const prefs = loadViewPrefs();
     return { ...init, layoutMode: prefs.layoutMode, panel: prefs.panel, jawSide: prefs.jawSide };
   });
+
+  // Every action passes the edition's feature gate first (core/features), so a
+  // disabled feature's data cannot arrive by any route — UI, plan file,
+  // autosave or the imperative API. The ref keeps dispatch's identity stable.
+  const features = useFeatures();
+  const featuresRef = useRef(features);
+  featuresRef.current = features;
+  const dispatch = useCallback<Dispatch<ViewerAction>>((action) => {
+    const gated = gateAction(action, featuresRef.current);
+    if (gated) rawDispatch(gated);
+  }, []);
+
+  // A host switching a feature off while a plan is open: drop what it can no
+  // longer show, the same way a plan load would.
+  const implantsRef = useRef(state.implants);
+  implantsRef.current = state.implants;
+  useEffect(() => {
+    const implants = implantsRef.current;
+    if (!features.implantPlanning) {
+      rawDispatch({ type: 'SET_IMPLANT_PLACEMENT_MODE', payload: false });
+      rawDispatch({ type: 'SET_EDITING_IMPLANT', payload: null });
+      for (const imp of implants) rawDispatch({ type: 'REMOVE_IMPLANT', payload: imp.id });
+    } else if (!features.drillGuide) {
+      for (const imp of implants) if (imp.guided) dispatch({ type: 'UPDATE_IMPLANT', payload: imp });
+    }
+  }, [features.implantPlanning, features.drillGuide, dispatch]);
 
   // Remember the arrangement whenever it changes.
   useEffect(() => {

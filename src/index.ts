@@ -25,3 +25,4 @@ export type {
 } from './types/dicom';
 export { IMPLANT_SYSTEMS, getImplantSystem } from './types/dicom';
 export type { PlanData } from './core/planIO';
+export type { ViewerFeatures } from './core/features';
