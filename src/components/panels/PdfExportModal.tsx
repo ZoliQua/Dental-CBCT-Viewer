@@ -58,6 +58,12 @@ export function PdfExportModal({ open, onClose }: { open: boolean; onClose: () =
     if (open) setSelected(Object.fromEntries(views.map((v) => [v.key, true])));
   }, [open, views]);
 
+  // The planning sections follow the edition: a host can switch planning on or
+  // off while this modal stays mounted, so re-derive them on open and on change.
+  useEffect(() => {
+    if (open) setSections((s) => ({ ...s, implants: implantPlanning, safety: implantPlanning, boneQuality: implantPlanning }));
+  }, [open, implantPlanning]);
+
   if (!open) return null;
 
   const setH = (p: Partial<typeof header>) => setHeader((h) => ({ ...h, ...p }));

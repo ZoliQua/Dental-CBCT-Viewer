@@ -6,13 +6,33 @@
 
 import { useEffect, useState } from 'react';
 import { useI18n } from '@/i18n/I18nContext';
+import { useFeatures } from '@/context/FeaturesContext';
 
-const KEY = 'disclaimer-agreed';
+const BASE_KEY = 'disclaimer-agreed';
+
+/**
+ * The agreement is kept per disclaimer text: the viewer edition's text leaves
+ * out the implant-planning liability sentence, so agreeing to it must not
+ * silence the planner's. The planner keeps the original key (earlier
+ * agreements stay valid).
+ */
+export function disclaimerKey(implantPlanning: boolean): string {
+  return implantPlanning ? BASE_KEY : `${BASE_KEY}@viewer`;
+}
+
+function readAgreed(key: string): boolean {
+  try { return localStorage.getItem(key) === '1'; } catch { return false; }
+}
 
 export function DisclaimerBanner() {
   const { t } = useI18n();
-  const [agreed, setAgreed] = useState(() => localStorage.getItem(KEY) === '1');
+  const { implantPlanning } = useFeatures();
+  const KEY = disclaimerKey(implantPlanning);
+  const [agreed, setAgreed] = useState(() => readAgreed(KEY));
   const [shown, setShown] = useState(false); // drives the slide-in transition
+
+  // A host switching edition at runtime: the other text needs its own agreement.
+  useEffect(() => { setAgreed(readAgreed(KEY)); }, [KEY]);
 
   useEffect(() => {
     if (agreed) return;
@@ -23,7 +43,7 @@ export function DisclaimerBanner() {
   if (agreed) return null;
 
   const accept = () => {
-    localStorage.setItem(KEY, '1');
+    try { localStorage.setItem(KEY, '1'); } catch { /* storage blocked: agree for this session only */ }
     setShown(false);
     // Unmount after the slide-out transition completes
     window.setTimeout(() => setAgreed(true), 300);

@@ -256,3 +256,12 @@ describe('held plan (a feature switched off loses nothing)', () => {
     expect(next.editingImplantId).toBeNull();
   });
 });
+
+describe('translate interpolation', () => {
+  it('fills every occurrence of a placeholder', () => {
+    expect(translate('en', 'no.such.key {n} of {n}', { n: 3 })).toBe('no.such.key 3 of 3');
+  });
+  it('uses the viewer wording for plan files', () => {
+    expect(translate('en', 'plan.save', undefined, 'viewer')).toBe('Save work (JSON)');
+  });
+});

@@ -81,6 +81,8 @@ export function SettingsPanel() {
     ...(drillGuide ? [{ id: 'guide' as const, label: t('settings.guide') }] : []),
     { id: 'about', label: t('settings.tab.about') },
   ];
+  // A tab whose feature the host has just switched off falls back to General.
+  const activeTab: Tab = TABS.some((tb) => tb.id === tab) ? tab : 'general';
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onMouseDown={close}>
@@ -97,7 +99,7 @@ export function SettingsPanel() {
               key={tb.id}
               onClick={() => setTab(tb.id)}
               className={`w-full text-left px-3 py-2 rounded-md text-xs transition-colors ${
-                tab === tb.id
+                activeTab === tb.id
                   ? 'bg-dental-600 text-white'
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'
               }`}
@@ -111,12 +113,12 @@ export function SettingsPanel() {
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">
-              {TABS.find((tb) => tb.id === tab)?.label}
+              {TABS.find((tb) => tb.id === activeTab)?.label}
             </h2>
             <button onClick={close} title={t('layers.close')} className="w-7 h-7 flex items-center justify-center rounded-md text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800">✕</button>
           </div>
 
-          {tab === 'general' && (
+          {activeTab === 'general' && (
             <>
               {!themeControlled && (
               <Section title={t('settings.theme')}>
@@ -198,7 +200,7 @@ export function SettingsPanel() {
             </>
           )}
 
-          {tab === 'threed' && (
+          {activeTab === 'threed' && (
             <>
               <Section title={t('settings.default3dPreset')}>
                 <Help>{t('settings.help.threed')}</Help>
@@ -227,7 +229,7 @@ export function SettingsPanel() {
             </>
           )}
 
-          {tab === 'patient' && (
+          {activeTab === 'patient' && (
             <Section title={t('settings.report')}>
               <Help>{t('settings.help.patient')}</Help>
               <Field label={t('report.patientName')}>
@@ -256,7 +258,7 @@ export function SettingsPanel() {
             </Section>
           )}
 
-          {tab === 'panoramic' && (
+          {activeTab === 'panoramic' && (
             <Section title={t('settings.opg')}>
               <Help>{t('settings.help.panoramic')}</Help>
               <div className="space-y-1">
@@ -284,7 +286,7 @@ export function SettingsPanel() {
             </Section>
           )}
 
-          {tab === 'implant' && implantPlanning && (
+          {activeTab === 'implant' && implantPlanning && (
             <Section title={t('settings.safety')}>
               <Help>{t('settings.help.implant')}</Help>
               <Field label={t('settings.defaultImplant')}>
@@ -319,7 +321,7 @@ export function SettingsPanel() {
             </Section>
           )}
 
-          {tab === 'guide' && drillGuide && (
+          {activeTab === 'guide' && drillGuide && (
             <Section title={t('settings.guide')}>
               <Help>{t('settings.help.guide')}</Help>
               <label className="flex items-center gap-2 mb-2 text-[12px] text-slate-700 dark:text-slate-300">
@@ -349,7 +351,7 @@ export function SettingsPanel() {
             </Section>
           )}
 
-          {tab === 'about' && (
+          {activeTab === 'about' && (
             <>
               <Section title={t('settings.about.contributor')}>
                 <p className="text-sm text-slate-700 dark:text-slate-300">
