@@ -18,7 +18,7 @@ import { lineProfileHU } from '@/core/measureStats';
 import { RENDERING_ENGINE_ID } from '@/core/constants';
 
 export function ViewerShell() {
-  const { state, dispatch } = useViewer();
+  const { state, dispatch, withHeldPlan } = useViewer();
   const { t } = useI18n();
   const measurementsRef = useRef(state.measurements);
   measurementsRef.current = state.measurements;
@@ -226,8 +226,10 @@ export function ViewerShell() {
     if (!studyUID) return;
     const id = setTimeout(() => {
       try {
+        // withHeldPlan: implants/guide a disabled feature holds back are kept,
+        // so switching an edition does not overwrite the stored plan without them.
         const plan = serializePlan(
-          { ...state, report: { ...state.report, patientName: '', patientBirthDate: '' } },
+          withHeldPlan({ ...state, report: { ...state.report, patientName: '', patientBirthDate: '' } }),
           {
             savedAt: new Date().toISOString(),
             studyInstanceUID: studyUID,
@@ -242,7 +244,7 @@ export function ViewerShell() {
     studyUID, state.implants, state.anatomy, state.measurements, state.archCurveControlPoints,
     state.crossSectionPosition, state.crossSectionTiltDeg, state.panoramicSlabWidth,
     state.panoramicProjection, state.panoramicResolution, state.safety, state.windowLevel,
-    state.report, state.study,
+    state.report, state.study, state.guide, withHeldPlan,
   ]);
 
   return (

@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   resolveFeatures, stripPlanForFeatures, gateAction, copyVariant, ALL_FEATURES,
+  applyFeatures, holdBack, withHeld, isHeldEmpty,
 } from '../src/core/features';
 import { viewerReducer, initialState, type ViewerAction, type ViewerState } from '../src/context/ViewerContext';
 import { planFromObject, serializePlan, type PlanData } from '../src/core/planIO';
@@ -190,5 +191,68 @@ describe('edition copy', () => {
         expect(v, `${lang} ${k}`).not.toMatch(/implant|drill|bohr|fresado|fúró|sleeve|hülse|casquillo|persely/i);
       }
     }
+  });
+});
+
+describe('held plan (a feature switched off loses nothing)', () => {
+  const base = () => ({ implants: [guidedImplant], guide: customGuide });
+
+  it('holds implants and guide while planning is off, and gives them back', () => {
+    const off = applyFeatures(base(), undefined, VIEWER);
+    expect(off.plan.implants).toEqual([]);
+    expect(off.plan.guide).toEqual(GUIDE_DEFAULTS);
+    const on = applyFeatures(off.plan, off.held, ALL_FEATURES);
+    expect(on.plan.implants).toEqual([guidedImplant]);
+    expect(on.plan.guide).toEqual(customGuide);
+    expect(isHeldEmpty(on.held)).toBe(true);
+  });
+
+  it('resets the guide and strips sleeves when only the drill guide goes off', () => {
+    const off = applyFeatures(base(), undefined, NO_GUIDE);
+    expect(off.plan.implants[0].guided).toBeUndefined();
+    expect(off.plan.guide).toEqual(GUIDE_DEFAULTS);
+    // The implant moves while the guide is off; its sleeve follows it back.
+    const moved = { ...off.plan, implants: [{ ...off.plan.implants[0], position: [9, 9, 9] as [number, number, number] }] };
+    const on = applyFeatures(moved, off.held, ALL_FEATURES);
+    expect(on.plan.implants[0].position).toEqual([9, 9, 9]);
+    expect(on.plan.implants[0].guided).toEqual(guidedImplant.guided);
+    expect(on.plan.guide).toEqual(customGuide);
+  });
+
+  it('brings implants back without sleeves when planning returns but the guide does not', () => {
+    const off = applyFeatures(base(), undefined, VIEWER);
+    const half = applyFeatures(off.plan, off.held, NO_GUIDE);
+    expect(half.plan.implants).toHaveLength(1);
+    expect(half.plan.implants[0].guided).toBeUndefined();
+    const full = applyFeatures(half.plan, half.held, ALL_FEATURES);
+    expect(full.plan.implants[0].guided).toEqual(guidedImplant.guided);
+  });
+
+  it('puts held data into what is persisted', () => {
+    const off = applyFeatures(base(), undefined, VIEWER);
+    const persisted = withHeld(off.plan, off.held);
+    expect(persisted.implants).toEqual([guidedImplant]);
+    expect(persisted.guide).toEqual(customGuide);
+  });
+
+  it('holds nothing with every feature on, and keeps the same plan object', () => {
+    const p = base();
+    const r = applyFeatures(p, undefined, ALL_FEATURES);
+    expect(r.plan).toBe(p);
+    expect(isHeldEmpty(r.held)).toBe(true);
+  });
+
+  it('a plan load holds what it strips', () => {
+    const { plan: shown, held } = holdBack(plan(), VIEWER);
+    expect(shown.implants).toEqual([]);
+    expect(held.implants).toEqual([guidedImplant]);
+    expect(held.guide).toEqual(customGuide);
+  });
+
+  it('SET_FEATURE_PLAN clears a selection whose implant is gone', () => {
+    const s = { ...initialState, implants: [guidedImplant], activeImplantId: 'i1', editingImplantId: 'i1' };
+    const next = viewerReducer(s, { type: 'SET_FEATURE_PLAN', payload: { implants: [], guide: GUIDE_DEFAULTS } });
+    expect(next.activeImplantId).toBeNull();
+    expect(next.editingImplantId).toBeNull();
   });
 });

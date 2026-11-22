@@ -6,7 +6,7 @@ import type { JawSide } from '@/core/jawSplit';
 import type { Fiducial } from '@/core/fiducials';
 import type { ParsedPlan } from '@/core/planIO';
 import type { Volume3DQuality, Volume3DColormap } from '@/core/volume3DPreset';
-import { gateAction } from '@/core/features';
+import { gateAction, holdBack, applyFeatures, isHeldEmpty, withHeld, type HeldPlan } from '@/core/features';
 import { useFeatures } from './FeaturesContext';
 
 export interface ViewerState {
@@ -217,6 +217,8 @@ export type ViewerAction =
   | { type: 'SET_WINDOW_LEVEL'; payload: { wc: number; ww: number } }
   | { type: 'SET_SAFETY'; payload: Partial<{ marginMm: number; color: string; nerveMm: number; sinusMm: number; neighborMm: number }> }
   | { type: 'SET_GUIDE'; payload: Partial<GuideParams> }
+  /** Internal: the implants and guide after an edition switch (see core/features applyFeatures). */
+  | { type: 'SET_FEATURE_PLAN'; payload: { implants: ImplantData[]; guide: GuideParams } }
   | { type: 'SET_DEFAULT_SYSTEM'; payload: string }
   | { type: 'SET_REPORT'; payload: Partial<ReportFields> }
   | { type: 'SET_DISPLAY'; payload: Partial<DisplayConfig> }
@@ -535,6 +537,17 @@ export function viewerReducer(state: ViewerState, action: ViewerAction): ViewerS
       return { ...state, safety: { ...state.safety, ...action.payload } };
     case 'SET_GUIDE':
       return { ...state, guide: { ...state.guide, ...action.payload } };
+    case 'SET_FEATURE_PLAN': {
+      const { implants, guide } = action.payload;
+      const has = (id: string | null) => id !== null && implants.some((i) => i.id === id);
+      return {
+        ...state,
+        implants,
+        guide,
+        activeImplantId: has(state.activeImplantId) ? state.activeImplantId : null,
+        editingImplantId: has(state.editingImplantId) ? state.editingImplantId : null,
+      };
+    }
     case 'SET_DEFAULT_SYSTEM':
       return { ...state, defaultSystemId: action.payload };
     case 'ADD_ANATOMY':
@@ -673,6 +686,8 @@ export function viewerReducer(state: ViewerState, action: ViewerAction): ViewerS
 const ViewerContext = createContext<{
   state: ViewerState;
   dispatch: Dispatch<ViewerAction>;
+  /** Puts back what a disabled feature holds for the active study (autosave / host plan API). */
+  withHeldPlan: <P extends { implants: ImplantData[]; guide: GuideParams }>(plan: P) => P;
 } | null>(null);
 
 export function ViewerProvider({ children }: { children: ReactNode }) {
@@ -689,25 +704,61 @@ export function ViewerProvider({ children }: { children: ReactNode }) {
   const features = useFeatures();
   const featuresRef = useRef(features);
   featuresRef.current = features;
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  // What a disabled feature took out of each study's plan (by study UID; ''
+  // before any study is open). Held, not deleted: the autosave and the host's
+  // plan callbacks still persist it, and it comes back when the feature does.
+  const heldRef = useRef(new Map<string, HeldPlan>());
+  const setHeld = (key: string, h: HeldPlan) => {
+    if (isHeldEmpty(h)) heldRef.current.delete(key);
+    else heldRef.current.set(key, h);
+  };
+
   const dispatch = useCallback<Dispatch<ViewerAction>>((action) => {
-    const gated = gateAction(action, featuresRef.current);
+    const f = featuresRef.current;
+    const current = stateRef.current.study?.studyInstanceUID ?? '';
+    if (action.type === 'RESET') heldRef.current.clear();
+    if (action.type === 'REMOVE_STUDY') heldRef.current.delete(action.payload);
+    if (action.type === 'SET_ACTIVE_SERIES' && action.payload !== stateRef.current.activeSeriesUID) {
+      // Held implants are in world coordinates like the shown ones, which the
+      // reducer clears on a series switch (M2): they must not come back on
+      // another series. The guide settings carry no geometry and stay.
+      const held = heldRef.current.get(current);
+      if (held) setHeld(current, { implants: [], guided: {}, guide: held.guide });
+    }
+    if (action.type === 'LOAD_PLAN') {
+      const planUID = action.payload.studyInstanceUID;
+      // A plan for another study is refused by the reducer: leave the held data alone.
+      if (!(planUID && current && planUID !== current)) {
+        const { plan, held } = holdBack(action.payload, f);
+        setHeld(current, held);
+        rawDispatch({ ...action, payload: plan });
+        return;
+      }
+    }
+    const gated = gateAction(action, f);
     if (gated) rawDispatch(gated);
   }, []);
 
-  // A host switching a feature off while a plan is open: drop what it can no
-  // longer show, the same way a plan load would.
-  const implantsRef = useRef(state.implants);
-  implantsRef.current = state.implants;
+  // A host switching a feature off or on, or another study becoming active:
+  // hold back what the edition cannot show, and give back what it can again.
+  const studyKey = state.study?.studyInstanceUID ?? '';
   useEffect(() => {
-    const implants = implantsRef.current;
-    if (!features.implantPlanning) {
-      rawDispatch({ type: 'SET_IMPLANT_PLACEMENT_MODE', payload: false });
-      rawDispatch({ type: 'SET_EDITING_IMPLANT', payload: null });
-      for (const imp of implants) rawDispatch({ type: 'REMOVE_IMPLANT', payload: imp.id });
-    } else if (!features.drillGuide) {
-      for (const imp of implants) if (imp.guided) dispatch({ type: 'UPDATE_IMPLANT', payload: imp });
-    }
-  }, [features.implantPlanning, features.drillGuide, dispatch]);
+    const s = stateRef.current;
+    const f = featuresRef.current;
+    const { plan, held } = applyFeatures({ implants: s.implants, guide: s.guide }, heldRef.current.get(studyKey), f);
+    setHeld(studyKey, held);
+    if (!f.implantPlanning && s.implantPlacementMode) rawDispatch({ type: 'SET_IMPLANT_PLACEMENT_MODE', payload: false });
+    const changed = plan.guide !== s.guide || plan.implants.length !== s.implants.length
+      || plan.implants.some((imp, i) => imp !== s.implants[i]);
+    if (changed) rawDispatch({ type: 'SET_FEATURE_PLAN', payload: { implants: plan.implants, guide: plan.guide } });
+  }, [features.implantPlanning, features.drillGuide, studyKey]);
+
+  /** The plan with this study's held data put back in, for persistence. */
+  const withHeldPlan = useCallback(<P extends { implants: ImplantData[]; guide: GuideParams }>(p: P): P =>
+    withHeld(p, heldRef.current.get(stateRef.current.study?.studyInstanceUID ?? '')), []);
 
   // Remember the arrangement whenever it changes.
   useEffect(() => {
@@ -715,7 +766,7 @@ export function ViewerProvider({ children }: { children: ReactNode }) {
   }, [state.layoutMode, state.panel, state.jawSide]);
 
   return (
-    <ViewerContext.Provider value={{ state, dispatch }}>
+    <ViewerContext.Provider value={{ state, dispatch, withHeldPlan }}>
       {children}
     </ViewerContext.Provider>
   );

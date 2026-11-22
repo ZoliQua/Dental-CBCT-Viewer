@@ -80,17 +80,20 @@ The same component runs as a plain imaging viewer or as the full planner.
   *Plan from crown* on a tooth-setup scan, the implant-planning and drill-guide
   settings tabs, the implant / safety / bone-quality sections of the PDF report
   and the intro tour's planning step. It is enforced on the state, not only the
-  UI: implants (and guide settings) are dropped from every plan loaded —
+  UI: implants (and guide settings) are held back from every plan loaded —
   `initialPlan`, `loadPlan`, the *Load plan* menu and the session autosave —
-  and `addImplant` / `updateImplant` are no-ops. Viewing, MPR, panoramic and
+  and `addImplant` / `updateImplant` are no-ops. Held data is not shown and is
+  left out of a saved plan file and of `getImplants()`, but `getPlan()`,
+  `onPlanChange` and the autosave keep it, and it returns when the feature is
+  switched on again. A series switch clears held implants like visible ones. Viewing, MPR, panoramic and
   cross-sections, 3D, measurements and annotations, nerve / sinus tracing,
   scan import and registration, and image / PDF export all stay. It implies
   `drillGuide: false`. Help and intro text that described the planner switch
   to edition copy.
 - **`features={{ drillGuide: false }}`** — implants without guided surgery: no
   sleeve settings, no drill-guide settings tab, no *Drill guide (STL)* export,
-  and `exportGuideStl()` resolves `false`. Sleeves are dropped from loaded
-  plans.
+  and `exportGuideStl()` resolves `false`. Sleeves are held back from loaded
+  plans in the same way.
 
 ```tsx
 <DicomViewer features={{ implantPlanning: false }} branding={false} theme="dark" />
@@ -136,7 +139,7 @@ function App() {
 | `startTour` | `() => void` | Start the intro tour. |
 
 With `features={{ implantPlanning: false }}`, `addImplant` and `updateImplant`
-do nothing and `loadPlan` drops the plan's implants.
+do nothing and `loadPlan` holds the plan's implants back (see [Editions](#editions)).
 
 ---
 

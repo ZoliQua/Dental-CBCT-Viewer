@@ -73,7 +73,7 @@ export interface DicomViewerProps {
    *  disclaimer banner is suppressed. */
   embedded?: boolean;
   /** Edition switches, both on by default. `implantPlanning: false` is a pure
-   *  imaging viewer: no implant UI, and implants (and guide data) are dropped
+   *  imaging viewer: no implant UI, and implants (and guide data) are held back
    *  from any plan loaded. `drillGuide: false` keeps implants but removes the
    *  guided sleeves and the STL guide export. */
   features?: ViewerFeatures;
@@ -116,7 +116,7 @@ function ViewerApp({
   props: DicomViewerProps;
   handleRef: React.Ref<DicomViewerHandle>;
 }) {
-  const { state, dispatch } = useViewer();
+  const { state, dispatch, withHeldPlan } = useViewer();
   const { t, lang, setLang } = useI18n();
   const { theme } = useTheme();
   const features = useFeatures();
@@ -143,7 +143,7 @@ function ViewerApp({
     addImplant: (implant) => dispatch({ type: 'ADD_IMPLANT', payload: implant }),
     updateImplant: (implant) => dispatch({ type: 'UPDATE_IMPLANT', payload: implant }),
     removeImplant: (id) => dispatch({ type: 'REMOVE_IMPLANT', payload: id }),
-    getPlan: () => serializePlan(stateRef.current, planMeta()),
+    getPlan: () => serializePlan(withHeldPlan(stateRef.current), planMeta()),
     loadPlan: (plan) => dispatch({ type: 'LOAD_PLAN', payload: plan }),
     loadStudy: (files) => loadFiles(files),
     loadScans: (files) => importScans(files).then(() => undefined),
@@ -157,7 +157,7 @@ function ViewerApp({
     openSettings: () => dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'settings' }),
     openHelp: () => dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'help' }),
     startTour: () => dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'intro' }),
-  }), [dispatch, loadFiles, importScans, loadSample, t, lang, features.drillGuide]);
+  }), [dispatch, withHeldPlan, loadFiles, importScans, loadSample, t, lang, features.drillGuide]);
 
   // ── Prop → state wiring ─────────────────────────────────────
   const appliedInitial = useRef(false);
@@ -182,7 +182,7 @@ function ViewerApp({
   const onPlan = props.onPlanChange;
   useEffect(() => {
     if (!onPlan) return;
-    const id = setTimeout(() => onPlan(serializePlan(stateRef.current, planMeta())), 500);
+    const id = setTimeout(() => onPlan(serializePlan(withHeldPlan(stateRef.current), planMeta())), 500);
     return () => clearTimeout(id);
   }, [
     onPlan, state.implants, state.anatomy, state.measurements, state.archCurveControlPoints,
