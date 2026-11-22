@@ -13,7 +13,7 @@ import { LANGUAGES } from '@/i18n/translations';
 import { useLayoutSwitch } from '@/hooks/useLayoutSwitch';
 import { LayoutConfigButton } from './LayoutConfigButton';
 import { LandingNav } from '@/components/dicom/landing/LandingNav';
-import { serializePlan, planFromObject } from '@/core/planIO';
+import { serializePlan, planFromObject, MAX_PLAN_FILE_BYTES } from '@/core/planIO';
 import { useScanImport } from '@/hooks/useScanImport';
 import { useSampleLoad } from '@/hooks/useSampleLoad';
 import { isIoScan, type LayoutMode } from '@/types/dicom';
@@ -228,6 +228,12 @@ export function TopBar() {
 
   const loadPlanFile = async (file: File) => {
     try {
+      // A plan is a few hundred KB at most; refuse anything far larger before
+      // reading it, rather than freeze the tab parsing it.
+      if (file.size > MAX_PLAN_FILE_BYTES) {
+        window.alert(t('plan.invalid'));
+        return;
+      }
       const obj = JSON.parse(await file.text());
       const data = planFromObject(obj);
       if (!data) {

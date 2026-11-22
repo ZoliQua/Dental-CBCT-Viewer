@@ -25,8 +25,12 @@ interface ThemeValue {
 const ThemeContext = createContext<ThemeValue | null>(null);
 
 function initialTheme(): Theme {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  return stored === 'light' ? 'light' : 'dark';
+  // Storage can throw (sandboxed iframe, blocked cookies): never fail the mount.
+  try {
+    return localStorage.getItem(STORAGE_KEY) === 'light' ? 'light' : 'dark';
+  } catch {
+    return 'dark';
+  }
 }
 
 export function ThemeProvider({ theme: hostTheme, children }: { theme?: Theme; children: ReactNode }) {
@@ -37,7 +41,8 @@ export function ThemeProvider({ theme: hostTheme, children }: { theme?: Theme; c
   // Only the viewer's own choice is remembered; a host-driven theme is the
   // host's to persist, and must not overwrite what the web app had stored.
   useEffect(() => {
-    if (!controlled) localStorage.setItem(STORAGE_KEY, stored);
+    if (controlled) return;
+    try { localStorage.setItem(STORAGE_KEY, stored); } catch { /* storage blocked */ }
   }, [stored, controlled]);
 
   const toggleTheme = useCallback(() => {

@@ -13,7 +13,7 @@ import { TopBar } from '@/components/layout/TopBar';
 import { useDicomLoader } from '@/hooks/useDicomLoader';
 import { useScanImport } from '@/hooks/useScanImport';
 import { useSampleLoad, type SampleKind } from '@/hooks/useSampleLoad';
-import { serializePlan } from '@/core/planIO';
+import { serializePlan, planFromObject, PLAN_VERSION } from '@/core/planIO';
 import type { PlanData } from '@/core/planIO';
 import type { ViewportTool, ImplantData, LayoutMode, ViewKey } from '@/types/dicom';
 
@@ -136,6 +136,14 @@ function ViewerApp({
   const loadSample = useSampleLoad();
   const importScans = useScanImport();
 
+  // A host plan gets the same validation as a plan file: it may be partial,
+  // from an older version, or come out of a database the host does not control.
+  const loadHostPlan = useCallback((plan: unknown) => {
+    const parsed = planFromObject(plan && typeof plan === 'object' ? { version: PLAN_VERSION, ...plan } : null);
+    if (parsed) dispatch({ type: 'LOAD_PLAN', payload: parsed });
+    else console.warn('[DenCT] loadPlan: not a plan object, ignored');
+  }, [dispatch]);
+
   // addImplant / updateImplant / loadPlan go through the same feature gate as
   // the UI (see ViewerProvider), so an edition without planning ignores them.
   useImperativeHandle(handleRef, (): DicomViewerHandle => ({
@@ -144,7 +152,7 @@ function ViewerApp({
     updateImplant: (implant) => dispatch({ type: 'UPDATE_IMPLANT', payload: implant }),
     removeImplant: (id) => dispatch({ type: 'REMOVE_IMPLANT', payload: id }),
     getPlan: () => serializePlan(withHeldPlan(stateRef.current), planMeta()),
-    loadPlan: (plan) => dispatch({ type: 'LOAD_PLAN', payload: plan }),
+    loadPlan: (plan) => loadHostPlan(plan),
     loadStudy: (files) => loadFiles(files),
     loadScans: (files) => importScans(files).then(() => undefined),
     loadSample: (kind = 'ct') => loadSample(kind).then(() => undefined),
@@ -157,7 +165,7 @@ function ViewerApp({
     openSettings: () => dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'settings' }),
     openHelp: () => dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'help' }),
     startTour: () => dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'intro' }),
-  }), [dispatch, withHeldPlan, loadFiles, importScans, loadSample, t, lang, features.drillGuide]);
+  }), [dispatch, loadHostPlan, withHeldPlan, loadFiles, importScans, loadSample, t, lang, features.drillGuide]);
 
   // ── Prop → state wiring ─────────────────────────────────────
   const appliedInitial = useRef(false);
@@ -165,8 +173,8 @@ function ViewerApp({
     if (appliedInitial.current || !state.isInitialized) return;
     appliedInitial.current = true;
     if (props.initialLayout) dispatch({ type: 'SET_LAYOUT_MODE', payload: props.initialLayout });
-    if (props.initialPlan) dispatch({ type: 'LOAD_PLAN', payload: props.initialPlan });
-  }, [state.isInitialized, props.initialLayout, props.initialPlan, dispatch]);
+    if (props.initialPlan) loadHostPlan(props.initialPlan);
+  }, [state.isInitialized, props.initialLayout, props.initialPlan, dispatch, loadHostPlan]);
 
   useEffect(() => {
     if (props.lang && props.lang !== lang) setLang(props.lang as Parameters<typeof setLang>[0]);

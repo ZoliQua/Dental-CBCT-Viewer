@@ -106,8 +106,18 @@ export function parseScanMesh(fileName: string, buffer: ArrayBuffer): any | null
   }
 }
 
+/**
+ * Largest mesh file read. A full-arch intraoral scan is a few to ~100 MB; past
+ * this the synchronous parse would freeze the tab (and may run it out of memory).
+ */
+export const MAX_SCAN_FILE_BYTES = 300 * 1024 * 1024;
+
 /** Read a mesh file into vtkPolyData by extension. Returns null on failure. */
 export async function loadScanPolyData(file: File): Promise<any | null> {
+  if (file.size > MAX_SCAN_FILE_BYTES) {
+    console.warn(`[DenCT] Scan mesh "${file.name}" skipped: ${Math.round(file.size / 1048576)} MB is over the ${MAX_SCAN_FILE_BYTES / 1048576} MB limit`);
+    return null;
+  }
   try {
     return parseScanMesh(file.name, await file.arrayBuffer());
   } catch {
