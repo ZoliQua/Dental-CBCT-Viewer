@@ -17,7 +17,7 @@ import { getVolumeData } from '@/core/cprEngine';
 import { lineProfileHU } from '@/core/measureStats';
 import { RENDERING_ENGINE_ID } from '@/core/constants';
 
-export function ViewerShell() {
+export function ViewerShell({ autosave = true }: { autosave?: boolean } = {}) {
   const { state, dispatch, withHeldPlan } = useViewer();
   const { t } = useI18n();
   const measurementsRef = useRef(state.measurements);
@@ -207,7 +207,7 @@ export function ViewerShell() {
 
   // Restore the last autosaved plan once per study, only into a fresh plan
   useEffect(() => {
-    if (!studyUID || restoredRef.current === studyUID) return;
+    if (!autosave || !studyUID || restoredRef.current === studyUID) return;
     restoredRef.current = studyUID;
     if (state.implants.length || state.anatomy.length || state.measurements.length) return;
     try {
@@ -219,11 +219,11 @@ export function ViewerShell() {
       const data = planFromObject(JSON.parse(raw));
       if (data) dispatch({ type: 'LOAD_PLAN', payload: data });
     } catch { /* ignore corrupt autosave */ }
-  }, [studyUID, state.implants.length, state.anatomy.length, state.measurements.length, dispatch]);
+  }, [autosave, studyUID, state.implants.length, state.anatomy.length, state.measurements.length, dispatch]);
 
   // Debounced autosave of the current plan
   useEffect(() => {
-    if (!studyUID) return;
+    if (!autosave || !studyUID) return;
     const id = setTimeout(() => {
       try {
         // withHeldPlan: implants/guide a disabled feature holds back are kept,
@@ -233,7 +233,8 @@ export function ViewerShell() {
           {
             savedAt: new Date().toISOString(),
             studyInstanceUID: studyUID,
-            patientId: state.study?.patientId ?? null,
+            // Not needed to restore (the key is the study UID): keep identifiers out of storage.
+            patientId: null,
           },
         );
         sessionStorage.setItem(`rdcv-plan-${studyUID}`, JSON.stringify(plan));
@@ -241,7 +242,7 @@ export function ViewerShell() {
     }, 800);
     return () => clearTimeout(id);
   }, [
-    studyUID, state.implants, state.anatomy, state.measurements, state.archCurveControlPoints,
+    autosave, studyUID, state.implants, state.anatomy, state.measurements, state.archCurveControlPoints,
     state.crossSectionPosition, state.crossSectionTiltDeg, state.panoramicSlabWidth,
     state.panoramicProjection, state.panoramicResolution, state.safety, state.windowLevel,
     state.report, state.study, state.guide, withHeldPlan,

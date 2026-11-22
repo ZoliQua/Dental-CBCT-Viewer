@@ -72,6 +72,12 @@ export interface DicomViewerProps {
   /** Embed mode — the host owns page-level consent, so the built-in
    *  disclaimer banner is suppressed. */
   embedded?: boolean;
+  /**
+   * Keep a per-study copy of the plan in the page's sessionStorage so a reload
+   * restores it (default true). A host that persists plans itself through
+   * `onPlanChange` can turn it off, so no plan data is left in its origin's storage.
+   */
+  autosave?: boolean;
   /** Edition switches, both on by default. `implantPlanning: false` is a pure
    *  imaging viewer: no implant UI, and implants (and guide data) are held back
    *  from any plan loaded. `drillGuide: false` keeps implants but removes the
@@ -253,7 +259,7 @@ function ViewerApp({
   } else {
     content = (
       <Suspense fallback={<Spinner label={t('app.initializing')} />}>
-        <ViewerShell />
+        <ViewerShell autosave={props.autosave !== false} />
       </Suspense>
     );
   }

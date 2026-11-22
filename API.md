@@ -67,6 +67,7 @@ All props are optional. Import the type with
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Called whenever the implant list changes. |
 | `className` | `string` | Extra class on the root element. |
 | `embedded` | `boolean` | Embed mode — the host owns page-level consent, so the built-in disclaimer banner is suppressed. |
+| `autosave` | `boolean` | Keep a per-study copy of the plan in sessionStorage so a reload restores it (default `true`). Turn it off when the host persists plans through `onPlanChange`. |
 | `features` | `ViewerFeatures` | Edition switches, `{ implantPlanning?: boolean; drillGuide?: boolean }`, both `true` by default. See [Editions](#editions). |
 | `branding` | `boolean` | Show the web promotion — the GitHub star, the landing page's About box and the other-projects links. Default `true`. |
 | `theme` | `'dark' \| 'light'` | Host-owned theme. When set it overrides the remembered choice, follows the prop live, and the viewer's own theme toggles are hidden. Omit it to keep the built-in toggle. |
