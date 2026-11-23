@@ -11,8 +11,8 @@ abstract: >-
   a 3D-printable surgical drill guide (STL) — entirely in the browser, with no
   upload of patient data. Research and demonstration software; not a certified
   medical device.
-version: 1.4.0
-date-released: 2026-10-18
+version: 1.5.0
+date-released: 2026-11-23
 url: "https://dental-cbct-viewer.vercel.app/"
 repository-code: "https://github.com/ZoliQua/Dental-CBCT-Viewer"
 license: MIT

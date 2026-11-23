@@ -7,6 +7,8 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-11-23
+
 ### Added
 
 - **Eleven more UI languages, picked from the browser.** Czech, Danish,
@@ -20,7 +22,6 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
 - **`autosave` prop** to keep plan data out of the host page's sessionStorage
   when the host persists plans itself. The autosave no longer stores the
   patient id.
-
 - **The registration says how far off it can be where the implant goes.** The
   panel could already show the residual at each landmark pair, which is the
   obvious number and the wrong one: Fitzpatrick, West & Maurer (IEEE TMI, 1998)
@@ -83,6 +84,11 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
   time into blobs; drag handlers dispatch at most once per frame; the 3D slice
   planes follow W/L once a drag settles; scan actors are updated in place
   instead of rebuilt.
+
+### Security
+
+- Dependencies updated to the versions `npm audit` can fix without a
+  breaking change.
 
 ## [1.4.0] — 2026-10-18
 
@@ -448,6 +454,7 @@ First public release — the viewer is packaged as an embeddable React library.
   `SharedArrayBuffer`).
 - This is research / demonstration software — **not** a certified medical device.
 
+[1.5.0]: https://github.com/ZoliQua/Dental-CBCT-Viewer/releases/tag/v1.5.0
 [1.4.0]: https://github.com/ZoliQua/Dental-CBCT-Viewer/releases/tag/v1.4.0
 [1.3.0]: https://github.com/ZoliQua/Dental-CBCT-Viewer/releases/tag/v1.3.0
 [1.2.0]: https://github.com/ZoliQua/Dental-CBCT-Viewer/releases/tag/v1.2.0
