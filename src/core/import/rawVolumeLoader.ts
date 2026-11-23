@@ -134,6 +134,12 @@ export function disposeRawVolume(volumeId: string): void {
   volumes.delete(scheme);
 }
 
+/** Drop every stored volume's pixel data (the viewer was cleared or unmounted). */
+export function disposeAllRawVolumes(): void {
+  volumes.clear();
+  schemeByVolumeId.clear();
+}
+
 /** Build a Cornerstone volume + study from a decoded raw volume. */
 export async function buildRawVolume(raw: RawVolume, onProgress?: (pct: number) => void): Promise<LoadedRaw> {
   const n = counter++;

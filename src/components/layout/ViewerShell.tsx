@@ -10,6 +10,8 @@ import { useI18n } from '@/i18n/I18nContext';
 import { setupTools, setActiveTool } from '@/core/toolManager';
 import { createVolume } from '@/core/volumeBuilder';
 import { revokeAllBlobUrls } from '@/core/dicomLoader';
+import { disposeSampleVolume, disposeAllSampleVolumes } from '@/core/sampleLoader';
+import { disposeRawVolume, disposeAllRawVolumes } from '@/core/import/rawVolumeLoader';
 import { clearScanRegistry } from '@/core/scanMesh';
 import { serializePlan, planFromObject } from '@/core/planIO';
 import { CS_TOOL_KEYS, readAnnotationMeasure } from '@/core/annotationLayer';
@@ -173,7 +175,34 @@ export function ViewerShell({ autosave = true }: { autosave?: boolean } = {}) {
     try { cache.purgeCache(); } catch { /* engine already gone */ }
     revokeAllBlobUrls();
     clearScanRegistry();
+    // The sample / GALILEOS / OneVolume loaders keep their own copy of the
+    // voxels (a 512³ volume is ~268 MB) outside the Cornerstone cache.
+    disposeAllSampleVolumes();
+    disposeAllRawVolumes();
   };
+
+  // A study removed while others stay open: free its volume now rather than
+  // when the viewer is cleared. Its volume id lives in the per-study snapshot
+  // (or in the state, if it was the active one) — remember it before the
+  // reducer drops the snapshot.
+  const volumeByStudyRef = useRef(new Map<string, string>());
+  useEffect(() => {
+    const known = volumeByStudyRef.current;
+    const next = new Map<string, string>();
+    for (const [uid, plan] of Object.entries(state.studyPlans)) if (plan.volumeId) next.set(uid, plan.volumeId);
+    const active = state.study?.studyInstanceUID;
+    if (active && state.volumeId) next.set(active, state.volumeId);
+    const present = new Set(state.studies.map((s) => s.studyInstanceUID));
+    if (present.size > 0) {
+      for (const [uid, volumeId] of known) {
+        if (present.has(uid)) continue;
+        try { cache.removeVolumeLoadObject(volumeId); } catch { /* not cached */ }
+        disposeSampleVolume(volumeId);
+        disposeRawVolume(volumeId);
+      }
+    }
+    volumeByStudyRef.current = next;
+  }, [state.studies, state.studyPlans, state.study, state.volumeId]);
   const prevStudyRef = useRef<{ uid: string | null; volumeId: string | null }>({ uid: null, volumeId: null });
   useEffect(() => {
     const uid = state.study?.studyInstanceUID ?? null;

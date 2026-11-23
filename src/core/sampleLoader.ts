@@ -147,6 +147,12 @@ export function disposeSampleVolume(volumeId: string): void {
   volumes.delete(scheme);
 }
 
+/** Drop every stored volume's pixel data (the viewer was cleared or unmounted). */
+export function disposeAllSampleVolumes(): void {
+  volumes.clear();
+  schemeByVolumeId.clear();
+}
+
 async function fetchOk(url: string): Promise<Response> {
   let resp: Response;
   try {

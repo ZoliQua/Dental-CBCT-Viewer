@@ -112,9 +112,9 @@ export async function parseDicomFiles(
       const byteArray = new Uint8Array(arrayBuffer);
       const dataSet = dicomParser.parseDicom(byteArray);
 
-      // Create blob URL for cornerstone wadouri loader
-      const blob = new Blob([byteArray], { type: 'application/dicom' });
-      const url = URL.createObjectURL(blob);
+      // Blob URL for the cornerstone wadouri loader. A File already is a Blob,
+      // so this points at it instead of holding a second copy of every slice.
+      const url = URL.createObjectURL(file);
       blobUrls.push(url);
       const imageId = `wadouri:${url}`;
 
