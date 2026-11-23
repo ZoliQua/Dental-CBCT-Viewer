@@ -144,8 +144,8 @@ BibTeX lub APA), a każde wydanie jest archiwizowane w Zenodo.
 
 Cytuj koncepcyjny DOI [`10.5281/zenodo.23458076`](https://doi.org/10.5281/zenodo.23458076)
 dla oprogramowania ogólnie — zawsze wskazuje on najnowsze zarchiwizowane wydanie — lub
-DOI konkretnego wydania, aby wskazać dokładną wersję ([`10.5281/zenodo.23458077`](https://doi.org/10.5281/zenodo.23458077)
-dla v1.4.0).
+DOI konkretnego wydania, aby wskazać dokładną wersję ([`10.5281/zenodo.24484034`](https://doi.org/10.5281/zenodo.24484034)
+dla v1.5.0).
 
 ## Licencja i zastrzeżenie
 

@@ -144,8 +144,8 @@ BibTeX eller APA), og hver udgivelse arkiveres på Zenodo.
 
 Citér koncept-DOI'en [`10.5281/zenodo.23458076`](https://doi.org/10.5281/zenodo.23458076)
 for softwaren generelt — den peger altid på den senest arkiverede udgivelse — eller en
-udgivelses egen DOI for at fastlåse den præcise version ([`10.5281/zenodo.23458077`](https://doi.org/10.5281/zenodo.23458077)
-for v1.4.0).
+udgivelses egen DOI for at fastlåse den præcise version ([`10.5281/zenodo.24484034`](https://doi.org/10.5281/zenodo.24484034)
+for v1.5.0).
 
 ## Licens og ansvarsfraskrivelse
 

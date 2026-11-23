@@ -144,7 +144,7 @@ repository** erzeugt daraus BibTeX oder APA), und jedes Release wird auf Zenodo 
 Für die Software im Allgemeinen zitieren Sie die Konzept-DOI
 [`10.5281/zenodo.23458076`](https://doi.org/10.5281/zenodo.23458076) — sie verweist stets
 auf das zuletzt archivierte Release —, für eine bestimmte Version deren eigene DOI
-([`10.5281/zenodo.23458077`](https://doi.org/10.5281/zenodo.23458077) für v1.4.0).
+([`10.5281/zenodo.24484034`](https://doi.org/10.5281/zenodo.24484034) für v1.5.0).
 
 ## Lizenz & Haftungsausschluss
 

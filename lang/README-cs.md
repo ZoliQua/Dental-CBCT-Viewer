@@ -144,8 +144,8 @@ BibTeX nebo APA) a každé vydání je archivováno na Zenodo.
 
 Citujte koncepční DOI [`10.5281/zenodo.23458076`](https://doi.org/10.5281/zenodo.23458076)
 pro software obecně — vždy odkazuje na nejnovější archivované vydání — nebo vlastní
-DOI vydání pro přesnou verzi ([`10.5281/zenodo.23458077`](https://doi.org/10.5281/zenodo.23458077)
-pro v1.4.0).
+DOI vydání pro přesnou verzi ([`10.5281/zenodo.24484034`](https://doi.org/10.5281/zenodo.24484034)
+pro v1.5.0).
 
 ## Licence a upozornění
 

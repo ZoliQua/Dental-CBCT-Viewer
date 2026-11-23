@@ -144,7 +144,7 @@ csinál BibTeX-et vagy APA-t), és minden kiadás felkerül a Zenodo-ra.
 Magára a szoftverre a koncepció-DOI-val hivatkozz
 ([`10.5281/zenodo.23458076`](https://doi.org/10.5281/zenodo.23458076)) — ez mindig a
 legutóbbi archivált kiadásra mutat —, egy konkrét verzióra pedig annak saját DOI-jával
-([`10.5281/zenodo.23458077`](https://doi.org/10.5281/zenodo.23458077) a v1.4.0-hoz).
+([`10.5281/zenodo.24484034`](https://doi.org/10.5281/zenodo.24484034) a v1.5.0-hoz).
 
 ## Licenc & disclaimer
 

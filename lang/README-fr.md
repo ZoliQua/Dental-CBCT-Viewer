@@ -144,8 +144,8 @@ BibTeX ou de l’APA), et chaque version est archivée sur Zenodo.
 
 Citez le DOI de concept [`10.5281/zenodo.23458076`](https://doi.org/10.5281/zenodo.23458076)
 pour le logiciel en général — il renvoie toujours à la dernière version archivée — ou le
-DOI propre d’une version pour figer la version exacte ([`10.5281/zenodo.23458077`](https://doi.org/10.5281/zenodo.23458077)
-pour la v1.4.0).
+DOI propre d’une version pour figer la version exacte ([`10.5281/zenodo.24484034`](https://doi.org/10.5281/zenodo.24484034)
+pour la v1.5.0).
 
 ## Licence et avertissement
 

@@ -144,8 +144,8 @@ BibTeX eller APA), och varje release arkiveras på Zenodo.
 
 Citera koncept-DOI:n [`10.5281/zenodo.23458076`](https://doi.org/10.5281/zenodo.23458076)
 för programvaran i allmänhet — den pekar alltid på den senast arkiverade releasen — eller en
-releases egen DOI för att låsa den exakta versionen ([`10.5281/zenodo.23458077`](https://doi.org/10.5281/zenodo.23458077)
-för v1.4.0).
+releases egen DOI för att låsa den exakta versionen ([`10.5281/zenodo.24484034`](https://doi.org/10.5281/zenodo.24484034)
+för v1.5.0).
 
 ## Licens och ansvarsfriskrivning
 

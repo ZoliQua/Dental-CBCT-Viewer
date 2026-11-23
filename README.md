@@ -167,7 +167,7 @@ BibTeX or APA for you, and every release is archived on Zenodo.
 Cite the **concept DOI** [`10.5281/zenodo.23458076`](https://doi.org/10.5281/zenodo.23458076)
 for the software in general — it always resolves to the latest archived release. To pin the
 exact version you used, cite that release's own DOI
-([`10.5281/zenodo.23458077`](https://doi.org/10.5281/zenodo.23458077) for v1.4.0).
+([`10.5281/zenodo.24484034`](https://doi.org/10.5281/zenodo.24484034) for v1.5.0).
 
 ## 📄 License & disclaimer
 

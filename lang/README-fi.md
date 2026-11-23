@@ -144,8 +144,8 @@ BibTeX- tai APA-muodon), ja jokainen julkaisu arkistoidaan Zenodoon.
 
 Viittaa konsepti-DOI:hin [`10.5281/zenodo.23458076`](https://doi.org/10.5281/zenodo.23458076)
 ohjelmistoon yleisesti — se osoittaa aina uusimpaan arkistoituun julkaisuun — tai
-julkaisun omaan DOI:hin tarkan version kiinnittämiseksi ([`10.5281/zenodo.23458077`](https://doi.org/10.5281/zenodo.23458077)
-versiolle v1.4.0).
+julkaisun omaan DOI:hin tarkan version kiinnittämiseksi ([`10.5281/zenodo.24484034`](https://doi.org/10.5281/zenodo.24484034)
+versiolle v1.5.0).
 
 ## Lisenssi ja vastuuvapauslauseke
 

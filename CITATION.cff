@@ -19,7 +19,7 @@ license: MIT
 # Zenodo concept (all-versions) DOI — auto-resolves to the latest archived
 # release. Recommended for citing the software in general. A version-specific
 # DOI is minted per release when it is archived on Zenodo; the last archived
-# version-specific DOI (v1.4.0) is kept under `identifiers:` below until a
+# version-specific DOI (v1.5.0) is kept under `identifiers:` below until a
 # newer release is archived.
 doi: "10.5281/zenodo.23458076"
 identifiers:
@@ -27,8 +27,8 @@ identifiers:
     value: "10.5281/zenodo.23458076"
     description: "Zenodo concept DOI (all versions) — recommended for citing the software"
   - type: doi
-    value: "10.5281/zenodo.23458077"
-    description: "Zenodo DOI for the last archived version (v1.4.0)"
+    value: "10.5281/zenodo.24484034"
+    description: "Zenodo DOI for the last archived version (v1.5.0)"
 authors:
   - family-names: Dul
     given-names: Zoltán
