@@ -42,12 +42,14 @@
 - ✅ **Pre-export guide checks** — thin walls, narrow drill channels, fragile webs between bores, and a drill path that reaches the nerve or sinus past the implant apex
 - 🧩 **Surface-scan import** (STL / OBJ / PLY, several at once) — the arch is recognised from the file name, then paired to the CBCT by **landmark registration**: 3–8 pairs picked on the axial slice **or straight on the 3D rendering**, each pair's residual shown so a mis-click is obvious
 - 🎯 **Radiopaque marker (fiducial) registration** — auto-detects marker beads in the CT and draws them to click, snaps a scan-side click to the bead's fitted centre, and catches mis-paired markers by their constellation. This is what makes a scan-to-CBCT pairing trustworthy; markerless surface matching does not resolve it (see the CHANGELOG)
+- 📐 **Predicted error at the implant** — the registration panel estimates the target error at each planned implant's apex from the marker layout, and warns when the markers lie on one line or are bunched too tightly to hold the far end of the arch — failures the landmark residual does not show
 - 🔩 **Metal check before you register** — restorations scatter the reconstruction into bright streaks across the very tooth surfaces a scan would be matched against. The registration panel sweeps the volume for material denser than any tissue and reports how much it found and in how many places, so a scan that cannot be surface-matched is recognised as such rather than trusted
 - 🖼️ **Image export** (PNG / JPG) and a configurable **PDF report**; plan save / load as JSON — a saved plan carries each scan's **registration**, so reopening a case does not mean picking the landmarks again
 
 **Integration & privacy**
 - 🔒 **100% local** — parsing, rendering and exports run in the browser; **nothing is uploaded**
 - ⚛️ React 18 / 19 component with an **imperative ref API**, controlled props and callbacks, and a React-free **`/core`** of the geometry / safety math
+- 🧰 **Editions** — `features={{ implantPlanning: false }}` turns the planner into a pure imaging viewer (or `drillGuide: false` keeps implants but drops guided surgery); `branding`, `theme` and `autosave` let a host own the promotion, the theme and plan persistence
 - 🌐 15 UI languages (CS / DA / DE / EN / ES / FI / FR / HU / NB / PL / PT / RU / SK / SV / UK), picked from the browser / OS language by default · 🌓 self-scoped dark mode that never restyles the host page
 
 > The exported guide is for verification on a printed model — tissue fit needs a **registered surface scan**, and the sleeve seat must be checked against your own sleeve kit before any use.
@@ -120,9 +122,9 @@ function App() {
 }
 ```
 
-**Handle methods:** `getImplants`, `addImplant`, `updateImplant`, `removeImplant`, `getPlan`, `loadPlan`, `loadStudy(files)`, `loadSample`, `setLayout`, `setActiveView`, `exportPdf`, `exportGuideStl`.
+**Handle methods:** `getImplants`, `addImplant`, `updateImplant`, `removeImplant`, `getPlan`, `loadPlan`, `loadStudy(files)`, `loadScans(files)`, `loadSample`, `setLayout`, `setActiveView`, `exportPdf`, `exportGuideStl`, `openSettings`, `openHelp`, `startTour`.
 
-**Props:** `patientId`, `patientName`, `initialPlan`, `initialLayout`, `lang`, `onPlanChange`, `onImplantsChange`, `className`, `embedded`.
+**Props:** `patientId`, `patientName`, `initialPlan`, `initialLayout`, `lang`, `onPlanChange`, `onImplantsChange`, `className`, `embedded`, `autosave`, `features`, `branding`, `theme`. Full signatures and the edition rules are in the [API reference](API.md).
 
 ## 🧩 Framework-free core (`/core`)
 

@@ -59,12 +59,16 @@ El visor ocupa su contenedor padre — asígnele un contenedor con tamaño. Incl
 | `patientId` | `string` | Identificador del paciente en la cabecera del informe. |
 | `patientName` | `string` | Nombre del paciente en la cabecera del informe. |
 | `initialPlan` | `PlanData` | Cargar un plan guardado al montar. |
-| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1'` | Disposición inicial. |
+| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1' \| 'IO3D'` | Disposición inicial. |
 | `lang` | `'cs' \| 'da' \| 'de' \| 'en' \| 'es' \| 'fi' \| 'fr' \| 'hu' \| 'nb' \| 'pl' \| 'pt' \| 'ru' \| 'sk' \| 'sv' \| 'uk'` | Idioma de la interfaz. |
 | `onPlanChange` | `(plan: PlanData) => void` | Se llama (con debounce) al cambiar el plan. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Se llama al cambiar la lista de implantes. |
 | `className` | `string` | Clase adicional en el elemento raíz. |
 | `embedded` | `boolean` | Oculta el banner de aviso integrado (el anfitrión gestiona el consentimiento). |
+| `autosave` | `boolean` | Guarda una copia del plan por estudio en sessionStorage para que una recarga lo restaure (por defecto `true`). Desactívalo si el anfitrión guarda los planes con `onPlanChange`. |
+| `features` | `ViewerFeatures` | Interruptores de edición: `{ implantPlanning?: boolean; drillGuide?: boolean }`, ambos activos por defecto. `implantPlanning: false` da un visor de imágenes puro. Véase [API.md](../API.md#editions). |
+| `branding` | `boolean` | Muestra la promoción web (estrella de GitHub, cuadro Acerca de, enlaces a otros proyectos). Por defecto `true`. |
+| `theme` | `'dark' \| 'light'` | Tema oscuro / claro controlado por el anfitrión; anula la elección recordada y oculta los conmutadores propios del visor. |
 
 ## API imperativa (ref)
 
@@ -91,6 +95,9 @@ const ref = useRef<DicomViewerHandle>(null);
 | `setActiveView` | `(view: ViewKey) => void` | Cambiar la vista 1×1. |
 | `exportPdf` | `() => Promise<void>` | Generar + descargar el informe PDF. |
 | `exportGuideStl` | `() => Promise<boolean>` | Generar + descargar la guía de fresado STL (false si no hay implante guiado). |
+| `openSettings` | `() => void` | Abre el diálogo de ajustes. |
+| `openHelp` | `() => void` | Abre el panel de ayuda. |
+| `startTour` | `() => void` | Inicia el recorrido de introducción. |
 
 ## Núcleo independiente del framework (`/core`)
 

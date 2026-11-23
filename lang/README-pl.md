@@ -59,12 +59,16 @@ Przeglądarka wypełnia element nadrzędny — nadaj mu określone wymiary. Dost
 | `patientId` | `string` | Identyfikator pacjenta wyświetlany w nagłówku raportu. |
 | `patientName` | `string` | Imię i nazwisko pacjenta wyświetlane w nagłówku raportu. |
 | `initialPlan` | `PlanData` | Wczytuje zapisany plan przy montowaniu. |
-| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1'` | Układ początkowy. |
+| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1' \| 'IO3D'` | Układ początkowy. |
 | `lang` | `'cs' \| 'da' \| 'de' \| 'en' \| 'es' \| 'fi' \| 'fr' \| 'hu' \| 'nb' \| 'pl' \| 'pt' \| 'ru' \| 'sk' \| 'sv' \| 'uk'` | Język interfejsu. Bez niego przeglądarka używa ostatniego wyboru użytkownika, następnie języka przeglądarki / systemu, a na końcu angielskiego. |
 | `onPlanChange` | `(plan: PlanData) => void` | Wywoływane (z opóźnieniem debounce) przy każdej zmianie planu. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Wywoływane przy każdej zmianie listy implantów. |
 | `className` | `string` | Dodatkowa klasa elementu głównego. |
 | `embedded` | `boolean` | Ukrywa wbudowany baner z zastrzeżeniem (zgodą zarządza host). |
+| `autosave` | `boolean` | Przechowuje kopię planu dla każdego badania w sessionStorage, aby przeładowanie ją przywróciło (domyślnie `true`). Wyłącz, gdy host sam zapisuje plany przez `onPlanChange`. |
+| `features` | `ViewerFeatures` | Przełączniki edycji: `{ implantPlanning?: boolean; drillGuide?: boolean }`, oba domyślnie włączone. `implantPlanning: false` daje czystą przeglądarkę obrazów. Zob. [API.md](../API.md#editions). |
+| `branding` | `boolean` | Pokazuje promocję w sieci (gwiazdka GitHub, okno O programie, linki do innych projektów). Domyślnie `true`. |
+| `theme` | `'dark' \| 'light'` | Ciemny / jasny motyw sterowany przez hosta; zastępuje zapamiętany wybór i ukrywa własne przełączniki przeglądarki. |
 
 ## API imperatywne (ref)
 
@@ -91,6 +95,9 @@ const ref = useRef<DicomViewerHandle>(null);
 | `setActiveView` | `(view: ViewKey) => void` | Zmienia widok 1×1. |
 | `exportPdf` | `() => Promise<void>` | Tworzy i pobiera raport PDF. |
 | `exportGuideStl` | `() => Promise<boolean>` | Tworzy i pobiera szablon chirurgiczny STL (false, jeśli nie ma implantu nawigowanego). |
+| `openSettings` | `() => void` | Otwiera okno ustawień. |
+| `openHelp` | `() => void` | Otwiera panel pomocy. |
+| `startTour` | `() => void` | Uruchamia przewodnik wprowadzający. |
 
 ## Rdzeń bez frameworka (`/core`)
 

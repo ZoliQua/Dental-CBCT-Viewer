@@ -59,12 +59,16 @@ Prehliadač vyplní svojho rodiča — dajte mu kontajner s danou veľkosťou. D
 | `patientId` | `string` | ID pacienta zobrazené v hlavičke správy. |
 | `patientName` | `string` | Meno pacienta zobrazené v hlavičke správy. |
 | `initialPlan` | `PlanData` | Načíta uložený plán pri pripojení. |
-| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1'` | Počiatočné rozloženie. |
+| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1' \| 'IO3D'` | Počiatočné rozloženie. |
 | `lang` | `'cs' \| 'da' \| 'de' \| 'en' \| 'es' \| 'fi' \| 'fr' \| 'hu' \| 'nb' \| 'pl' \| 'pt' \| 'ru' \| 'sk' \| 'sv' \| 'uk'` | Jazyk rozhrania. Bez neho prehliadač použije poslednú voľbu používateľa, potom jazyk prehliadača / OS, potom angličtinu. |
 | `onPlanChange` | `(plan: PlanData) => void` | Volá sa (s debounce) pri každej zmene plánu. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Volá sa pri každej zmene zoznamu implantátov. |
 | `className` | `string` | Ďalšia trieda na koreňovom prvku. |
 | `embedded` | `boolean` | Potlačí vstavaný banner s upozornením (súhlas spravuje hostiteľ). |
+| `autosave` | `boolean` | Uchováva kópiu plánu pre každú štúdiu v sessionStorage, aby ju opätovné načítanie obnovilo (predvolené `true`). Vypnite, ak hostiteľ ukladá plány sám cez `onPlanChange`. |
+| `features` | `ViewerFeatures` | Prepínače edície: `{ implantPlanning?: boolean; drillGuide?: boolean }`, obe predvolene zapnuté. `implantPlanning: false` dáva čistý zobrazovací prehliadač. Pozri [API.md](../API.md#editions). |
+| `branding` | `boolean` | Zobrazí webovú propagáciu (hviezdička GitHub, okno O aplikácii, odkazy na ďalšie projekty). Predvolené `true`. |
+| `theme` | `'dark' \| 'light'` | Tmavý / svetlý motív riadený hostiteľom; prepíše zapamätanú voľbu a skryje vlastné prepínače prehliadača. |
 
 ## Imperatívne API (ref)
 
@@ -91,6 +95,9 @@ const ref = useRef<DicomViewerHandle>(null);
 | `setActiveView` | `(view: ViewKey) => void` | Prepne zobrazenie 1×1. |
 | `exportPdf` | `() => Promise<void>` | Vytvorí a stiahne PDF správu. |
 | `exportGuideStl` | `() => Promise<boolean>` | Vytvorí a stiahne STL vŕtacej šablóny (false, ak chýba navigovaný implantát). |
+| `openSettings` | `() => void` | Otvorí dialóg nastavení. |
+| `openHelp` | `() => void` | Otvorí panel pomocníka. |
+| `startTour` | `() => void` | Spustí úvodnú prehliadku. |
 
 ## Jadro bez frameworku (`/core`)
 

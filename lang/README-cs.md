@@ -59,12 +59,16 @@ Prohlížeč vyplní svého rodiče — dejte mu kontejner s danou velikostí. D
 | `patientId` | `string` | ID pacienta zobrazené v záhlaví zprávy. |
 | `patientName` | `string` | Jméno pacienta zobrazené v záhlaví zprávy. |
 | `initialPlan` | `PlanData` | Načte uložený plán při připojení. |
-| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1'` | Výchozí rozložení. |
+| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1' \| 'IO3D'` | Výchozí rozložení. |
 | `lang` | `'cs' \| 'da' \| 'de' \| 'en' \| 'es' \| 'fi' \| 'fr' \| 'hu' \| 'nb' \| 'pl' \| 'pt' \| 'ru' \| 'sk' \| 'sv' \| 'uk'` | Jazyk rozhraní. Bez něj prohlížeč použije poslední volbu uživatele, poté jazyk prohlížeče / OS, poté angličtinu. |
 | `onPlanChange` | `(plan: PlanData) => void` | Volá se (s debounce) při každé změně plánu. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Volá se při každé změně seznamu implantátů. |
 | `className` | `string` | Další třída na kořenovém prvku. |
 | `embedded` | `boolean` | Potlačí vestavěný banner s upozorněním (souhlas spravuje hostitel). |
+| `autosave` | `boolean` | Uchovává kopii plánu pro každou studii v sessionStorage, aby ji znovunačtení obnovilo (výchozí `true`). Vypněte, pokud hostitel ukládá plány přes `onPlanChange`. |
+| `features` | `ViewerFeatures` | Přepínače edice: `{ implantPlanning?: boolean; drillGuide?: boolean }`, obojí ve výchozím stavu zapnuto. `implantPlanning: false` dává čistý zobrazovací prohlížeč. Viz [API.md](../API.md#editions). |
+| `branding` | `boolean` | Zobrazí webovou propagaci (hvězdička GitHub, okno O aplikaci, odkazy na další projekty). Výchozí `true`. |
+| `theme` | `'dark' \| 'light'` | Tmavý / světlý motiv řízený hostitelem; přepíše zapamatovanou volbu a skryje vlastní přepínače prohlížeče. |
 
 ## Imperativní API (ref)
 
@@ -91,6 +95,9 @@ const ref = useRef<DicomViewerHandle>(null);
 | `setActiveView` | `(view: ViewKey) => void` | Přepne zobrazení 1×1. |
 | `exportPdf` | `() => Promise<void>` | Vytvoří a stáhne PDF zprávu. |
 | `exportGuideStl` | `() => Promise<boolean>` | Vytvoří a stáhne STL vrtací šablony (false, pokud chybí navigovaný implantát). |
+| `openSettings` | `() => void` | Otevře dialog nastavení. |
+| `openHelp` | `() => void` | Otevře panel nápovědy. |
+| `startTour` | `() => void` | Spustí úvodní prohlídku. |
 
 ## Jádro bez frameworku (`/core`)
 

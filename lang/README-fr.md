@@ -59,12 +59,16 @@ La visionneuse remplit son parent — donnez-lui un conteneur dimensionné. Elle
 | `patientId` | `string` | Identifiant du patient affiché dans l’en-tête du rapport. |
 | `patientName` | `string` | Nom du patient affiché dans l’en-tête du rapport. |
 | `initialPlan` | `PlanData` | Charge un plan enregistré au montage. |
-| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1'` | Disposition de départ. |
+| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1' \| 'IO3D'` | Disposition de départ. |
 | `lang` | `'cs' \| 'da' \| 'de' \| 'en' \| 'es' \| 'fi' \| 'fr' \| 'hu' \| 'nb' \| 'pl' \| 'pt' \| 'ru' \| 'sk' \| 'sv' \| 'uk'` | Langue de l’interface. Sans elle, la visionneuse suit le dernier choix de l’utilisateur, puis la langue du navigateur / du système, puis l’anglais. |
 | `onPlanChange` | `(plan: PlanData) => void` | Déclenché (avec anti-rebond) à chaque modification du plan. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Déclenché à chaque modification de la liste des implants. |
 | `className` | `string` | Classe supplémentaire sur l’élément racine. |
 | `embedded` | `boolean` | Supprime la bannière d’avertissement intégrée (l’hôte gère le consentement). |
+| `autosave` | `boolean` | Conserve une copie du plan par examen dans sessionStorage pour qu’un rechargement la restaure (par défaut `true`). À désactiver quand l’hôte enregistre les plans lui-même via `onPlanChange`. |
+| `features` | `ViewerFeatures` | Interrupteurs d’édition : `{ implantPlanning?: boolean; drillGuide?: boolean }`, tous deux activés par défaut. `implantPlanning: false` donne une visionneuse d’images pure. Voir [API.md](../API.md#editions). |
+| `branding` | `boolean` | Affiche la promotion web (étoile GitHub, encadré À propos, liens vers d’autres projets). Par défaut `true`. |
+| `theme` | `'dark' \| 'light'` | Thème sombre / clair piloté par l’hôte ; remplace le choix mémorisé et masque les bascules propres à la visionneuse. |
 
 ## API impérative (ref)
 
@@ -91,6 +95,9 @@ const ref = useRef<DicomViewerHandle>(null);
 | `setActiveView` | `(view: ViewKey) => void` | Change la vue 1×1. |
 | `exportPdf` | `() => Promise<void>` | Génère et télécharge le rapport PDF. |
 | `exportGuideStl` | `() => Promise<boolean>` | Génère et télécharge le STL du guide chirurgical (false s’il n’y a pas d’implant guidé). |
+| `openSettings` | `() => void` | Ouvre la fenêtre des réglages. |
+| `openHelp` | `() => void` | Ouvre le panneau d’aide. |
+| `startTour` | `() => void` | Lance la visite guidée. |
 
 ## Cœur sans framework (`/core`)
 

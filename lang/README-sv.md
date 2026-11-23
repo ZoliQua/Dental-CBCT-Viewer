@@ -59,12 +59,16 @@ Visaren fyller sitt föräldraelement — ge den en behållare med storlek. Den 
 | `patientId` | `string` | Patient-id som visas i rapporthuvudet. |
 | `patientName` | `string` | Patientnamn som visas i rapporthuvudet. |
 | `initialPlan` | `PlanData` | Laddar en sparad plan vid montering. |
-| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1'` | Startlayout. |
+| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1' \| 'IO3D'` | Startlayout. |
 | `lang` | `'cs' \| 'da' \| 'de' \| 'en' \| 'es' \| 'fi' \| 'fr' \| 'hu' \| 'nb' \| 'pl' \| 'pt' \| 'ru' \| 'sk' \| 'sv' \| 'uk'` | Gränssnittsspråk. Utan den följer visaren användarens senaste val, därefter webbläsarens / operativsystemets språk och sist engelska. |
 | `onPlanChange` | `(plan: PlanData) => void` | Anropas (med fördröjning) varje gång planen ändras. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Anropas varje gång implantatlistan ändras. |
 | `className` | `string` | Extra klass på rotelementet. |
 | `embedded` | `boolean` | Döljer den inbyggda ansvarsfriskrivningsbannern (värden ansvarar för samtycket). |
+| `autosave` | `boolean` | Sparar en kopia av planen per undersökning i sessionStorage så att en omladdning återställer den (standard `true`). Stäng av den när värden själv sparar planer via `onPlanChange`. |
+| `features` | `ViewerFeatures` | Utgåvebrytare: `{ implantPlanning?: boolean; drillGuide?: boolean }`, båda på som standard. `implantPlanning: false` ger en ren bildvisare. Se [API.md](../API.md#editions). |
+| `branding` | `boolean` | Visar webbkampanjen (GitHub-stjärnan, Om-rutan, länkar till andra projekt). Standard `true`. |
+| `theme` | `'dark' \| 'light'` | Mörkt / ljust tema som styrs av värden; åsidosätter det sparade valet och döljer visarens egna växlare. |
 
 ## Imperativt API (ref)
 
@@ -91,6 +95,9 @@ const ref = useRef<DicomViewerHandle>(null);
 | `setActiveView` | `(view: ViewKey) => void` | Byter 1×1-vyn. |
 | `exportPdf` | `() => Promise<void>` | Skapar och laddar ner PDF-rapporten. |
 | `exportGuideStl` | `() => Promise<boolean>` | Skapar och laddar ner borrmallen som STL (false om det inte finns något guidat implantat). |
+| `openSettings` | `() => void` | Öppnar inställningsdialogen. |
+| `openHelp` | `() => void` | Öppnar hjälppanelen. |
+| `startTour` | `() => void` | Startar introduktionsturen. |
 
 ## Ramverksfri kärna (`/core`)
 

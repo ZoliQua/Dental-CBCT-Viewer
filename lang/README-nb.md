@@ -59,12 +59,16 @@ Viseren fyller foreldreelementet sitt — gi den en container med en størrelse.
 | `patientId` | `string` | Pasient-ID som vises i rapportens topptekst. |
 | `patientName` | `string` | Pasientnavn som vises i rapportens topptekst. |
 | `initialPlan` | `PlanData` | Last inn en lagret plan ved montering. |
-| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1'` | Startlayout. |
+| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1' \| 'IO3D'` | Startlayout. |
 | `lang` | `'cs' \| 'da' \| 'de' \| 'en' \| 'es' \| 'fi' \| 'fr' \| 'hu' \| 'nb' \| 'pl' \| 'pt' \| 'ru' \| 'sk' \| 'sv' \| 'uk'` | Grensesnittspråk. Uten den følger viseren brukerens siste valg, deretter nettleser-/OS-språket og til slutt engelsk. |
 | `onPlanChange` | `(plan: PlanData) => void` | Utløses (debounced) hver gang planen endres. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Utløses hver gang implantatlisten endres. |
 | `className` | `string` | Ekstra klasse på rotelementet. |
 | `embedded` | `boolean` | Undertrykker det innebygde banneret med ansvarsfraskrivelse (verten håndterer samtykket). |
+| `autosave` | `boolean` | Lagrer en kopi av planen per undersøkelse i sessionStorage, slik at en ny innlasting gjenoppretter den (standard `true`). Slå den av når verten selv lagrer planer via `onPlanChange`. |
+| `features` | `ViewerFeatures` | Utgavebrytere: `{ implantPlanning?: boolean; drillGuide?: boolean }`, begge på som standard. `implantPlanning: false` gir en ren bildeviser. Se [API.md](../API.md#editions). |
+| `branding` | `boolean` | Viser webkampanjen (GitHub-stjernen, Om-boksen, lenker til andre prosjekter). Standard `true`. |
+| `theme` | `'dark' \| 'light'` | Mørkt / lyst tema styrt av verten; overstyrer det lagrede valget og skjuler viserens egne brytere. |
 
 ## Imperativt API (ref)
 
@@ -91,6 +95,9 @@ const ref = useRef<DicomViewerHandle>(null);
 | `setActiveView` | `(view: ViewKey) => void` | Bytt 1×1-visningen. |
 | `exportPdf` | `() => Promise<void>` | Bygg + last ned PDF-rapporten. |
 | `exportGuideStl` | `() => Promise<boolean>` | Bygg + last ned boremalen som STL (false hvis det ikke finnes noe guidet implantat). |
+| `openSettings` | `() => void` | Åpner innstillingsdialogen. |
+| `openHelp` | `() => void` | Åpner hjelpepanelet. |
+| `startTour` | `() => void` | Starter introduksjonsturen. |
 
 ## Rammeverksuavhengig kjerne (`/core`)
 

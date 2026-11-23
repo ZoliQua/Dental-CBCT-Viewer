@@ -59,12 +59,16 @@ The viewer fills its parent — give it a sized container. It ships its own styl
 | `patientId` | `string` | Patient id shown in the report header. |
 | `patientName` | `string` | Patient name shown in the report header. |
 | `initialPlan` | `PlanData` | Load a saved plan on mount. |
-| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1'` | Starting layout. |
+| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1' \| 'IO3D'` | Starting layout. |
 | `lang` | `'cs' \| 'da' \| 'de' \| 'en' \| 'es' \| 'fi' \| 'fr' \| 'hu' \| 'nb' \| 'pl' \| 'pt' \| 'ru' \| 'sk' \| 'sv' \| 'uk'` | UI language. Without it the viewer follows the user's last choice, then the browser / OS language, then English. |
 | `onPlanChange` | `(plan: PlanData) => void` | Fired (debounced) whenever the plan changes. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Fired whenever the implant list changes. |
 | `className` | `string` | Extra class on the root element. |
 | `embedded` | `boolean` | Suppresses the built-in disclaimer banner (host owns consent). |
+| `autosave` | `boolean` | Keep a per-study copy of the plan in sessionStorage so a reload restores it (default `true`). Turn it off when the host persists plans via `onPlanChange`. |
+| `features` | `ViewerFeatures` | Edition switches: `{ implantPlanning?: boolean; drillGuide?: boolean }`, both on by default. `implantPlanning: false` gives a pure imaging viewer. See [API.md](../API.md#editions). |
+| `branding` | `boolean` | Show the web promotion (GitHub star, About box, other-projects links). Default `true`. |
+| `theme` | `'dark' \| 'light'` | Host-owned dark / light theme; overrides the remembered choice and hides the viewer's own toggles. |
 
 ## Imperative API (ref)
 
@@ -91,6 +95,9 @@ const ref = useRef<DicomViewerHandle>(null);
 | `setActiveView` | `(view: ViewKey) => void` | Switch the 1×1 view. |
 | `exportPdf` | `() => Promise<void>` | Build + download the PDF report. |
 | `exportGuideStl` | `() => Promise<boolean>` | Build + download the drill guide STL (false if no guided implant). |
+| `openSettings` | `() => void` | Open the settings dialog. |
+| `openHelp` | `() => void` | Open the help panel. |
+| `startTour` | `() => void` | Start the intro tour. |
 
 ## Framework-free core (`/core`)
 

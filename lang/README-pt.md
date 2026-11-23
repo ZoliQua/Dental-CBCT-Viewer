@@ -59,12 +59,16 @@ O visualizador ocupa todo o elemento pai — dê-lhe um contentor com dimensões
 | `patientId` | `string` | ID do paciente mostrado no cabeçalho do relatório. |
 | `patientName` | `string` | Nome do paciente mostrado no cabeçalho do relatório. |
 | `initialPlan` | `PlanData` | Carrega um plano guardado ao montar. |
-| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1'` | Disposição inicial. |
+| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1' \| 'IO3D'` | Disposição inicial. |
 | `lang` | `'cs' \| 'da' \| 'de' \| 'en' \| 'es' \| 'fi' \| 'fr' \| 'hu' \| 'nb' \| 'pl' \| 'pt' \| 'ru' \| 'sk' \| 'sv' \| 'uk'` | Idioma da interface. Sem ele, o visualizador segue a última escolha do utilizador, depois o idioma do navegador / sistema operativo e, por fim, o inglês. |
 | `onPlanChange` | `(plan: PlanData) => void` | Disparado (com debounce) sempre que o plano muda. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Disparado sempre que a lista de implantes muda. |
 | `className` | `string` | Classe adicional no elemento raiz. |
 | `embedded` | `boolean` | Suprime o banner de aviso integrado (o anfitrião gere o consentimento). |
+| `autosave` | `boolean` | Guarda uma cópia do plano por estudo no sessionStorage para que um recarregamento a restaure (predefinição `true`). Desative-o quando o anfitrião guarda os planos através de `onPlanChange`. |
+| `features` | `ViewerFeatures` | Interruptores de edição: `{ implantPlanning?: boolean; drillGuide?: boolean }`, ambos ativos por predefinição. `implantPlanning: false` dá um visualizador de imagem puro. Ver [API.md](../API.md#editions). |
+| `branding` | `boolean` | Mostra a promoção web (estrela do GitHub, caixa Sobre, ligações para outros projetos). Predefinição `true`. |
+| `theme` | `'dark' \| 'light'` | Tema escuro / claro controlado pelo anfitrião; substitui a escolha memorizada e oculta os comutadores próprios do visualizador. |
 
 ## API imperativa (ref)
 
@@ -91,6 +95,9 @@ const ref = useRef<DicomViewerHandle>(null);
 | `setActiveView` | `(view: ViewKey) => void` | Muda a vista 1×1. |
 | `exportPdf` | `() => Promise<void>` | Cria e descarrega o relatório PDF. |
 | `exportGuideStl` | `() => Promise<boolean>` | Cria e descarrega o STL da guia cirúrgica (false se não houver implante guiado). |
+| `openSettings` | `() => void` | Abre o diálogo de definições. |
+| `openHelp` | `() => void` | Abre o painel de ajuda. |
+| `startTour` | `() => void` | Inicia a visita de introdução. |
 
 ## Núcleo sem framework (`/core`)
 

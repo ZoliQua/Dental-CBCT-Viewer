@@ -59,12 +59,16 @@ Katselin täyttää isäelementtinsä — anna sille mitoitettu säiliö. Sillä
 | `patientId` | `string` | Raportin otsikossa näytettävä potilastunniste. |
 | `patientName` | `string` | Raportin otsikossa näytettävä potilaan nimi. |
 | `initialPlan` | `PlanData` | Lataa tallennetun suunnitelman käynnistettäessä. |
-| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1'` | Aloitusasettelu. |
+| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1' \| 'IO3D'` | Aloitusasettelu. |
 | `lang` | `'cs' \| 'da' \| 'de' \| 'en' \| 'es' \| 'fi' \| 'fr' \| 'hu' \| 'nb' \| 'pl' \| 'pt' \| 'ru' \| 'sk' \| 'sv' \| 'uk'` | Käyttöliittymän kieli. Ilman sitä katselin noudattaa käyttäjän viimeisintä valintaa, sitten selaimen / käyttöjärjestelmän kieltä ja lopuksi englantia. |
 | `onPlanChange` | `(plan: PlanData) => void` | Laukeaa (viivästetysti) aina, kun suunnitelma muuttuu. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Laukeaa aina, kun implanttiluettelo muuttuu. |
 | `className` | `string` | Lisäluokka juurielementille. |
 | `embedded` | `boolean` | Piilottaa sisäänrakennetun vastuuvapausbannerin (isäntä hoitaa suostumuksen). |
+| `autosave` | `boolean` | Säilyttää suunnitelmasta tutkimuskohtaisen kopion sessionStoragessa, jotta uudelleenlataus palauttaa sen (oletus `true`). Kytke pois, kun isäntä tallentaa suunnitelmat itse `onPlanChange`-kutsulla. |
+| `features` | `ViewerFeatures` | Versiokytkimet: `{ implantPlanning?: boolean; drillGuide?: boolean }`, molemmat oletuksena päällä. `implantPlanning: false` tekee pelkän kuvankatseluohjelman. Katso [API.md](../API.md#editions). |
+| `branding` | `boolean` | Näyttää verkkomainonnan (GitHub-tähti, Tietoja-ruutu, linkit muihin projekteihin). Oletus `true`. |
+| `theme` | `'dark' \| 'light'` | Isännän hallitsema tumma / vaalea teema; ohittaa muistetun valinnan ja piilottaa katseluohjelman omat valitsimet. |
 
 ## Imperatiivinen API (ref)
 
@@ -91,6 +95,9 @@ const ref = useRef<DicomViewerHandle>(null);
 | `setActiveView` | `(view: ViewKey) => void` | Vaihtaa 1×1-näkymää. |
 | `exportPdf` | `() => Promise<void>` | Luo ja lataa PDF-raportin. |
 | `exportGuideStl` | `() => Promise<boolean>` | Luo ja lataa porausohjaimen STL:n (false, jos ohjattua implanttia ei ole). |
+| `openSettings` | `() => void` | Avaa asetusikkunan. |
+| `openHelp` | `() => void` | Avaa ohjepaneelin. |
+| `startTour` | `() => void` | Käynnistää esittelykierroksen. |
 
 ## Kehyksetön ydin (`/core`)
 

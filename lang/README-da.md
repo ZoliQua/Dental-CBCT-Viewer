@@ -59,12 +59,16 @@ Vieweren udfylder sit overordnede element — giv den en container med en størr
 | `patientId` | `string` | Patient-id, der vises i rapportens sidehoved. |
 | `patientName` | `string` | Patientnavn, der vises i rapportens sidehoved. |
 | `initialPlan` | `PlanData` | Indlæs en gemt plan ved montering. |
-| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1'` | Startlayout. |
+| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1' \| 'IO3D'` | Startlayout. |
 | `lang` | `'cs' \| 'da' \| 'de' \| 'en' \| 'es' \| 'fi' \| 'fr' \| 'hu' \| 'nb' \| 'pl' \| 'pt' \| 'ru' \| 'sk' \| 'sv' \| 'uk'` | Brugerfladens sprog. Uden den følger vieweren brugerens seneste valg, derefter browser-/OS-sproget og til sidst engelsk. |
 | `onPlanChange` | `(plan: PlanData) => void` | Udløses (debounced), hver gang planen ændres. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Udløses, hver gang implantatlisten ændres. |
 | `className` | `string` | Ekstra klasse på rodelementet. |
 | `embedded` | `boolean` | Undertrykker det indbyggede banner med ansvarsfraskrivelse (værten håndterer samtykket). |
+| `autosave` | `boolean` | Gemmer en kopi af planen pr. undersøgelse i sessionStorage, så en genindlæsning gendanner den (standard `true`). Slå den fra, når værten selv gemmer planer via `onPlanChange`. |
+| `features` | `ViewerFeatures` | Udgavekontakter: `{ implantPlanning?: boolean; drillGuide?: boolean }`, begge slået til som standard. `implantPlanning: false` giver en ren billedviser. Se [API.md](../API.md#editions). |
+| `branding` | `boolean` | Viser webpromoveringen (GitHub-stjernen, Om-boksen, links til andre projekter). Standard `true`. |
+| `theme` | `'dark' \| 'light'` | Mørkt / lyst tema styret af værten; tilsidesætter det huskede valg og skjuler viserens egne knapper. |
 
 ## Imperativ API (ref)
 
@@ -91,6 +95,9 @@ const ref = useRef<DicomViewerHandle>(null);
 | `setActiveView` | `(view: ViewKey) => void` | Skift 1×1-visningen. |
 | `exportPdf` | `() => Promise<void>` | Byg + download PDF-rapporten. |
 | `exportGuideStl` | `() => Promise<boolean>` | Byg + download boreskabelonen som STL (false, hvis der ikke er noget guidet implantat). |
+| `openSettings` | `() => void` | Åbner indstillingsdialogen. |
+| `openHelp` | `() => void` | Åbner hjælpepanelet. |
+| `startTour` | `() => void` | Starter introduktionsturen. |
 
 ## Framework-uafhængig kerne (`/core`)
 

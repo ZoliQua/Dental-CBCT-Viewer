@@ -59,12 +59,16 @@ A néző kitölti a szülőjét — adj neki méretezett konténert. Saját stí
 | `patientId` | `string` | A riport fejlécében megjelenő páciens-azonosító. |
 | `patientName` | `string` | A riport fejlécében megjelenő páciensnév. |
 | `initialPlan` | `PlanData` | Mentett terv betöltése induláskor. |
-| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1'` | Kezdő elrendezés. |
+| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1' \| 'IO3D'` | Kezdő elrendezés. |
 | `lang` | `'cs' \| 'da' \| 'de' \| 'en' \| 'es' \| 'fi' \| 'fr' \| 'hu' \| 'nb' \| 'pl' \| 'pt' \| 'ru' \| 'sk' \| 'sv' \| 'uk'` | UI-nyelv. |
 | `onPlanChange` | `(plan: PlanData) => void` | A terv változásakor (késleltetve) hívódik. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Az implant-lista változásakor hívódik. |
 | `className` | `string` | Extra osztály a gyökér elemen. |
 | `embedded` | `boolean` | Elrejti a beépített disclaimer-sávot (a befogadó kezeli a hozzájárulást). |
+| `autosave` | `boolean` | Vizsgálatonként a terv egy másolatát a sessionStorage-ban tartja, hogy újratöltés után visszaálljon (alapértelmezés `true`). Kapcsold ki, ha a befogadó maga menti a terveket az `onPlanChange`-en át. |
+| `features` | `ViewerFeatures` | Kiadás-kapcsolók: `{ implantPlanning?: boolean; drillGuide?: boolean }`, alapból mindkettő be van kapcsolva. Az `implantPlanning: false` tisztán képmegjelenítő. Lásd: [API.md](../API.md#editions). |
+| `branding` | `boolean` | Megjeleníti a webes promóciót (GitHub-csillag, Névjegy doboz, további projektek linkjei). Alapértelmezés `true`. |
+| `theme` | `'dark' \| 'light'` | A befogadó által vezérelt sötét / világos téma; felülírja a megjegyzett választást, és elrejti a megjelenítő saját kapcsolóit. |
 
 ## Imperatív API (ref)
 
@@ -91,6 +95,9 @@ const ref = useRef<DicomViewerHandle>(null);
 | `setActiveView` | `(view: ViewKey) => void` | Az 1×1 nézet váltása. |
 | `exportPdf` | `() => Promise<void>` | PDF-riport készítése + letöltése. |
 | `exportGuideStl` | `() => Promise<boolean>` | Fúrósablon STL készítése + letöltése (false, ha nincs guided implant). |
+| `openSettings` | `() => void` | Megnyitja a beállítások ablakot. |
+| `openHelp` | `() => void` | Megnyitja a súgópanelt. |
+| `startTour` | `() => void` | Elindítja a bemutatót. |
 
 ## Keret-független mag (`/core`)
 

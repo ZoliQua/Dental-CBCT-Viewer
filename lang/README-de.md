@@ -59,12 +59,16 @@ Der Viewer füllt sein Elternelement — geben Sie ihm einen dimensionierten Con
 | `patientId` | `string` | Im Berichtskopf angezeigte Patienten-ID. |
 | `patientName` | `string` | Im Berichtskopf angezeigter Patientenname. |
 | `initialPlan` | `PlanData` | Gespeicherten Plan beim Mounten laden. |
-| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1'` | Start-Layout. |
+| `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1' \| 'IO3D'` | Start-Layout. |
 | `lang` | `'cs' \| 'da' \| 'de' \| 'en' \| 'es' \| 'fi' \| 'fr' \| 'hu' \| 'nb' \| 'pl' \| 'pt' \| 'ru' \| 'sk' \| 'sv' \| 'uk'` | UI-Sprache. |
 | `onPlanChange` | `(plan: PlanData) => void` | Wird (entprellt) bei Planänderungen aufgerufen. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Wird bei Änderung der Implantatliste aufgerufen. |
 | `className` | `string` | Zusätzliche Klasse am Wurzelelement. |
 | `embedded` | `boolean` | Unterdrückt das eingebaute Haftungsbanner (der Host verwaltet die Zustimmung). |
+| `autosave` | `boolean` | Hält pro Studie eine Kopie des Plans im sessionStorage, damit ein Neuladen ihn wiederherstellt (Standard `true`). Ausschalten, wenn der Host Pläne selbst über `onPlanChange` speichert. |
+| `features` | `ViewerFeatures` | Editionsschalter: `{ implantPlanning?: boolean; drillGuide?: boolean }`, beide standardmäßig an. `implantPlanning: false` ergibt einen reinen Bildbetrachter. Siehe [API.md](../API.md#editions). |
+| `branding` | `boolean` | Zeigt die Web-Werbung (GitHub-Stern, Über-Box, Links zu anderen Projekten). Standard `true`. |
+| `theme` | `'dark' \| 'light'` | Vom Host gesteuertes dunkles / helles Design; überschreibt die gespeicherte Wahl und blendet die eigenen Umschalter des Viewers aus. |
 
 ## Imperative API (ref)
 
@@ -91,6 +95,9 @@ const ref = useRef<DicomViewerHandle>(null);
 | `setActiveView` | `(view: ViewKey) => void` | 1×1-Ansicht wechseln. |
 | `exportPdf` | `() => Promise<void>` | PDF-Bericht erstellen + herunterladen. |
 | `exportGuideStl` | `() => Promise<boolean>` | Bohrschablone (STL) erstellen + herunterladen (false ohne geführtes Implantat). |
+| `openSettings` | `() => void` | Öffnet den Einstellungsdialog. |
+| `openHelp` | `() => void` | Öffnet das Hilfefenster. |
+| `startTour` | `() => void` | Startet die Einführungstour. |
 
 ## Framework-unabhängiger Kern (`/core`)
 

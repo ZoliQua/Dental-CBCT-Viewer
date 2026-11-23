@@ -190,6 +190,14 @@ panoramic and cross-section views.
 `interpolateArchCurve`, `resampleByArcLength`, `computeCurveNormals`,
 `generateDefaultArchCurve` — Catmull-Rom arch-curve math.
 
+### Registration accuracy (`core/registrationError`)
+`registrationAccuracy(fiducials, freMm, targets)` — the predicted target
+registration error at each target (e.g. implant apices) from the fiducial
+layout and the fit residual (Fitzpatrick, West & Maurer 1998), sorted worst
+first, with a `degenerate` flag for markers on one line; plus
+`fiducialSpread`, `estimateFle` and `predictTre`. An expectation over many
+registrations, not a bound on one.
+
 ### Drill-guide geometry (`core/guideGeom`, `core/guideExport`, `core/guideBuilder`)
 `cylinderMesh` / `sweptBarMesh` / `planSleeveSeat` (pure `TriMesh` primitives),
 `triMeshToBinarySTL(mesh)`, and `buildDrillGuide(input)` — the async CSG build
