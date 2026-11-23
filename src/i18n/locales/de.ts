@@ -9,7 +9,7 @@ const de: Dict = {
   'app.retry': 'Erneut versuchen',
 
   'landing.infoTitle': 'Was ist diese App?',
-  'landing.infoBody': 'Ein dentaler CBCT/CT-DICOM-Viewer für die Implantatplanung — mehrere CTs gleichzeitig laden, MPR- und echte 3D-Ansichten, Panorama-Rekonstruktion (OPG) entlang des Zahnbogens, kippbare Querschnitte, geführte Implantatplanung mit Sicherheitsabständen zu Nerv/Sinus/Nachbar und Misch-Knochenqualität, druckbarer Bohrschablonen-Export (STL) sowie konfigurierbarer Bild- (PNG/JPG) und PDF-Bericht-Export — alles in vier Sprachen.',
+  'landing.infoBody': 'Ein dentaler CBCT/CT-DICOM-Viewer für die Implantatplanung — mehrere CTs gleichzeitig laden, MPR- und echte 3D-Ansichten, Panorama-Rekonstruktion (OPG) entlang des Zahnbogens, kippbare Querschnitte, geführte Implantatplanung mit Sicherheitsabständen zu Nerv/Sinus/Nachbar und Misch-Knochenqualität, druckbarer Bohrschablonen-Export (STL) sowie konfigurierbarer Bild- (PNG/JPG) und PDF-Bericht-Export — alles in 15 Sprachen.',
   'landing.howTitle': 'Bedienung',
   'landing.how1': 'DICOM-Ordner oder .dcm-Dateien unten laden (auch GALILEOS- und OneVolume-Ordner); weitere CTs später im Serien-Panel hinzufügen.',
   'landing.how2': 'Layout in der oberen Leiste wählen — „3D-Ansicht“ kombiniert 3D + MPR, „Panorama-Ansicht“ zeigt Panorama mit Axial, Querschnitt und Koronal.',
@@ -47,7 +47,7 @@ const de: Dict = {
   'landing.why4t': 'Geführte Chirurgie',
   'landing.why4d': 'Druckbare Bohrschablone (STL) für die schablonengeführte Chirurgie exportieren.',
   'landing.why5t': 'Berichte & Sprachen',
-  'landing.why5d': 'Mehrsprachiger PDF-Bericht-Export in vier Sprachen.',
+  'landing.why5d': 'Mehrsprachiger PDF-Bericht-Export in 15 Sprachen.',
   'landing.why6t': 'Dental-optimiert',
   'landing.why6d': 'Bogenkurve, Panorama (OPG) und Misch-Knochenqualität.',
   'landing.views.title': 'Vier Blickwinkel',

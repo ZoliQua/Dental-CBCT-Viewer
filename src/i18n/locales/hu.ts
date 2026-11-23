@@ -9,7 +9,7 @@ const hu: Dict = {
   'app.retry': 'Újrapróbálás',
 
   'landing.infoTitle': 'Mi ez az alkalmazás?',
-  'landing.infoBody': 'Dentális CBCT/CT DICOM-néző implantátum-tervezéshez — több CT egyszerre, MPR és valódi 3D nézetek, panoráma (OPG) rekonstrukció a fogív mentén, dönthető keresztmetszetek, vezetett implantátum-tervezés ideg/arcüreg/szomszéd biztonsági távolságokkal és Misch-csontminőséggel, nyomtatható fúrósablon (STL) export, valamint konfigurálható kép- (PNG/JPG) és PDF-riport-export — négy nyelven.',
+  'landing.infoBody': 'Dentális CBCT/CT DICOM-néző implantátum-tervezéshez — több CT egyszerre, MPR és valódi 3D nézetek, panoráma (OPG) rekonstrukció a fogív mentén, dönthető keresztmetszetek, vezetett implantátum-tervezés ideg/arcüreg/szomszéd biztonsági távolságokkal és Misch-csontminőséggel, nyomtatható fúrósablon (STL) export, valamint konfigurálható kép- (PNG/JPG) és PDF-riport-export — 15 nyelven.',
   'landing.howTitle': 'Használat',
   'landing.how1': 'Tölts be egy DICOM mappát vagy .dcm fájlokat lent (GALILEOS és OneVolume mappákat is); további CT-ket később a Sorozatok panelen adhatsz hozzá.',
   'landing.how2': 'Válassz elrendezést a felső sávban — a „3D nézet” a 3D-t és az MPR-t, a „Panoráma nézet” a panorámát adja axiális, keresztmetszet és koronális nézettel.',
@@ -47,7 +47,7 @@ const hu: Dict = {
   'landing.why4t': 'Vezetett sebészet',
   'landing.why4d': 'Nyomtatható fúrósablon (STL) exportálása sablonvezérelt sebészethez.',
   'landing.why5t': 'Jelentések és nyelvek',
-  'landing.why5d': 'Többnyelvű PDF-jelentés exportálása négy nyelven.',
+  'landing.why5d': 'Többnyelvű PDF-jelentés exportálása 15 nyelven.',
   'landing.why6t': 'Fogászatra optimalizált',
   'landing.why6d': 'Fogív-görbe, panoráma (OPG) és Misch csontminőség.',
   'landing.views.title': 'Négyféle nézőpont',

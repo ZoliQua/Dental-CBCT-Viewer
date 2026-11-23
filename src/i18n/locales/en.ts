@@ -10,7 +10,7 @@ const en: Dict = {
 
   // Landing page
   'landing.infoTitle': 'What is this app?',
-  'landing.infoBody': 'A dental CBCT/CT DICOM viewer for implant planning — load several CTs at once, MPR and true-3D views, panoramic (OPG) reconstruction along the dental arch, tiltable cross-sections, guided implant planning with nerve/sinus/neighbour safety clearances and Misch bone quality, a printable drill-guide (STL) export, and configurable image (PNG/JPG) and PDF report exports — all in four languages.',
+  'landing.infoBody': 'A dental CBCT/CT DICOM viewer for implant planning — load several CTs at once, MPR and true-3D views, panoramic (OPG) reconstruction along the dental arch, tiltable cross-sections, guided implant planning with nerve/sinus/neighbour safety clearances and Misch bone quality, a printable drill-guide (STL) export, and configurable image (PNG/JPG) and PDF report exports — in 15 languages.',
   'landing.howTitle': 'How to use',
   'landing.how1': 'Load a DICOM folder or .dcm files below (GALILEOS and OneVolume folders too); add more CTs later from the Series panel.',
   'landing.how2': 'Pick a layout in the top bar — “3D view” combines 3D + MPR, “Panoramic view” shows the panoramic with axial, cross-section and coronal.',
@@ -48,7 +48,7 @@ const en: Dict = {
   'landing.why4t': 'Guided surgery',
   'landing.why4d': 'Export a printable drill-guide (STL) for template-based surgery.',
   'landing.why5t': 'Reports & languages',
-  'landing.why5d': 'Multilingual PDF report export in four languages.',
+  'landing.why5d': 'Multilingual PDF report export in 15 languages.',
   'landing.why6t': 'Dental-optimized',
   'landing.why6d': 'Arch curve, panoramic (OPG) and Misch bone-quality classification.',
   'landing.views.title': 'Four ways to look',

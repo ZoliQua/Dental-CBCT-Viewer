@@ -62,7 +62,7 @@ All props are optional. Import the type with
 | `patientName` | `string` | Patient name shown in the report header. |
 | `initialPlan` | `PlanData` | A saved plan (implants, anatomy, arch, settings…) loaded on mount. |
 | `initialLayout` | `LayoutMode` | Starting layout: `'1x1'` \| `'1+3'` \| `'2x2'` \| `'OPG2+1'` \| `'IO3D'`. `'IO3D'` (the 3D IO view) only renders once an upper/lower intraoral scan is loaded. |
-| `lang` | `string` | UI language: `'en'` \| `'de'` \| `'es'` \| `'hu'`. |
+| `lang` | `string` | UI language: `'cs'` \| `'da'` \| `'de'` \| `'en'` \| `'es'` \| `'fi'` \| `'fr'` \| `'hu'` \| `'nb'` \| `'pl'` \| `'pt'` \| `'ru'` \| `'sk'` \| `'sv'` \| `'uk'`. An unknown code is ignored. Without it the viewer uses the user's last choice, then the browser / OS language, then English. Languages other than English load on first use as separate chunks. |
 | `onPlanChange` | `(plan: PlanData) => void` | Called (debounced) whenever the plan changes — persist it host-side. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Called whenever the implant list changes. |
 | `className` | `string` | Extra class on the root element. |

@@ -9,7 +9,7 @@ const es: Dict = {
   'app.retry': 'Reintentar',
 
   'landing.infoTitle': '¿Qué es esta aplicación?',
-  'landing.infoBody': 'Un visor DICOM de CBCT/TC dental para la planificación de implantes — cargue varias TC a la vez, vistas MPR y 3D real, reconstrucción panorámica (OPG) a lo largo del arco dental, cortes transversales inclinables, planificación guiada de implantes con distancias de seguridad a nervio/seno/vecino y calidad ósea de Misch, exportación de guía de fresado imprimible (STL) y exportación configurable de imagen (PNG/JPG) e informe PDF — todo en cuatro idiomas.',
+  'landing.infoBody': 'Un visor DICOM de CBCT/TC dental para la planificación de implantes — cargue varias TC a la vez, vistas MPR y 3D real, reconstrucción panorámica (OPG) a lo largo del arco dental, cortes transversales inclinables, planificación guiada de implantes con distancias de seguridad a nervio/seno/vecino y calidad ósea de Misch, exportación de guía de fresado imprimible (STL) y exportación configurable de imagen (PNG/JPG) e informe PDF — todo en 15 idiomas.',
   'landing.howTitle': 'Cómo se usa',
   'landing.how1': 'Cargue una carpeta DICOM o archivos .dcm abajo (también carpetas GALILEOS y OneVolume); añada más TC luego desde el panel Series.',
   'landing.how2': 'Elija un diseño en la barra superior — «Vista 3D» combina 3D + MPR, «Vista panorámica» muestra la panorámica con axial, corte transversal y coronal.',
@@ -47,7 +47,7 @@ const es: Dict = {
   'landing.why4t': 'Cirugía guiada',
   'landing.why4d': 'Exporta una guía de fresado imprimible (STL) para cirugía con férula.',
   'landing.why5t': 'Informes e idiomas',
-  'landing.why5d': 'Exportación de informe PDF multilingüe en cuatro idiomas.',
+  'landing.why5d': 'Exportación de informe PDF multilingüe en 15 idiomas.',
   'landing.why6t': 'Optimizado para odontología',
   'landing.why6d': 'Curva del arco, panorámica (OPG) y calidad ósea de Misch.',
   'landing.views.title': 'Cuatro formas de mirar',

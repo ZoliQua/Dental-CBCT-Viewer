@@ -62,7 +62,7 @@ export interface DicomViewerProps {
   initialPlan?: PlanData;
   /** Start in this layout ('1x1' | '1+3' | '2x2' | 'OPG2+1'). */
   initialLayout?: LayoutMode;
-  /** UI language ('en' | 'de' | 'es' | 'hu'). */
+  /** UI language (a Language code, e.g. 'en', 'de', 'fr', 'uk'). Unknown codes are ignored. Without it: the user's last choice, then the browser language, then English. */
   lang?: string;
   /** Called (debounced) whenever the plan changes — persist it host-side. */
   onPlanChange?: (plan: PlanData) => void;
