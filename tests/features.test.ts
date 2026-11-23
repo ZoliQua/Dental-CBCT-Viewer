@@ -10,7 +10,8 @@ import {
 } from '../src/core/features';
 import { viewerReducer, initialState, type ViewerAction, type ViewerState } from '../src/context/ViewerContext';
 import { planFromObject, serializePlan, type PlanData } from '../src/core/planIO';
-import { translations } from '../src/i18n/translations';
+import type { Dict } from '../src/i18n/translations';
+import { loadLanguage } from '../src/i18n/translations';
 import { translate } from '../src/i18n/I18nContext';
 import { GUIDE_DEFAULTS, type ImplantData } from '../src/types/dicom';
 
@@ -159,6 +160,11 @@ describe('gate + reducer: no route brings implants into a viewer edition', () =>
   });
 });
 
+const translations: Record<string, Dict> = Object.fromEntries(
+  Object.entries(import.meta.glob<{ default: Dict }>('../src/i18n/locales/*.ts', { eager: true }))
+    .map(([path, m]) => [path.match(/(\w+)\.ts$/)![1], m.default]),
+);
+
 describe('edition copy', () => {
   it('picks the variant for the missing feature', () => {
     expect(copyVariant(ALL_FEATURES)).toBeNull();
@@ -166,7 +172,8 @@ describe('edition copy', () => {
     expect(copyVariant(NO_GUIDE)).toBe('noguide');
   });
 
-  it('prefers the variant, and falls back to the plain key', () => {
+  it('prefers the variant, and falls back to the plain key', async () => {
+    await loadLanguage('hu');
     expect(translate('en', 'pdf.description', undefined, 'viewer')).toBe(translations.en['pdf.description@viewer']);
     expect(translate('hu', 'pdf.description', undefined, 'viewer')).toBe(translations.hu['pdf.description@viewer']);
     expect(translate('en', 'pdf.description')).toBe(translations.en['pdf.description']);
@@ -178,17 +185,18 @@ describe('edition copy', () => {
     expect(variants.length).toBeGreaterThan(0);
     for (const k of variants) {
       expect(translations.en[k.split('@')[0]], `${k} has no plain key`).toBeDefined();
-      for (const lang of ['de', 'es', 'hu'] as const) {
+      for (const lang of Object.keys(translations)) {
         expect(translations[lang][k], `${lang} lacks ${k}`).toBeDefined();
       }
     }
   });
 
   it('never mentions implants or the drill guide in the viewer copy', () => {
-    for (const lang of ['en', 'de', 'es', 'hu'] as const) {
+    for (const lang of Object.keys(translations)) {
       for (const [k, v] of Object.entries(translations[lang])) {
         if (!k.endsWith('@viewer')) continue;
-        expect(v, `${lang} ${k}`).not.toMatch(/implant|drill|bohr|fresado|fúró|sleeve|hülse|casquillo|persely/i);
+        expect(v, `${lang} ${k}`).not.toMatch(
+          /implant|имплант|імплант|drill|bohr|fresado|fúró|sleeve|hülse|casquillo|persely|vrták|vrtac|vŕtac|wiert|сверл|свердл|borr|porau|foret|broca|douille|tulejk|втулк/i);
       }
     }
   });

@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef, useImperativeHandle, forwardRef, lazy, Suspense } from 'react';
 import { ViewerProvider, useViewer } from '@/context/ViewerContext';
 import { I18nProvider, useI18n } from '@/i18n/I18nContext';
+import { isLanguage } from '@/i18n/translations';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { FeaturesProvider, useFeatures } from '@/context/FeaturesContext';
 import type { ViewerFeatures } from '@/core/features';
@@ -183,7 +184,9 @@ function ViewerApp({
   }, [state.isInitialized, props.initialLayout, props.initialPlan, dispatch, loadHostPlan]);
 
   useEffect(() => {
-    if (props.lang && props.lang !== lang) setLang(props.lang as Parameters<typeof setLang>[0]);
+    // An unknown code (typo, unsupported language) is ignored rather than
+    // leaving the viewer without a dictionary.
+    if (isLanguage(props.lang) && props.lang !== lang) setLang(props.lang);
   }, [props.lang, lang, setLang]);
 
   // Notify the host when the implant list changes.
