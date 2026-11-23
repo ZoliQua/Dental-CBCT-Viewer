@@ -9,6 +9,18 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
 
 ### Added
 
+- **Eleven more UI languages, picked from the browser.** Czech, Danish,
+  Finnish, French, Norwegian (Bokmål), Polish, Portuguese, Russian, Slovak,
+  Swedish and Ukrainian join English, German, Spanish and Hungarian — 15 in
+  all, listed alphabetically by their own names, each with its own README in
+  `lang/`. English stays the default, but with no saved choice the viewer now
+  opens in the browser / OS language when it has it. Every language but
+  English is its own chunk, loaded the first time it is chosen. The PDF's
+  embedded font gained the Cyrillic block.
+- **`autosave` prop** to keep plan data out of the host page's sessionStorage
+  when the host persists plans itself. The autosave no longer stores the
+  patient id.
+
 - **The registration says how far off it can be where the implant goes.** The
   panel could already show the residual at each landmark pair, which is the
   obvious number and the wrong one: Fitzpatrick, West & Maurer (IEEE TMI, 1998)
@@ -35,15 +47,42 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) from
   or the imperative API can all carry implants in; so every action now passes
   one gate (`src/core/features.ts`) on its way to the reducer, and a disabled
   feature's data never reaches the state. Implants and guide settings are
-  dropped from every plan loaded, and `addImplant` / `updateImplant` become
+  held back from every plan loaded, and `addImplant` / `updateImplant` become
   no-ops. Help, intro and disclaimer text that described the planner reads
-  edition copy instead (`<key>@viewer`, in all four languages). 20 tests.
+  edition copy instead (`<key>@viewer`, in every language). 20 tests.
 - **`branding` and `theme` props.** `branding={false}` hides the web promotion
   — the GitHub star, the landing page's About box, the other-projects links.
   `theme` lets a host own dark / light: it overrides the remembered choice,
   follows the prop live, and the viewer's own toggles step aside.
 - **`openSettings()`, `openHelp()` and `startTour()`** on the imperative handle,
   so a native menu can open them.
+
+### Fixed
+
+- **Switching a feature off no longer deletes the plan.** Turning
+  `implantPlanning` (or `drillGuide`) off, or opening the viewer edition over a
+  planner autosave, removed the implants and the autosave then overwrote the
+  stored plan without them. What a disabled feature cannot show is now held
+  back per study, still persisted by the autosave and `getPlan`/`onPlanChange`,
+  and comes back when the feature does. The guide settings are held the same way.
+  A series switch clears held implants, as it does visible ones.
+- The viewer edition's disclaimer agreement is stored apart from the planner's,
+  so agreeing to the shorter text no longer hides the implant liability text.
+- The PDF dialog's implant sections and the Settings tab follow a host that
+  switches planning at runtime; viewer-edition wording for Save/Load plan;
+  `{param}` placeholders are filled at every occurrence.
+- **Hardening:** plan files and host plans (`loadPlan`, `initialPlan` now go
+  through the same validation) have their numbers clamped — panoramic
+  resolution and slab, tilt, guide tessellation, coordinates, implant sizes and
+  angles — and safety thresholds can no longer be negative (which silently
+  turned the clearance warnings off). An unknown `lang` no longer crashes the
+  viewer; storage access is guarded everywhere; plan (20 MB) and mesh (300 MB)
+  imports are size-capped.
+- **Performance and memory:** sample / GALILEOS / OneVolume voxels are freed on
+  reset and when a study is removed; DICOM files are no longer copied a second
+  time into blobs; drag handlers dispatch at most once per frame; the 3D slice
+  planes follow W/L once a drag settles; scan actors are updated in place
+  instead of rebuilt.
 
 ## [1.4.0] — 2026-10-18
 

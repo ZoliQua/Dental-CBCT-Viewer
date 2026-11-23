@@ -1,6 +1,6 @@
 # 🦷 DenCT — Deutsch
 
-🇩🇪 Deutsch · 🇬🇧 [English](README-en.md) · 🇪🇸 [Español](README-es.md) · 🇭🇺 [Magyar](README-hu.md) · [⬅ Zurück](../README.md)
+🇨🇿 [Čeština](README-cs.md) · 🇩🇰 [Dansk](README-da.md) · 🇩🇪 Deutsch · 🇬🇧 [English](README-en.md) · 🇪🇸 [Español](README-es.md) · 🇫🇷 [Français](README-fr.md) · 🇭🇺 [Magyar](README-hu.md) · 🇳🇴 [Norsk](README-nb.md) · 🇵🇱 [Polski](README-pl.md) · 🇵🇹 [Português](README-pt.md) · 🇸🇰 [Slovenčina](README-sk.md) · 🇫🇮 [Suomi](README-fi.md) · 🇸🇪 [Svenska](README-sv.md) · 🇷🇺 [Русский](README-ru.md) · 🇺🇦 [Українська](README-uk.md) · [⬅ Zurück](../README.md)
 
 Einbettbarer **zahnmedizinischer DVT / CT DICOM-Viewer** für React + TypeScript: MPR + echte 3D-Ansicht, Panorama- (OPG-)Rekonstruktion, Querschnitte, geführte Implantatplanung, Sicherheitsabstände, Knochenqualität, eine druckbare Bohrschablone (STL) und ein mehrsprachiger PDF-Bericht.
 
@@ -60,7 +60,7 @@ Der Viewer füllt sein Elternelement — geben Sie ihm einen dimensionierten Con
 | `patientName` | `string` | Im Berichtskopf angezeigter Patientenname. |
 | `initialPlan` | `PlanData` | Gespeicherten Plan beim Mounten laden. |
 | `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1'` | Start-Layout. |
-| `lang` | `'en' \| 'de' \| 'es' \| 'hu'` | UI-Sprache. |
+| `lang` | `'cs' \| 'da' \| 'de' \| 'en' \| 'es' \| 'fi' \| 'fr' \| 'hu' \| 'nb' \| 'pl' \| 'pt' \| 'ru' \| 'sk' \| 'sv' \| 'uk'` | UI-Sprache. |
 | `onPlanChange` | `(plan: PlanData) => void` | Wird (entprellt) bei Planänderungen aufgerufen. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Wird bei Änderung der Implantatliste aufgerufen. |
 | `className` | `string` | Zusätzliche Klasse am Wurzelelement. |

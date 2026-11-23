@@ -10,7 +10,7 @@
 
 **DenCT is an open-source, embeddable dental CBCT / CT DICOM viewer and guided implant planner for React + TypeScript.** It reconstructs a **panoramic (OPG)** view along the dental arch, renders the jaw in **true 3D**, plans implants with **nerve / sinus / neighbour safety clearances**, and exports a **3D-printable surgical drill guide (STL)** — entirely **in the browser, with no upload**.
 
-**▶ [Try the live demo](https://dental-cbct-viewer.vercel.app)** (an anonymized sample CBCT, on its own or paired with intraoral scans) · 📖 [API reference](API.md) · 🧪 [Next.js example](examples/nextjs/) · 🌐 Docs: 🇬🇧 [English](lang/README-en.md) · 🇩🇪 [Deutsch](lang/README-de.md) · 🇪🇸 [Español](lang/README-es.md) · 🇭🇺 [Magyar](lang/README-hu.md)
+**▶ [Try the live demo](https://dental-cbct-viewer.vercel.app)** (an anonymized sample CBCT, on its own or paired with intraoral scans) · 📖 [API reference](API.md) · 🧪 [Next.js example](examples/nextjs/) · 🌐 Docs: 🇨🇿 [Čeština](lang/README-cs.md) · 🇩🇰 [Dansk](lang/README-da.md) · 🇩🇪 [Deutsch](lang/README-de.md) · 🇬🇧 [English](lang/README-en.md) · 🇪🇸 [Español](lang/README-es.md) · 🇫🇷 [Français](lang/README-fr.md) · 🇭🇺 [Magyar](lang/README-hu.md) · 🇳🇴 [Norsk](lang/README-nb.md) · 🇵🇱 [Polski](lang/README-pl.md) · 🇵🇹 [Português](lang/README-pt.md) · 🇸🇰 [Slovenčina](lang/README-sk.md) · 🇫🇮 [Suomi](lang/README-fi.md) · 🇸🇪 [Svenska](lang/README-sv.md) · 🇷🇺 [Русский](lang/README-ru.md) · 🇺🇦 [Українська](lang/README-uk.md)
 
 ### Panoramic view — OPG, cross-section and 3D with a planned implant
 [![DenCT panoramic view: panoramic OPG reconstruction of a dental CBCT with a planned implant, the axial arch curve, the perpendicular cross-section and a 3D view showing where the cross-section cuts](https://raw.githubusercontent.com/ZoliQua/Dental-CBCT-Viewer/main/screenshots/panoramic-view.jpg)](https://dental-cbct-viewer.vercel.app)
@@ -48,7 +48,7 @@
 **Integration & privacy**
 - 🔒 **100% local** — parsing, rendering and exports run in the browser; **nothing is uploaded**
 - ⚛️ React 18 / 19 component with an **imperative ref API**, controlled props and callbacks, and a React-free **`/core`** of the geometry / safety math
-- 🌐 4 UI languages (EN / DE / ES / HU) · 🌓 self-scoped dark mode that never restyles the host page
+- 🌐 15 UI languages (CS / DA / DE / EN / ES / FI / FR / HU / NB / PL / PT / RU / SK / SV / UK), picked from the browser / OS language by default · 🌓 self-scoped dark mode that never restyles the host page
 
 > The exported guide is for verification on a printed model — tissue fit needs a **registered surface scan**, and the sleeve seat must be checked against your own sleeve kit before any use.
 

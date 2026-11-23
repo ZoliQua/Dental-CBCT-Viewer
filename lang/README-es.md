@@ -1,6 +1,6 @@
 # 🦷 DenCT — Español
 
-🇪🇸 Español · 🇬🇧 [English](README-en.md) · 🇩🇪 [Deutsch](README-de.md) · 🇭🇺 [Magyar](README-hu.md) · [⬅ Volver](../README.md)
+🇨🇿 [Čeština](README-cs.md) · 🇩🇰 [Dansk](README-da.md) · 🇩🇪 [Deutsch](README-de.md) · 🇬🇧 [English](README-en.md) · 🇪🇸 Español · 🇫🇷 [Français](README-fr.md) · 🇭🇺 [Magyar](README-hu.md) · 🇳🇴 [Norsk](README-nb.md) · 🇵🇱 [Polski](README-pl.md) · 🇵🇹 [Português](README-pt.md) · 🇸🇰 [Slovenčina](README-sk.md) · 🇫🇮 [Suomi](README-fi.md) · 🇸🇪 [Svenska](README-sv.md) · 🇷🇺 [Русский](README-ru.md) · 🇺🇦 [Українська](README-uk.md) · [⬅ Volver](../README.md)
 
 Visor **DICOM de CBCT / TC dental** integrable para React + TypeScript: MPR + 3D real, reconstrucción panorámica (OPG), cortes transversales, planificación guiada de implantes, distancias de seguridad, calidad ósea, una guía de fresado imprimible (STL) y un informe PDF multilingüe.
 
@@ -60,7 +60,7 @@ El visor ocupa su contenedor padre — asígnele un contenedor con tamaño. Incl
 | `patientName` | `string` | Nombre del paciente en la cabecera del informe. |
 | `initialPlan` | `PlanData` | Cargar un plan guardado al montar. |
 | `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1'` | Disposición inicial. |
-| `lang` | `'en' \| 'de' \| 'es' \| 'hu'` | Idioma de la interfaz. |
+| `lang` | `'cs' \| 'da' \| 'de' \| 'en' \| 'es' \| 'fi' \| 'fr' \| 'hu' \| 'nb' \| 'pl' \| 'pt' \| 'ru' \| 'sk' \| 'sv' \| 'uk'` | Idioma de la interfaz. |
 | `onPlanChange` | `(plan: PlanData) => void` | Se llama (con debounce) al cambiar el plan. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Se llama al cambiar la lista de implantes. |
 | `className` | `string` | Clase adicional en el elemento raíz. |

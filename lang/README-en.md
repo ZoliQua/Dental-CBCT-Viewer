@@ -1,6 +1,6 @@
 # 🦷 DenCT — English
 
-🇬🇧 English · 🇩🇪 [Deutsch](README-de.md) · 🇪🇸 [Español](README-es.md) · 🇭🇺 [Magyar](README-hu.md) · [⬅ Back](../README.md)
+🇨🇿 [Čeština](README-cs.md) · 🇩🇰 [Dansk](README-da.md) · 🇩🇪 [Deutsch](README-de.md) · 🇬🇧 English · 🇪🇸 [Español](README-es.md) · 🇫🇷 [Français](README-fr.md) · 🇭🇺 [Magyar](README-hu.md) · 🇳🇴 [Norsk](README-nb.md) · 🇵🇱 [Polski](README-pl.md) · 🇵🇹 [Português](README-pt.md) · 🇸🇰 [Slovenčina](README-sk.md) · 🇫🇮 [Suomi](README-fi.md) · 🇸🇪 [Svenska](README-sv.md) · 🇷🇺 [Русский](README-ru.md) · 🇺🇦 [Українська](README-uk.md) · [⬅ Back](../README.md)
 
 An embeddable **dental CBCT / CT DICOM viewer** for React + TypeScript: MPR + true-3D, panoramic (OPG) reconstruction, cross-sections, guided implant planning, safety clearances, bone quality, a printable drill guide (STL) and a multilingual PDF report.
 
@@ -60,7 +60,7 @@ The viewer fills its parent — give it a sized container. It ships its own styl
 | `patientName` | `string` | Patient name shown in the report header. |
 | `initialPlan` | `PlanData` | Load a saved plan on mount. |
 | `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1'` | Starting layout. |
-| `lang` | `'en' \| 'de' \| 'es' \| 'hu'` | UI language. |
+| `lang` | `'cs' \| 'da' \| 'de' \| 'en' \| 'es' \| 'fi' \| 'fr' \| 'hu' \| 'nb' \| 'pl' \| 'pt' \| 'ru' \| 'sk' \| 'sv' \| 'uk'` | UI language. Without it the viewer follows the user's last choice, then the browser / OS language, then English. |
 | `onPlanChange` | `(plan: PlanData) => void` | Fired (debounced) whenever the plan changes. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Fired whenever the implant list changes. |
 | `className` | `string` | Extra class on the root element. |

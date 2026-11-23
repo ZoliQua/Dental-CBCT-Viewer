@@ -1,6 +1,6 @@
 # 🦷 DenCT — Magyar
 
-🇭🇺 Magyar · 🇬🇧 [English](README-en.md) · 🇩🇪 [Deutsch](README-de.md) · 🇪🇸 [Español](README-es.md) · [⬅ Vissza](../README.md)
+🇨🇿 [Čeština](README-cs.md) · 🇩🇰 [Dansk](README-da.md) · 🇩🇪 [Deutsch](README-de.md) · 🇬🇧 [English](README-en.md) · 🇪🇸 [Español](README-es.md) · 🇫🇷 [Français](README-fr.md) · 🇭🇺 Magyar · 🇳🇴 [Norsk](README-nb.md) · 🇵🇱 [Polski](README-pl.md) · 🇵🇹 [Português](README-pt.md) · 🇸🇰 [Slovenčina](README-sk.md) · 🇫🇮 [Suomi](README-fi.md) · 🇸🇪 [Svenska](README-sv.md) · 🇷🇺 [Русский](README-ru.md) · 🇺🇦 [Українська](README-uk.md) · [⬅ Vissza](../README.md)
 
 Beágyazható **dentális CBCT / CT DICOM-néző** React + TypeScript alá: MPR + valódi 3D, panoráma (OPG) rekonstrukció, keresztmetszetek, vezetett (guided) implantátum-tervezés, biztonsági távolságok, csontminőség, nyomtatható fúrósablon (STL) és többnyelvű PDF-riport.
 
@@ -60,7 +60,7 @@ A néző kitölti a szülőjét — adj neki méretezett konténert. Saját stí
 | `patientName` | `string` | A riport fejlécében megjelenő páciensnév. |
 | `initialPlan` | `PlanData` | Mentett terv betöltése induláskor. |
 | `initialLayout` | `'1x1' \| '1+3' \| '2x2' \| 'OPG2+1'` | Kezdő elrendezés. |
-| `lang` | `'en' \| 'de' \| 'es' \| 'hu'` | UI-nyelv. |
+| `lang` | `'cs' \| 'da' \| 'de' \| 'en' \| 'es' \| 'fi' \| 'fr' \| 'hu' \| 'nb' \| 'pl' \| 'pt' \| 'ru' \| 'sk' \| 'sv' \| 'uk'` | UI-nyelv. |
 | `onPlanChange` | `(plan: PlanData) => void` | A terv változásakor (késleltetve) hívódik. |
 | `onImplantsChange` | `(implants: ImplantData[]) => void` | Az implant-lista változásakor hívódik. |
 | `className` | `string` | Extra osztály a gyökér elemen. |
