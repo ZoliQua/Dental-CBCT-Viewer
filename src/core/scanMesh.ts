@@ -253,3 +253,12 @@ export function buildScanActor(pd: any, colorHex: string, opacity: number, trans
   if (transform && transform.length === 16) actor.setUserMatrix(transform);
   return actor;
 }
+
+/** Apply colour, opacity and transform to an existing scan actor (no geometry rebuild). */
+export function updateScanActor(actor: any, colorHex: string, opacity: number, transform: number[]): void {
+  const prop = actor.getProperty();
+  const [r, g, b] = hexToRgb(colorHex);
+  prop.setColor(r, g, b);
+  prop.setOpacity(opacity);
+  if (transform && transform.length === 16) actor.setUserMatrix(transform);
+}

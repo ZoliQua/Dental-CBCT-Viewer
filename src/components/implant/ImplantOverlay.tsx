@@ -32,6 +32,7 @@ import {
 } from '@/core/implantGeometry';
 import { evaluateImplant, type ImplantSeg } from '@/core/safety';
 import { sliceScanWorld } from '@/core/scanMesh';
+import { rafThrottle } from '@/utils/rafThrottle';
 
 interface ImplantOverlayProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -227,10 +228,12 @@ export function ImplantOverlay({ containerRef, canvasRef, widthMm, zMin, zMax }:
 
     const handleUp = () => setDragState(null);
 
-    window.addEventListener('pointermove', handleMove);
+    const onMove = rafThrottle(handleMove);
+    window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', handleUp);
     return () => {
-      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointermove', onMove);
+      onMove.flush(); // land the last position
       window.removeEventListener('pointerup', handleUp);
     };
   }, [dragState, pixelToMm, worldFromImage, dispatch]);
@@ -265,10 +268,12 @@ export function ImplantOverlay({ containerRef, canvasRef, widthMm, zMin, zMax }:
 
     const handleUp = () => setRotState(null);
 
-    window.addEventListener('pointermove', handleMove);
+    const onMove = rafThrottle(handleMove);
+    window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', handleUp);
     return () => {
-      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointermove', onMove);
+      onMove.flush(); // land the last position
       window.removeEventListener('pointerup', handleUp);
     };
   }, [rotState, frame, pixelToMm, zMid, dispatch]);

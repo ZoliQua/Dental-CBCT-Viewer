@@ -11,6 +11,7 @@
 import { useEffect, useRef } from 'react';
 import { getRenderingEngine, Enums, type Types } from '@cornerstonejs/core';
 import { useViewer } from '@/context/ViewerContext';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { RENDERING_ENGINE_ID, VP_3D, VP_AXIAL, VP_SAGITTAL, VP_CORONAL } from '@/core/constants';
 import { getVolumeData } from '@/core/cprEngine';
 import {
@@ -38,6 +39,9 @@ export function Slice3DActors({
   indexOverride?: Partial<Record<SliceAxis, number>>;
 }) {
   const { state } = useViewer();
+  // A W/L drag dispatches on every VOI event; each rebuild re-samples three
+  // slice textures on the CPU and re-uploads them, so follow it once it settles.
+  const windowLevel = useDebouncedValue(state.windowLevel, 150);
   const addedRef = useRef<string[]>([]);
 
   useEffect(() => {
@@ -70,7 +74,7 @@ export function Slice3DActors({
       return;
     }
 
-    const voi = { wc: state.windowLevel.wc, ww: state.windowLevel.ww };
+    const voi = { wc: windowLevel.wc, ww: windowLevel.ww };
     const activeAxes = SLICE_AXES.filter((a) => axes[a]);
     if (!activeAxes.length) return;
     const indexByAxis: Partial<Record<SliceAxis, number>> = {};
@@ -141,7 +145,7 @@ export function Slice3DActors({
         addedRef.current = [];
       }
     };
-  }, [axes, indexOverride, state.windowLevel, state.volumeId, state.layoutMode, state.panel, state.display.sliceOpacity, preset, rebuildKey]);
+  }, [axes, indexOverride, windowLevel, state.volumeId, state.layoutMode, state.panel, state.display.sliceOpacity, preset, rebuildKey]);
 
   return null;
 }

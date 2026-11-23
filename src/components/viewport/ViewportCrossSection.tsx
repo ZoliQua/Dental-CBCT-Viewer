@@ -8,6 +8,7 @@ import { generateCrossSection, type CrossSectionResult } from '@/core/cprEngine'
 import { RENDERING_ENGINE_ID, VP_AXIAL } from '@/core/constants';
 import { ImplantOverlay } from '@/components/implant/ImplantOverlay';
 import { ComputingOverlay } from './ComputingOverlay';
+import { rafThrottle } from '@/utils/rafThrottle';
 
 interface ViewportCrossSectionProps {
   volumeId: string;
@@ -262,10 +263,12 @@ export function ViewportCrossSection({ volumeId }: ViewportCrossSectionProps) {
       }
     };
     const handleUp = () => setLineDragging(false);
-    window.addEventListener('pointermove', handleMove);
+    const onMove = rafThrottle(handleMove);
+    window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', handleUp);
     return () => {
-      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointermove', onMove);
+      onMove.flush(); // land the last position
       window.removeEventListener('pointerup', handleUp);
     };
   }, [lineDragging, containerYToZ, setAxialSliceZ, zToContainerY]);

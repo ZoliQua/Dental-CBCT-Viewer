@@ -12,6 +12,7 @@ import { nearestArchFrame, archFrameAt, implantAxis, implantWorldAxis } from '@/
 import { evaluateImplant, type ImplantSeg } from '@/core/safety';
 import { isMeasureTool } from '@/components/measurements/CanvasMeasurementOverlay';
 import { ComputingOverlay } from './ComputingOverlay';
+import { rafThrottle } from '@/utils/rafThrottle';
 
 interface ViewportPanoramicProps {
   volumeId: string;
@@ -306,10 +307,12 @@ export function ViewportPanoramic({ volumeId, showCrossSectionLine = false }: Vi
       if (z !== null) setAxialSliceZ(z);
     };
     const handleUp = () => setHLineDragging(false);
-    window.addEventListener('pointermove', handleMove);
+    const onMove = rafThrottle(handleMove);
+    window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', handleUp);
     return () => {
-      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointermove', onMove);
+      onMove.flush(); // land the last position
       window.removeEventListener('pointerup', handleUp);
     };
   }, [hLineDragging, containerYToZ, setAxialSliceZ]);
@@ -342,10 +345,12 @@ export function ViewportPanoramic({ volumeId, showCrossSectionLine = false }: Vi
       setVLineLeft(positionToContainerX(pos));
     };
     const handleUp = () => setVLineDragging(false);
-    window.addEventListener('pointermove', handleMove);
+    const onMove = rafThrottle(handleMove);
+    window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', handleUp);
     return () => {
-      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointermove', onMove);
+      onMove.flush(); // land the last position
       window.removeEventListener('pointerup', handleUp);
     };
   }, [vLineDragging, containerXToPosition, positionToContainerX, dispatch]);
@@ -378,10 +383,12 @@ export function ViewportPanoramic({ volumeId, showCrossSectionLine = false }: Vi
       dispatch({ type: 'SET_CROSS_SECTION_TILT', payload: Math.round(clamped) });
     };
     const handleUp = () => setTiltDragging(false);
-    window.addEventListener('pointermove', handleMove);
+    const onMove = rafThrottle(handleMove);
+    window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', handleUp);
     return () => {
-      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointermove', onMove);
+      onMove.flush(); // land the last position
       window.removeEventListener('pointerup', handleUp);
     };
   }, [tiltDragging, vLineLeft, dispatch]);
@@ -423,10 +430,12 @@ export function ViewportPanoramic({ volumeId, showCrossSectionLine = false }: Vi
     };
     const handleUp = () => setImplantDrag(null);
 
-    window.addEventListener('pointermove', handleMove);
+    const onMove = rafThrottle(handleMove);
+    window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', handleUp);
     return () => {
-      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointermove', onMove);
+      onMove.flush(); // land the last position
       window.removeEventListener('pointerup', handleUp);
     };
   }, [implantDrag, state.archCurveControlPoints, containerXToPosition, containerYToZ, dispatch]);

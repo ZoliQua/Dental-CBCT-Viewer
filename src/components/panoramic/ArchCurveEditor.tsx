@@ -17,6 +17,7 @@ import {
 import { crossSectionFrame, buildUniformCurve } from '@/core/cprMath';
 import { getVolumeData } from '@/core/cprEngine';
 import { detectArchControlPoints } from '@/core/archDetect';
+import { rafThrottle } from '@/utils/rafThrottle';
 
 type Point2 = [number, number];
 
@@ -219,11 +220,13 @@ export function ArchCurveEditor() {
       dragIdxRef.current = null;
     };
 
-    window.addEventListener('pointermove', handleMove);
+    const onMove = rafThrottle(handleMove);
+    window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', handleUp);
 
     return () => {
-      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointermove', onMove);
+      onMove.flush(); // land the last position
       window.removeEventListener('pointerup', handleUp);
     };
   }, [dragIdx, state.archCurveControlPoints, dispatch, getViewport]);
@@ -253,10 +256,12 @@ export function ArchCurveEditor() {
       setCsDragging(false);
       csDraggingRef.current = false;
     };
-    window.addEventListener('pointermove', handleMove);
+    const onMove = rafThrottle(handleMove);
+    window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', handleUp);
     return () => {
-      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointermove', onMove);
+      onMove.flush(); // land the last position
       window.removeEventListener('pointerup', handleUp);
     };
   }, [csDragging, state.archCurveControlPoints, dispatch, getViewport]);
